@@ -8,3 +8,4 @@ Design All O(1) Data Structure
 Design Min/Max stack
 Design unique ptr
 Design shared ptr
+Design Trie
