@@ -1,0 +1,205 @@
+{
+  "main": {
+    "id": "2c5517bb3382327a",
+    "type": "split",
+    "children": [
+      {
+        "id": "a7924201f579144f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d82e221421c41906",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Algorithms-S-CLRS/M03divideconquer.md",
+                "mode": "source",
+                "source": false,
+                "backlinks": false
+              },
+              "icon": "lucide-file",
+              "title": "M03divideconquer"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "bf79f10ecf99425c",
+    "type": "split",
+    "children": [
+      {
+        "id": "3734a40afd7d353d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "76cb649947dd4b55",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "9f13b2d28229ac13",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "613a4a03d61f9dc5",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "998ab6935d81403a",
+    "type": "split",
+    "children": [
+      {
+        "id": "b3222ef65a37b044",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "c7369d63bc5eb7da",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Algorithms-S-CLRS/M03divideconquer.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "339708938942a770",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Algorithms-S-CLRS/M03divideconquer.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "efe5b66e088c145d",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "fad5f524df92857a",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "bd0acb93b7025616",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Algorithms-S-CLRS/M03divideconquer.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "d82e221421c41906",
+  "lastOpenFiles": [
+    "Algorithms-S-CLRS/M15shortestpaths.md",
+    "Algorithms-S-CLRS/M14mst.md",
+    "Algorithms-S-CLRS/M13graphstraversal.md",
+    "Algorithms-S-CLRS/M12greedy.md",
+    "Algorithms-S-CLRS/pdfs",
+    "Algorithms-S-CLRS/Untitled Folder",
+    "Algorithms-S-CLRS/M01foundations.md",
+    "Algorithms-S-CLRS/M10unionfind.md",
+    "Algorithms-S-CLRS/M11dynamicprogramming.md",
+    "Algorithms-S-CLRS/INDEX.md"
+  ]
+}
