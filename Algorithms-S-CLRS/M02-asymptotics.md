@@ -195,13 +195,13 @@ Combined with the `O(n²)` upper bound (`n−1` outer iterations × at most `n�
 ### Selection sort — the algorithm with no bad case
 
 ```cpp
-void selectionSort(std::vector<int>& s) {
+void selectionSort(vector<int>& s) {
     const int n = static_cast<int>(s.size());
     for (int i = 0; i < n; ++i) {
         int mn = i;
         for (int j = i + 1; j < n; ++j)
             if (s[j] < s[mn]) mn = j;
-        std::swap(s[i], s[mn]);
+        swap(s[i], s[mn]);
     }
 }
 ```
@@ -213,6 +213,8 @@ T(n) = Σ_{i=0}^{n−1} Σ_{j=i+1}^{n−1} 1 = Σ_{i=0}^{n−1} (n − i − 1)
      = (n−1) + (n−2) + … + 2 + 1 = n(n−1)/2
 ```
 
+→ **C++ implementation:** [A2 Selection sort's exact comparison count](#a2-selection-sorts-exact-comparison-count)
+
 **Upper bound:** `n` terms each at most `n−1` → `T(n) ≤ n(n−1) = O(n²)`.
 **Lower bound:** the first `n/2` terms are each `> n/2`, the rest ≥ 0 → `T(n) ≥ (n/2)(n/2) = Ω(n²)`.
 
@@ -222,7 +224,7 @@ But selection sort is special: **it takes exactly the same time on all `n!` inpu
 
 ```cpp
 // Returns index of first occurrence of p in t, or -1.
-int findMatch(const std::string& p, const std::string& t) {
+int findMatch(const string& p, const string& t) {
     const int m = static_cast<int>(p.size());
     const int n = static_cast<int>(t.size());
     for (int i = 0; i + m <= n; ++i) {
@@ -251,13 +253,15 @@ dropping a negative term keeps an upper bound valid
                               →  O(nm)
 ```
 
+→ **C++ implementation:** [A3 Naive string matching, and its Ω(nm) instance](#a3-naive-string-matching-and-its-ωnm-instance)
+
 **The `Ω(nm)` instance:** `t = "aaaa…a"` (`n` a's), `p = "aaa…ab"` (`m−1` a's then `b`). At each of the `n − m + 1` alignments the inner loop matches `m−1` characters and fails on the last.
 
 ```
 (n − m + 1)·m = nm − m² + m = Ω(nm)
 ```
 
-Hence **`Θ(nm)`**. Faster algorithms exist — Rabin–Karp (expected linear) and KMP (worst-case linear) in [M18](M18-strings.md).
+Hence **`Θ(nm)`**. Faster algorithms exist — Rabin–Karp (expected linear) and KMP (worst-case linear) in [M18 *(planned)*](INDEX.md#module-map).
 
 ### The "round it up" heuristic, and its limit
 
@@ -279,6 +283,8 @@ Where it over-estimates: amortized structures (M09), union-find (M10), and any l
 n!  ≫  cⁿ  ≫  n³  ≫  n²  ≫  n^{1+ε}  ≫  n log n  ≫  n  ≫  √n
     ≫  log²n  ≫  log n  ≫  log n / log log n  ≫  log log n  ≫  α(n)  ≫  1
 ```
+
+→ **C++ implementation:** [A6 The dominance hierarchy, measured](#a6-the-dominance-hierarchy-measured)
 
 ### The bread-and-butter classes [Skiena §2.3.1, p.38]
 
@@ -485,6 +491,8 @@ And in the other direction, when `a > 1`, the sum is dominated by its **last** t
 Σ_{k=1}^{n−1} 1/(k(k+1)) = Σ (1/k − 1/(k+1)) = 1 − 1/n
 ```
 
+→ **C++ implementation:** [A5 The summation closed forms](#a5-the-summation-closed-forms)
+
 **Reindexing.** *"If the summation index appears in the body of the sum with a minus sign, it's worth thinking about reindexing."* [CLRS §A.1, p.1143]
 
 ```
@@ -515,17 +523,32 @@ Note the subtlety CLRS flags: on the left `Θ` applies to `k`; on the right it a
 Matrix multiplication [Skiena §2.5.4, p.45]:
 
 ```cpp
-for (int i = 0; i < x; ++i)
-    for (int j = 0; j < z; ++j) {
-        C[i][j] = 0;
-        for (int k = 0; k < y; ++k)
-            C[i][j] += A[i][k] * B[k][j];
-    }
+// A is x-by-y, B is y-by-z, C is x-by-z.
+// `const vector<vector<double>>&` = call-by-constant-reference: no copy of a
+// potentially huge matrix, and the const forbids us from modifying the inputs.
+// C is a plain `&` (call-by-reference) precisely because we DO write to it.
+void matrixMultiply(const vector<vector<double>>& A,
+                    const vector<vector<double>>& B,
+                    vector<vector<double>>& C) {
+    const int x = (int)A.size();                 // rows of A
+    const int y = (int)B.size();                 // rows of B == columns of A
+    const int z = y ? (int)B[0].size() : 0;      // columns of B
+    C.assign(x, vector<double>(z, 0.0));         // x rows, each z zeros
+
+    for (int i = 0; i < x; ++i)
+        for (int j = 0; j < z; ++j) {
+            C[i][j] = 0;
+            for (int k = 0; k < y; ++k)
+                C[i][j] += A[i][k] * B[k][j];
+        }
+}
 ```
 
 ```
 M(x,y,z) = Σ_{i=1}^{x} Σ_{j=1}^{y} Σ_{k=1}^{z} 1
 ```
+
+→ **C++ implementation:** [A4 Nested loops become nested summations](#a4-nested-loops-become-nested-summations)
 
 **Evaluate from the right inward:** sum of `z` ones is `z`; sum of `y` `z`'s is `yz`; sum of `x` `yz`'s is `xyz`. So `Θ(xyz)`, and `Θ(n³)` when all dimensions are `n`. Both `O` and `Ω` hold because the loop bounds are fixed by the dimensions — no early exit. Faster algorithms exist (Strassen, [M03](M03-divide-conquer.md)).
 
@@ -610,6 +633,8 @@ power(a, n)
     else:         return a · x²
 ```
 
+→ **C++ implementation:** [A1 power](#a1-power)
+
 **Correctness.** Strong induction on `n`. Base `n = 0` gives 1. For `n > 0`, by hypothesis `x = a^{⌊n/2⌋}`. If `n` even, `n = 2⌊n/2⌋` so `x² = aⁿ`. If `n` odd, `n = 2⌊n/2⌋ + 1` so `a·x² = aⁿ`. ∎
 
 **Complexity.** `T(n) = T(n/2) + O(1)` → **`Θ(log n)` multiplications**, versus `n − 1` naively.
@@ -623,14 +648,14 @@ power(a, n)
 
 // Computes (base^exp) mod m in O(log exp) multiplications.
 // Requires m > 0. Uses __int128 to avoid overflow on the multiply.
-std::uint64_t powMod(std::uint64_t base, std::uint64_t exp, std::uint64_t m) {
-    std::uint64_t result = 1 % m;
+uint64_t powMod(uint64_t base, uint64_t exp, uint64_t m) {
+    uint64_t result = 1 % m;
     base %= m;
     while (exp > 0) {
         if (exp & 1ULL)                                    // bit set -> fold base in
-            result = static_cast<std::uint64_t>(
+            result = static_cast<uint64_t>(
                          (static_cast<__uint128_t>(result) * base) % m);
-        base = static_cast<std::uint64_t>(
+        base = static_cast<uint64_t>(
                    (static_cast<__uint128_t>(base) * base) % m);
         exp >>= 1;
     }
@@ -776,6 +801,383 @@ Skiena's defense of the model is worth keeping because it is the right attitude 
 15. Why doesn't the base of a logarithm matter? How many binary-search probes on `10⁶` items with a 1/3–2/3 split? *(§8)*
 16. Write iterative `powMod` from memory. Why `1 % m` and not `1`? *(§8)*
 17. Show `lg(n!) = Θ(n log n)`, and say which lower bound depends on it. *(§5, §8)*
+
+---
+
+## Practice — where to drill this module
+
+M02 is an *analysis* module, so most of the drilling is "state the complexity and defend it" rather than "write the code". These are the problems where the analysis is the hard part.
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| Fast exponentiation | [50 · Pow(x, n)](https://leetcode.com/problems/powx-n/) | the exact `power(a,n)` of §8 — and `n = INT_MIN` is the edge case the pseudocode hides |
+| Modular fast exponentiation | [372 · Super Pow](https://leetcode.com/problems/super-pow/) | forces the modular version, plus a digit-by-digit outer loop |
+| Naive matching and its `Θ(nm)` | [28 · Find the Index of the First Occurrence in a String](https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/) | write the naive version, then explain why it is `Θ(nm)` and construct the bad input |
+| Where a log comes from (halving) | [704 · Binary Search](https://leetcode.com/problems/binary-search/) · [33 · Search in Rotated Sorted Array](https://leetcode.com/problems/search-in-rotated-sorted-array/) · [153 · Find Minimum in Rotated Sorted Array](https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/) | three problems whose whole content is "the answer is `lg n` because you halve" |
+| Rolling-hash vs naive cost | [187 · Repeated DNA Sequences](https://leetcode.com/problems/repeated-dna-sequences/) | the naive answer is `Θ(nm)`; the intended one is `Θ(n)`. The gap *is* this module |
+| Nested loops → nested sums | *(no single problem — write your own)* | take any `O(n³)` brute force you already have and count its innermost executions exactly; the `A4` entry below shows how |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *Introductory Problems* and *Mathematics*. [Codeforces `math` tag](https://codeforces.com/problemset?tags=math) and [`binary search` tag](https://codeforces.com/problemset?tags=binary+search).
+
+**The drill that actually matters here** is not a problem at all: take any solution you have already written and (a) write down its exact operation count as a summation, (b) evaluate the summation in closed form, (c) construct an input that forces the worst case. The appendix below does exactly that for four algorithms, with the counts measured rather than asserted.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 1.*
+
+### 1. Integer types, width, and overflow — the analysis module's own bug class
+
+Asymptotics tells you `n²` grows fast; C++ then quietly wraps around when it does.
+
+| Type | Width | Max | Overflow behaviour |
+|---|---|---|---|
+| `int` | 32 bits | `2 147 483 647` | **undefined behaviour** — the optimizer may assume it never happens |
+| `long long` | 64 bits | `≈ 9.22 × 10¹⁸` | undefined behaviour |
+| `unsigned` / `size_t` | 32 / 64 | — | **defined**: wraps modulo 2ⁿ |
+| `__int128` | 128 (GCC/Clang ext.) | `≈ 1.7 × 10³⁸` | for the intermediate product in modular arithmetic |
+
+Signed overflow being *undefined* rather than *wrapping* is the part people get wrong. `if (a + b < a)` is not a valid overflow check for signed types — the compiler is entitled to delete it. Use a wider type, or `__builtin_add_overflow`.
+
+The rule of thumb this module gives you: **if your loop count is `Θ(n²)` and `n` can reach `10⁵`, the count is `10¹⁰` and does not fit in `int`.** Every counter in the appendix below is `long long` for that reason.
+
+### 2. `size_t` and the unsigned trap
+
+`vector::size()` returns `size_t`, an **unsigned** type. Mixing it with `int` triggers the usual-arithmetic-conversions rule: the `int` is converted to unsigned.
+
+```cpp
+void unsignedTrap(const vector<int>& v) {
+    // BROKEN when v is empty: v.size() - 1 is 0u - 1 == SIZE_MAX
+    for (size_t i = 0; i + 1 < v.size(); ++i) { /* correct rewrite */ }
+    // and this comparison warns under -Wall -Wextra for a good reason:
+    const int n = (int)v.size();      // cast ONCE, at the top, then use int
+    for (int i = 0; i < n; ++i) { (void)v[i]; }
+}
+```
+
+Weiss's convention throughout is to take the size into an `int` once. Do the same, and `-Wsign-compare` stays quiet.
+
+### 3. `double` is not a real number
+
+The summation checks in `A5` compare a loop's result against a closed form. They cannot use `==`:
+
+```cpp
+// Relative tolerance, not absolute: 1e-9 is a huge error next to 1e20
+// and an impossible one next to 1e-20.
+bool nearly(double a, double b, double tol) {
+    return fabs(a - b) <= tol * max(1.0, fabs(b));
+}
+```
+
+`double` has 53 bits of mantissa ≈ 15–16 decimal digits. Summing `1/k` for `k` up to `10⁶` accumulates rounding, which is why the harmonic check below uses a `1e-5` tolerance while the arithmetic one uses `1e-12`.
+
+### 4. `std::function` — type erasure, and what it costs
+
+`A6` stores growth-rate functions in a table, so it needs a type that can hold *any* callable:
+
+```cpp
+double crossoverDemo(const function<double(double)>& f, double n) { return f(n); }
+```
+
+`function<double(double)>` accepts a lambda, a function pointer, or a functor — but it does so through a **virtual call and possibly a heap allocation**. A template parameter (`template <typename F>`) is the zero-overhead alternative when the type is known at compile time. Use `std::function` when you must store heterogeneous callables in one container, as here; use a template when you are just passing a comparator to `sort`.
+
+### 5. Passing an out-parameter: pointer vs reference
+
+`A3` needs to return two things — a comparison count and a match position. Three idioms, in order of preference:
+
+```cpp
+struct MatchResult { long long compares; int where; };   // 1. best: a named struct
+MatchResult matchA(const string& p, const string& t);
+void matchB(const string& p, const string& t, int& where);   // 2. reference out-param
+void matchC(const string& p, const string& t, int* where);   // 3. pointer out-param
+```
+
+Weiss's guidance [§1.5.3] favours references over pointers, because a reference cannot be null and needs no `*` at the call site. The one argument for the pointer form is exactly that: `matchC(p, t, &where)` makes it **visible at the call site** that `where` will be modified. The appendix uses the pointer form for that reason, and says so.
+
+### 6. Structured bindings (C++17)
+
+```cpp
+void bindingsDemo() {
+    vector<array<int,3>> dims = {{4,5,6},{10,10,10}};
+    for (auto [x, y, z] : dims) (void)(x + y + z);   // unpacks each array into three names
+}
+```
+
+This works on arrays, `pair`, `tuple`, and any struct with public members. It replaces `d[0], d[1], d[2]` with names that say what they mean — and in this module that matters, because `x`, `y`, `z` are the three loop bounds whose product is the running time.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+M02 has one procedure in pseudocode (`power`) and several *analysis claims* stated as summations. Each entry below turns one of those into runnable C++ that **measures** the quantity the text asserts, so nothing here has to be taken on faith.
+
+### A1 power
+
+*Pseudocode: §8, "Algorithm: Fast Exponentiation (binary exponentiation)".*
+
+```cpp
+// LITERAL translation of Skiena's pseudocode: recursive, one recursive call.
+//
+//   power(a, n)
+//       if n = 0: return 1
+//       x = power(a, floor(n/2))
+//       if n is even: return x^2
+//       else:         return a * x^2
+//
+// `long long` throughout: a^n overflows 32-bit almost immediately, and signed
+// overflow is UNDEFINED behaviour, not wraparound.
+long long powerRecursive(long long a, long long n) {
+    if (n == 0) return 1;                     // if n = 0: return 1
+    long long x = powerRecursive(a, n / 2);   // x = power(a, floor(n/2))
+    // CRITICAL: `x` is computed ONCE and squared. Writing
+    //     return powerRecursive(a,n/2) * powerRecursive(a,n/2);
+    // is the same mathematics and a catastrophically different algorithm --
+    // it turns T(n) = T(n/2) + O(1)  =  Theta(lg n)
+    //     into T(n) = 2T(n/2) + O(1) =  Theta(n).
+    // This is the single most instructive bug in the module.
+    if (n % 2 == 0) return x * x;             // n even
+    return a * x * x;                         // n odd
+}
+
+// Counts the multiplications powerRecursive performs, without doing them.
+// Even step: one multiply (x*x). Odd step: two (x*x, then a*(x*x)).
+int powerMultiplyCount(long long n) {
+    if (n == 0) return 0;
+    return powerMultiplyCount(n / 2) + (n % 2 == 0 ? 1 : 2);
+}
+```
+
+**Complexity.** `T(n) = T(n/2) + O(1) = Θ(lg n)` multiplications; `Θ(lg n)` recursion depth. The iterative `powMod` in the body of §8 is the same algorithm with the recursion unrolled into a scan over the bits of `n` — and it is `Θ(1)` space.
+
+> *Verified:* `powerRecursive` agrees with a naive repeated-multiplication loop for all `a ∈ [0,5]`, `n ∈ [0,12]`. Multiplication counts, against the naive `n − 1`:
+>
+> | `n` | `lg n` | multiplications | naive |
+> |---|---|---|---|
+> | 10 | 3 | 6 | 9 |
+> | 1 000 | 10 | 16 | 999 |
+> | 10⁶ | 20 | 27 | 999 999 |
+> | 10⁹ | 30 | **43** | 999 999 999 |
+>
+> Forty-three multiplications instead of a billion. That is what `Θ(lg n)` buys.
+
+### A2 Selection sort's exact comparison count
+
+*Corresponds to the summation `T(n) = Σ_{i=0}^{n−1} Σ_{j=i+1}^{n−1} 1 = n(n−1)/2` in §4.*
+
+```cpp
+// The same selectionSort as in the body, with a counter threaded through, so
+// the summation in the text can be CHECKED rather than believed.
+//
+// Return type is `long long`, not `int`: for n = 100000 the count is
+// n(n-1)/2 ~ 5e9, which overflows a 32-bit int. This is the module's own
+// lesson applied to the module's own code.
+long long selectionSortCompares(vector<int>& s) {
+    const int n = (int)s.size();       // one cast, at the top (see toolkit §2)
+    long long compares = 0;
+    for (int i = 0; i < n; ++i) {                 // outer: i = 0 .. n-1
+        int mn = i;
+        for (int j = i + 1; j < n; ++j) {         // inner: j = i+1 .. n-1, i.e. n-i-1 times
+            ++compares;
+            if (s[j] < s[mn]) mn = j;
+        }
+        // std::swap: for `int` this is three moves; for a big type it is three
+        // MOVES rather than three copies in C++11 [Weiss 1.5.5, p.29].
+        // swap(s[i], s[i]) when mn == i is harmless but not free -- guarding it
+        // with `if (mn != i)` is a real micro-optimisation for expensive types.
+        swap(s[i], s[mn]);
+    }
+    return compares;
+}
+```
+
+**The point.** `Σ_{i=0}^{n−1} (n − i − 1) = (n−1) + (n−2) + … + 1 + 0 = n(n−1)/2`. Selection sort is the rare algorithm with **no case analysis at all**: the loop bounds do not depend on the data, so best = average = worst = `Θ(n²)` exactly.
+
+> *Verified:* for `n ∈ {0, 1, 2, 10, 100, 500}`, on random, already-sorted, and reverse-sorted inputs, the measured count was **exactly `n(n−1)/2` every time** — and the output always matched `std::sort`.
+
+### A3 Naive string matching, and its `Ω(nm)` instance
+
+*Corresponds to the simplification chain and the `(n − m + 1)·m = Ω(nm)` block in §4.*
+
+```cpp
+// Same findMatch as the body, instrumented. Reports BOTH the comparison count
+// and the match position, so the out-parameter question of toolkit 5 is live.
+//
+// The pointer form `int* whereFound` is chosen deliberately: it forces the
+// caller to write `&where`, which makes the mutation visible at the call site.
+long long findMatchCompares(const string& p, const string& t, int* whereFound) {
+    const int m = (int)p.size();
+    const int n = (int)t.size();
+    long long compares = 0;
+    *whereFound = -1;                       // "not found" -- set BEFORE any early return
+
+    // `i + m <= n` not `i < n - m`: with n and m as ints this is equivalent,
+    // but if they were size_t, `n - m` on n < m would wrap to a huge number and
+    // the loop would run off the end of the string. Write the addition form.
+    for (int i = 0; i + m <= n; ++i) {
+        int j = 0;
+        while (j < m) {
+            ++compares;                     // count the character comparison itself
+            if (t[i + j] != p[j]) break;
+            ++j;
+        }
+        if (j == m) { *whereFound = i; return compares; }
+    }
+    return compares;
+}
+```
+
+**Building the worst case.** `t = "aaa…a"` (`n` a's) and `p = "aa…ab"` (`m−1` a's then `b`). Every one of the `n − m + 1` alignments matches `m − 1` characters and fails on the last, so the count is exactly `(n − m + 1)·m`.
+
+> *Verified*, with `m = 5`:
+>
+> | `n` | measured comparisons | `(n − m + 1)·m` |
+> |---|---|---|
+> | 50 | 230 | 230 |
+> | 100 | 480 | 480 |
+> | 200 | 980 | 980 |
+> | 400 | 1980 | 1980 |
+>
+> Exact agreement, so the `Ω(nm)` lower bound is not an estimate. On an ordinary input (`p = "abc"` in `t = "xxabcxx"`) it finds the match at index 2 after **5** comparisons — which is why naive matching is fine in practice and terrible in theory.
+
+### A4 Nested loops become nested summations
+
+*Corresponds to `M(x,y,z) = Σ_{i=1}^{x} Σ_{j=1}^{y} Σ_{k=1}^{z} 1` in §4.*
+
+```cpp
+// Counts executions of the innermost statement of the triple loop, to check
+// that the triple summation really evaluates to x*y*z.
+long long matrixMultiplyOps(int x, int y, int z) {
+    long long ops = 0;
+    // vector<vector<double>> is a vector OF vectors: rows are separate
+    // allocations, so it is not contiguous and each A[i][k] is two
+    // dereferences. A single vector<double> of size x*y with manual indexing
+    // (A[i*y + k]) is measurably faster -- but this shape matches the
+    // pseudocode, and clarity wins in notes.
+    vector<vector<double>> A(x, vector<double>(y, 1.0));
+    vector<vector<double>> B(y, vector<double>(z, 1.0));
+    vector<vector<double>> C(x, vector<double>(z, 0.0));
+
+    for (int i = 0; i < x; ++i)
+        for (int j = 0; j < z; ++j) {
+            C[i][j] = 0;
+            for (int k = 0; k < y; ++k) { ++ops; C[i][j] += A[i][k] * B[k][j]; }
+        }
+    return ops;
+}
+```
+
+**Evaluate from the inside out:** the innermost sum of `z` ones is `z`; the middle sum of `y` copies of `z` is `yz`; the outer sum of `x` copies of `yz` is `xyz`. **`Θ(xyz)`**, and `Θ(n³)` when all three dimensions are `n`. Both `O` and `Ω` hold, because the loop bounds are fixed by the dimensions — there is no early exit.
+
+> *Verified:* `(x,y,z) = (4,5,6) → 120`; `(10,10,10) → 1000`; `(20,3,7) → 420`. Exactly `xyz` in each case.
+
+### A5 The summation closed forms
+
+*Corresponds to the arithmetic / geometric / harmonic / telescoping identities in §6.*
+
+```cpp
+// Each function returns BOTH the value computed by brute-force summation and
+// the value from the closed form, so a test can compare them.
+// A tiny struct beats pair<double,double>: `.direct` and `.closed` say what
+// they mean, `.first` and `.second` do not.
+struct SumCheck { double direct, closed; };
+
+// Arithmetic: sum_{k=1}^{n} k = n(n+1)/2  -->  Theta(n^2)
+SumCheck arithmeticSum(int n) {
+    double s = 0;
+    for (int k = 1; k <= n; ++k) s += k;
+    // `n * (n + 1.0) / 2.0`: the 1.0 forces DOUBLE arithmetic. Written as
+    // `n * (n + 1) / 2` with int n = 100000, the product 1e10 overflows int.
+    return {s, n * (n + 1.0) / 2.0};
+}
+
+// Geometric: sum_{k=0}^{n} x^k = (x^{n+1} - 1)/(x - 1)
+// For x > 1 the sum is Theta(largest term); for x < 1 it converges to a
+// CONSTANT, which is why such a sum is "free" in an analysis.
+SumCheck geometricSum(double x, int n) {
+    double s = 0;
+    for (int k = 0; k <= n; ++k) s += pow(x, k);
+    return {s, (pow(x, n + 1) - 1) / (x - 1)};
+}
+
+// Harmonic: H_n = sum_{k=1}^{n} 1/k = ln n + gamma + O(1/n) = Theta(lg n)
+SumCheck harmonicSum(int n) {
+    double s = 0;
+    for (int k = 1; k <= n; ++k) s += 1.0 / k;
+    const double gamma = 0.5772156649015329;   // Euler-Mascheroni
+    return {s, log((double)n) + gamma};
+}
+
+// Telescoping: sum_{k=1}^{n-1} 1/(k(k+1)) = sum (1/k - 1/(k+1)) = 1 - 1/n
+SumCheck telescopingSum(int n) {
+    double s = 0;
+    // `k * (k + 1.0)`: again the 1.0. With int k near 46341, k*(k+1) overflows.
+    for (int k = 1; k <= n - 1; ++k) s += 1.0 / (k * (k + 1.0));
+    return {s, 1.0 - 1.0 / n};
+}
+
+// sum_{i=1}^{n} i*i! = (n+1)! - 1   -- the CLRS Appendix A worked example
+SumCheck factorialWeightedSum(int n) {
+    double s = 0, fact = 1;
+    for (int i = 1; i <= n; ++i) { fact *= i; s += i * fact; }
+    double f = 1;
+    for (int i = 1; i <= n + 1; ++i) f *= i;
+    return {s, f - 1};
+}
+```
+
+> *Verified*, direct summation against closed form:
+>
+> | Series | `n` | direct | closed form |
+> |---|---|---|---|
+> | arithmetic | 1 000 | 500 500 | 500 500 |
+> | geometric `x = 2` | 30 | 2 147 483 647 | 2 147 483 647 |
+> | geometric `x = ½` | 60 | 2.000000 | → 2 (converges) |
+> | harmonic | 10⁶ | 14.392727 | `ln n + γ` = 14.392726 |
+> | telescoping | 10⁵ | 0.999990000 | `1 − 1/n` = 0.999990000 |
+> | `Σ i·i!` | 15 | 20 922 789 887 999 | `(n+1)! − 1` = 20 922 789 887 999 |
+>
+> Note the geometric row with `x = 2`: the sum is `2 147 483 647` while the **largest single term** `2³⁰` is `1 073 741 824` — a ratio of exactly 2. That is the whole content of *"an increasing geometric series is `Θ(its largest term)`"*. And the `x = ½` row converges to 2 no matter how many terms you add: that is why a decreasing geometric series contributes only `Θ(1)`.
+
+### A6 The dominance hierarchy, measured
+
+*Corresponds to `n! ≫ cⁿ ≫ n³ ≫ n² ≫ n^{1+ε} ≫ n log n ≫ n ≫ …` in §5.*
+
+```cpp
+// Given two growth functions expressed as their LOGARITHMS (so 2^n does not
+// overflow), binary-search for the n where g overtakes f.
+//
+// Precondition: f(lo) > g(lo) and f(hi) < g(hi) -- i.e. the crossover is
+// bracketed. The caller asserts this; a bisection with a bad bracket silently
+// returns nonsense, which is the classic bisection bug.
+//
+// std::function<double(double)> can hold any callable (toolkit 4). Passed by
+// const& to avoid copying the type-erased object on every call.
+double crossover(const function<double(double)>& f, const function<double(double)>& g,
+                 double lo, double hi) {
+    for (int it = 0; it < 200; ++it) {          // fixed iteration count: no epsilon to tune,
+        double mid = lo + (hi - lo) / 2;        // and doubles run out of precision long before 200
+        if (f(mid) < g(mid)) hi = mid;          // g has already overtaken -> crossover is <= mid
+        else                 lo = mid;
+    }
+    return lo;
+}
+// `lo + (hi - lo) / 2`, not `(lo + hi) / 2`: for doubles this is about
+// avoiding overflow to infinity when both are ~1e308; for ints it is the
+// famous binary-search overflow bug. Same habit, both worlds.
+```
+
+> *Verified* crossovers (the smallest `n` at which the second function is larger):
+>
+> | grows slower eventually | overtaken by | at `n` = |
+> |---|---|---|
+> | `n³` | `2ⁿ` | **10** |
+> | `100n` | `n²` | **101** |
+> | `n¹⁰` | `1.1ⁿ` | **686** |
+> | `n lg n` | `n^1.1` | **≈ 4.9 × 10¹⁷** |
+>
+> Read the first and last rows together. `2ⁿ` beats `n³` at `n = 10` — exponentials really are hopeless immediately. But `n^1.1` does not beat `n lg n` until `n ≈ 5 × 10¹⁷`, which is more elements than you will ever have. **Both facts are consequences of the same hierarchy, and only one of them matters in practice.** This is the honest answer to "does asymptotic analysis lie?": it tells you the truth about the limit, and the limit is sometimes past the end of the world.
+
 
 ---
 

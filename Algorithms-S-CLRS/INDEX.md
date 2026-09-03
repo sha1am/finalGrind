@@ -6,6 +6,25 @@
 
 ---
 
+## C++ conventions used everywhere in these notes
+
+Every ```` ```cpp ```` block in every module compiles under **`g++ -std=c++17 -Wall -Wextra`** and assumes exactly this prelude:
+
+```cpp
+#include <bits/stdc++.h>    // one header, the whole standard library (GCC/Clang only)
+using namespace std;        // no std:: prefixes anywhere in these notes
+```
+
+- **`using namespace std;` is assumed, so `std::` never appears.** In production code you would not do this; in notes, in competitive programming, and on a whiteboard, the `std::` noise buys nothing and costs readability. The one place it bites is **name lookup** — a class member or local name silently hides the `std` version (see the `mergeRuns` comment in [M09](M09-amortized.md)). Where that can happen, the code says so.
+- **`#include <bits/stdc++.h>` is a GCC/Clang convenience header**, not standard C++. Real projects list explicit headers (`<vector>`, `<algorithm>`, `<queue>`, …); judges and interviews accept the shortcut.
+- **Every module ends with two C++ sections:**
+  - **C++ Toolkit for This Module** — the language features that module's code leans on, explained from Weiss, *Data Structures and Algorithm Analysis in C++* (4th ed.), ch. 1.
+  - **Appendix — C++ for Every Pseudocode Block** — a heavily-commented, runnable translation of *every* pseudocode block in that module. Each pseudocode block in the body carries a link straight to its implementation.
+- **Body code vs appendix code.** Body implementations are the *practical* version — the one you would actually write. Appendix implementations are *literal translations of the pseudocode*, line for line, so you can see the correspondence. They are deliberately different, and comparing them is the point.
+- **Third book used only for the C++ teaching**, not for algorithms: Mark Allen Weiss, *Data Structures and Algorithm Analysis in C++*, 4th ed. Cited as `[Weiss §1.5.3, p.25]`.
+
+---
+
 ## How these notes are built
 
 Two books, one set of notes. Every topic is written once, as a **Unified Understanding**, drawing from
@@ -26,67 +45,69 @@ Page references look like `[CLRS §2.1, p.17]` and `[Skiena §1.3, p.11]` so you
 
 ## Module map
 
+**Status:** ✅ written · ⏳ planned (no file yet — links in the modules point back here).
+
 ### Part I — Foundations
 
-| # | Module | Primary sources |
-|---|---|---|
-| [M01](M01-foundations.md) | Foundations of Algorithm Design | CLRS 1–2 · Skiena 1 |
-| [M02](M02-asymptotics.md) | Asymptotics & the Analysis Toolkit | CLRS 3 + App. A · Skiena 2 |
-| [M03](M03-divide-conquer.md) | Divide & Conquer and Recurrences | CLRS 4 · Skiena 5 |
-| [M04](M04-randomization.md) | Randomization & Probabilistic Analysis | CLRS 5 · Skiena 6 |
+| # | Module | Primary sources | Status |
+|---|---|---|---|
+| [M01](M01-foundations.md) | Foundations of Algorithm Design | CLRS 1–2 · Skiena 1 | ✅ |
+| [M02](M02-asymptotics.md) | Asymptotics & the Analysis Toolkit | CLRS 3 + App. A · Skiena 2 | ✅ |
+| [M03](M03-divide-conquer.md) | Divide & Conquer and Recurrences | CLRS 4 · Skiena 5 | ✅ |
+| [M04](M04-randomization.md) | Randomization & Probabilistic Analysis | CLRS 5 · Skiena 6 | ✅ |
 
 ### Part II — Sorting and Data Structures
 
-| # | Module | Primary sources |
-|---|---|---|
-| [M05](M05-sorting.md) | Sorting & Order Statistics | CLRS 6–9 · Skiena 4 |
-| [M06](M06-elementary-ds.md) | Elementary Data Structures | CLRS 10 · Skiena 3.1–3.3, 3.5, 3.8 |
-| [M07](M07-hashing.md) | Hashing | CLRS 11 · Skiena 3.7, 6 |
-| [M08](M08-search-trees.md) | Search Trees & Augmentation | CLRS 12, 13, 17, 18 · Skiena 3.4 |
-| [M09](M09-amortized.md) | Amortized Analysis | CLRS 16 |
-| [M10](M10-union-find.md) | Disjoint Sets / Union-Find | CLRS 19 · Skiena 8.1.3 |
+| # | Module | Primary sources | Status |
+|---|---|---|---|
+| [M05](M05-sorting.md) | Sorting & Order Statistics | CLRS 6–9 · Skiena 4 | ✅ |
+| [M06](M06-elementary-ds.md) | Elementary Data Structures | CLRS 10 · Skiena 3.1–3.3, 3.5, 3.8 | ✅ |
+| [M07](M07-hashing.md) | Hashing | CLRS 11 · Skiena 3.7, 6 | ✅ |
+| [M08](M08-search-trees.md) | Search Trees & Augmentation | CLRS 12, 13, 17, 18 · Skiena 3.4 | ✅ |
+| [M09](M09-amortized.md) | Amortized Analysis | CLRS 16 | ✅ |
+| [M10](M10-union-find.md) | Disjoint Sets / Union-Find | CLRS 19 · Skiena 8.1.3 | ✅ |
 
 ### Part III — Design Techniques
 
-| # | Module | Primary sources |
-|---|---|---|
-| [M11](M11-dynamic-programming.md) | Dynamic Programming | CLRS 14 · Skiena 10 |
-| [M12](M12-greedy.md) | Greedy Algorithms | CLRS 15 · Skiena (throughout) |
+| # | Module | Primary sources | Status |
+|---|---|---|---|
+| [M11](M11-dynamic-programming.md) | Dynamic Programming | CLRS 14 · Skiena 10 | ✅ |
+| [M12](M12-greedy.md) | Greedy Algorithms | CLRS 15 · Skiena (throughout) | ✅ |
 
 ### Part IV — Graphs
 
-| # | Module | Primary sources |
-|---|---|---|
-| [M13](M13-graph-traversal.md) | Graph Representation & Traversal | CLRS 20 · Skiena 7 |
-| [M14](M14-mst.md) | Minimum Spanning Trees | CLRS 21 · Skiena 8.1 |
-| [M15](M15-shortest-paths.md) | Shortest Paths | CLRS 22–23 · Skiena 8.3–8.4 |
-| [M16](M16-flow-matching.md) | Network Flow & Matching | CLRS 24–25 · Skiena 8.5 |
+| # | Module | Primary sources | Status |
+|---|---|---|---|
+| [M13](M13-graphs-traversal.md) | Graph Representation & Traversal | CLRS 20 · Skiena 7 | ✅ |
+| [M14](M14-mst.md) | Minimum Spanning Trees | CLRS 21 · Skiena 8.1 | ✅ |
+| [M15](M15-shortest-paths.md) | Shortest Paths | CLRS 22–23 · Skiena 8.3–8.4 | ✅ |
+| M16 | Network Flow & Matching | CLRS 24–25 · Skiena 8.5 | ⏳ |
 
 ### Part V — Search, Strings, Intractability
 
-| # | Module | Primary sources |
-|---|---|---|
-| [M17](M17-combinatorial-search.md) | Combinatorial Search & Backtracking | Skiena 9 |
-| [M18](M18-strings.md) | String Matching & Suffix Structures | CLRS 32 · Skiena 3.9, 21 |
-| [M19](M19-np-completeness.md) | NP-Completeness & Reductions | CLRS 34 · Skiena 11 |
-| [M20](M20-hard-problems.md) | Coping With Hard Problems | CLRS 35 · Skiena 12 |
+| # | Module | Primary sources | Status |
+|---|---|---|---|
+| M17 | Combinatorial Search & Backtracking | Skiena 9 | ⏳ |
+| M18 | String Matching & Suffix Structures | CLRS 32 · Skiena 3.9, 21 | ⏳ |
+| M19 | NP-Completeness & Reductions | CLRS 34 · Skiena 11 | ⏳ |
+| M20 | Coping With Hard Problems | CLRS 35 · Skiena 12 | ⏳ |
 
 ### Part VI — Specialized Topics
 
-| # | Module | Primary sources |
-|---|---|---|
-| [M21](M21-number-theory.md) | Number-Theoretic Algorithms | CLRS 31 |
-| [M22](M22-linear-programming.md) | Linear Programming | CLRS 29 · Skiena 13.6 |
-| [M23](M23-matrix-fft.md) | Matrix Operations, Polynomials & FFT | CLRS 28, 30 |
-| [M24](M24-parallel-online.md) | Parallel & Online Algorithms | CLRS 26–27 |
-| [M25](M25-ml-algorithms.md) | Machine-Learning Algorithms | CLRS 33 |
-| [M26](M26-geometry-catalog.md) | Geometry & the Algorithm Catalog | Skiena 13, Part II |
+| # | Module | Primary sources | Status |
+|---|---|---|---|
+| M21 | Number-Theoretic Algorithms | CLRS 31 | ⏳ |
+| M22 | Linear Programming | CLRS 29 · Skiena 13.6 | ⏳ |
+| M23 | Matrix Operations, Polynomials & FFT | CLRS 28, 30 | ⏳ |
+| M24 | Parallel & Online Algorithms | CLRS 26–27 | ⏳ |
+| M25 | Machine-Learning Algorithms | CLRS 33 | ⏳ |
+| M26 | Geometry & the Algorithm Catalog | Skiena 13, Part II | ⏳ |
 
 ### Part VII — Revision
 
-| # | Module | |
-|---|---|---|
-| [M27](M27-cheatsheet.md) | Master Cheat Sheet & Recognition Playbook | cross-module |
+| # | Module | | Status |
+|---|---|---|---|
+| M27 | Master Cheat Sheet & Recognition Playbook | cross-module | ⏳ |
 
 ---
 

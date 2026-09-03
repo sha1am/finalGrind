@@ -208,6 +208,8 @@ MAX-HEAPIFY(A, i)
 7      MAX-HEAPIFY(A, largest)
 ```
 
+→ **C++ implementation:** [A1 MAX-HEAPIFY](#a1-max-heapify)
+
 **Complexity.** Each child's subtree has at most `2n/3` nodes (worst case: the bottom level is exactly half full) [CLRS Ex. 6.2-2]:
 
 ```
@@ -224,6 +226,8 @@ BUILD-MAX-HEAP(A, n)
 2  for i = ⌊n/2⌋ downto 1
 3      MAX-HEAPIFY(A, i)
 ```
+
+→ **C++ implementation:** [A2 BUILD-MAX-HEAP](#a2-build-max-heap)
 
 **Why start at `⌊n/2⌋` and go down?** The elements `A[⌊n/2⌋+1 .. n]` are all **leaves** [Ex. 6.1-8], hence already 1-element heaps. And you must go *downward* in index so that when you heapify node `i`, both its children are already heap roots [Ex. 6.3-3].
 
@@ -277,6 +281,8 @@ HEAPSORT(A, n)
 5      MAX-HEAPIFY(A, 1)              // restore the property at the root
 ```
 
+→ **C++ implementation:** [A3 HEAPSORT](#a3-heapsort)
+
 **Loop invariant** [Ex. 6.4-2]: *At the start of each iteration, `A[1..i]` is a max-heap containing the `i` smallest elements of `A[1..n]`, and `A[i+1..n]` contains the `n−i` largest, sorted.*
 
 **Complexity.** `O(n)` for the build + `(n−1)` calls of `O(lg n)` = **`O(n lg n)`**, worst case. Best case is also `Ω(n lg n)` for distinct elements [Ex. 6.4-5]. In place, `O(1)` auxiliary.
@@ -292,31 +298,31 @@ namespace detail {
 // Sift v[i] down within v[0 .. size-1]. 0-indexed: children are 2i+1 and 2i+2.
 // Iterative (CLRS Ex. 6.2-6) -- avoids recursion overhead entirely.
 template <typename T>
-void siftDown(std::vector<T>& v, int i, int size) {
-    T key = std::move(v[i]);
+void siftDown(vector<T>& v, int i, int size) {
+    T key = move(v[i]);
     while (true) {
         const int l = 2 * i + 1;
         if (l >= size) break;
         // Pick the larger child.
         const int child = (l + 1 < size && v[l] < v[l + 1]) ? l + 1 : l;
         if (!(key < v[child])) break;          // key already dominates
-        v[i] = std::move(v[child]);            // move child up (one write, not a swap)
+        v[i] = move(v[child]);            // move child up (one write, not a swap)
         i = child;
     }
-    v[i] = std::move(key);
+    v[i] = move(key);
 }
 
 }  // namespace detail
 
 // Heapsort: O(n log n) worst case, O(1) auxiliary space, NOT stable.
 template <typename T>
-void heapSort(std::vector<T>& v) {
+void heapSort(vector<T>& v) {
     const int n = static_cast<int>(v.size());
     // Build phase: Theta(n). Start at the last internal node.
     for (int i = n / 2 - 1; i >= 0; --i) detail::siftDown(v, i, n);
     // Sort phase: n-1 extractions.
     for (int i = n - 1; i > 0; --i) {
-        std::swap(v[0], v[i]);
+        swap(v[0], v[i]);
         detail::siftDown(v, 0, i);
     }
 }
@@ -387,6 +393,8 @@ MAX-HEAP-INSERT(A, x, n)
 5  MAX-HEAP-INCREASE-KEY(A, x, k)
 ```
 
+→ **C++ implementation:** [A4 MAX-HEAP-INSERT and MAX-HEAP-INCREASE-KEY](#a4-max-heap-insert-and-max-heap-increase-key)
+
 The `while` loop of `INCREASE-KEY` is *"reminiscent of the insertion loop of `INSERTION-SORT`"* — bubble up until the parent dominates.
 
 **Two exercise answers worth internalizing:**
@@ -406,7 +414,7 @@ The `while` loop of `INCREASE-KEY` is *"reminiscent of the insertion loop of `IN
 class IndexedMinPQ {
 public:
     explicit IndexedMinPQ(int capacity)
-        : pos_(capacity, -1), key_(capacity, std::numeric_limits<long long>::max()) {}
+        : pos_(capacity, -1), key_(capacity, numeric_limits<long long>::max()) {}
 
     bool empty() const { return heap_.empty(); }
     bool contains(int id) const { return pos_[id] != -1; }
@@ -428,7 +436,7 @@ public:
     }
 
     int popMin() {
-        if (heap_.empty()) throw std::underflow_error("empty priority queue");
+        if (heap_.empty()) throw underflow_error("empty priority queue");
         const int top = heap_.front();
         swapNodes(0, static_cast<int>(heap_.size()) - 1);
         heap_.pop_back();
@@ -438,12 +446,12 @@ public:
     }
 
 private:
-    std::vector<int> heap_;        // heap_[i] = id at heap position i
-    std::vector<int> pos_;         // pos_[id] = heap position of id, or -1
-    std::vector<long long> key_;
+    vector<int> heap_;        // heap_[i] = id at heap position i
+    vector<int> pos_;         // pos_[id] = heap position of id, or -1
+    vector<long long> key_;
 
     void swapNodes(int i, int j) {
-        std::swap(heap_[i], heap_[j]);
+        swap(heap_[i], heap_[j]);
         pos_[heap_[i]] = i;                 // the handle update CLRS describes
         pos_[heap_[j]] = j;
     }
@@ -503,25 +511,25 @@ Constructing and sorting all `m×n` pairs is `O(nm log(nm))` — and wasteful, s
 
 // The k cheapest sums a[i] + b[j], a and b sorted ascending.
 // O(k log k) time, O(k) space -- never materializes the n*m pairs.
-std::vector<std::pair<int,int>>
-kSmallestPairs(const std::vector<int>& a, const std::vector<int>& b, int k) {
-    std::vector<std::pair<int,int>> out;
+vector<pair<int,int>>
+kSmallestPairs(const vector<int>& a, const vector<int>& b, int k) {
+    vector<pair<int,int>> out;
     if (a.empty() || b.empty() || k <= 0) return out;
 
-    struct Node { std::int64_t sum; int i, j; };
+    struct Node { int64_t sum; int i, j; };
     auto worse = [](const Node& x, const Node& y) { return x.sum > y.sum; };
-    std::priority_queue<Node, std::vector<Node>, decltype(worse)> pq(worse);
+    priority_queue<Node, vector<Node>, decltype(worse)> pq(worse);
 
-    pq.push({static_cast<std::int64_t>(a[0]) + b[0], 0, 0});
+    pq.push({static_cast<int64_t>(a[0]) + b[0], 0, 0});
     while (!pq.empty() && static_cast<int>(out.size()) < k) {
         const Node cur = pq.top(); pq.pop();
         out.push_back({cur.i, cur.j});
         // Push (i, j+1) always; push (i+1, j) only from the j == 0 column.
         // This generates every pair exactly once -- no duplicate check needed.
         if (cur.j + 1 < static_cast<int>(b.size()))
-            pq.push({static_cast<std::int64_t>(a[cur.i]) + b[cur.j + 1], cur.i, cur.j + 1});
+            pq.push({static_cast<int64_t>(a[cur.i]) + b[cur.j + 1], cur.i, cur.j + 1});
         if (cur.j == 0 && cur.i + 1 < static_cast<int>(a.size()))
-            pq.push({static_cast<std::int64_t>(a[cur.i + 1]) + b[0], cur.i + 1, 0});
+            pq.push({static_cast<int64_t>(a[cur.i + 1]) + b[0], cur.i + 1, 0});
     }
     return out;
 }
@@ -538,7 +546,7 @@ Two natural but too-slow ideas: `k` extract-mins is `O(k log n)`; scanning the f
 ```cpp
 // Returns how many of the k needed "small" elements remain unfound.
 // Result 0  <=>  at least k elements are < x  <=>  kth smallest is < x.
-int heapCompare(const std::vector<int>& heap, int i, int count, int x) {
+int heapCompare(const vector<int>& heap, int i, int count, int x) {
     if (count <= 0 || i >= static_cast<int>(heap.size())) return count;
     if (heap[i] < x) {
         count = heapCompare(heap, 2 * i + 1, count - 1, x);
@@ -588,6 +596,8 @@ PARTITION(A, p, r)                        // Lomuto
 7  exchange A[i + 1] with A[r]            // pivot into place
 8  return i + 1
 ```
+
+→ **C++ implementation:** [A5 QUICKSORT and PARTITION](#a5-quicksort-and-partition)
 
 ### Correctness — the partition loop invariant [CLRS §7.1, p.184]
 
@@ -647,6 +657,8 @@ RANDOMIZED-PARTITION(A, p, r)
 3  return PARTITION(A, p, r)
 ```
 
+→ **C++ implementation:** [A6 RANDOMIZED-PARTITION](#a6-randomized-partition)
+
 CLRS notes that although you *could* pre-shuffle the whole array (as with `RANDOMIZED-HIRE-ASSISTANT`), *"a different randomization technique yields a simpler analysis"* — randomize the pivot instead.
 
 ### The rigorous expected-time analysis — the argument to know
@@ -700,29 +712,29 @@ namespace detail {
 //   v[gt+1..hi]  > pivot
 // The 3-way split is what makes quicksort O(n) on all-equal input rather than O(n^2).
 template <typename T>
-std::pair<int,int> partition3(std::vector<T>& v, int lo, int hi, const T& pivot) {
+pair<int,int> partition3(vector<T>& v, int lo, int hi, const T& pivot) {
     int lt = lo, i = lo, gt = hi;
     while (i <= gt) {
-        if      (v[i] < pivot) std::swap(v[lt++], v[i++]);
-        else if (pivot < v[i]) std::swap(v[i], v[gt--]);   // do NOT advance i
+        if      (v[i] < pivot) swap(v[lt++], v[i++]);
+        else if (pivot < v[i]) swap(v[i], v[gt--]);   // do NOT advance i
         else                   ++i;
     }
     return {lt, gt};
 }
 
 template <typename T, typename RNG>
-void quickSortRec(std::vector<T>& v, int lo, int hi, RNG& rng) {
+void quickSortRec(vector<T>& v, int lo, int hi, RNG& rng) {
     while (lo < hi) {
         if (hi - lo < 16) {                       // coarsen the leaves (CLRS Ex. 7.4-5)
             for (int i = lo + 1; i <= hi; ++i) {
-                T key = std::move(v[i]);
+                T key = move(v[i]);
                 int j = i - 1;
-                while (j >= lo && key < v[j]) { v[j + 1] = std::move(v[j]); --j; }
-                v[j + 1] = std::move(key);
+                while (j >= lo && key < v[j]) { v[j + 1] = move(v[j]); --j; }
+                v[j + 1] = move(key);
             }
             return;
         }
-        std::uniform_int_distribution<int> pick(lo, hi);
+        uniform_int_distribution<int> pick(lo, hi);
         const T pivot = v[pick(rng)];             // copy: v is about to be permuted
         auto [lt, gt] = partition3(v, lo, hi, pivot);
 
@@ -738,9 +750,9 @@ void quickSortRec(std::vector<T>& v, int lo, int hi, RNG& rng) {
 // Randomized 3-way quicksort. O(n log n) expected, O(n^2) worst case (astronomically
 // unlikely), O(log n) stack, in place, NOT stable.
 template <typename T>
-void quickSort(std::vector<T>& v) {
+void quickSort(vector<T>& v) {
     if (v.size() < 2) return;
-    std::mt19937 rng(std::random_device{}());
+    mt19937 rng(random_device{}());
     detail::quickSortRec(v, 0, static_cast<int>(v.size()) - 1, rng);
 }
 ```
@@ -865,6 +877,8 @@ COUNTING-SORT(A, n, k)
 14  return B
 ```
 
+→ **C++ implementation:** [A7 COUNTING-SORT](#a7-counting-sort)
+
 **Complexity.** `Θ(k) + Θ(n) + Θ(k) + Θ(n) = Θ(k + n)`. Linear when `k = O(n)`.
 
 **Stability, and why line 11 counts down.** Iterating `j` from `n` downto `1` and decrementing `C[A[j]]` places the *last* occurrence of a value at the *last* available slot for that value — preserving input order. **Iterating forward instead still sorts correctly but is not stable** [Ex. 8.2-3].
@@ -879,8 +893,8 @@ COUNTING-SORT(A, n, k)
 #include <vector>
 
 // Stable counting sort of values in [0, k]. Theta(n + k) time, Theta(n + k) space.
-std::vector<int> countingSort(const std::vector<int>& a, int k) {
-    std::vector<int> count(k + 1, 0), out(a.size());
+vector<int> countingSort(const vector<int>& a, int k) {
+    vector<int> count(k + 1, 0), out(a.size());
     for (int x : a) ++count[x];
     for (int i = 1; i <= k; ++i) count[i] += count[i - 1];   // prefix sums
     // Backwards for stability: the last equal element takes the last slot.
@@ -910,6 +924,8 @@ RADIX-SORT(A, n, d)
 2      use a STABLE sort to sort array A[1..n] on digit i
 ```
 
+→ **C++ implementation:** [A8 RADIX-SORT](#a8-radix-sort)
+
 **Stability is load-bearing.** *"In order for radix sort to work correctly, the digit sorts must be stable."* Without stability, pass `i` destroys the ordering established by passes `1..i−1`.
 
 **Lemma 8.3.** With a `Θ(n+k)` stable sort, radix sort is **`Θ(d(n + k))`**. Linear when `d` is constant and `k = O(n)`.
@@ -938,33 +954,33 @@ RADIX-SORT(A, n, d)
 
 // LSD radix sort of 32-bit unsigned ints, 8 bits per pass -> 4 passes.
 // Theta(4(n + 256)) = Theta(n). Stable. Requires Theta(n) extra space.
-void radixSort(std::vector<std::uint32_t>& a) {
+void radixSort(vector<uint32_t>& a) {
     const size_t n = a.size();
     if (n < 2) return;
-    std::vector<std::uint32_t> buf(n);
-    std::vector<size_t> count(256);
+    vector<uint32_t> buf(n);
+    vector<size_t> count(256);
 
     for (int shift = 0; shift < 32; shift += 8) {
-        std::fill(count.begin(), count.end(), 0);
-        for (std::uint32_t x : a) ++count[(x >> shift) & 0xFFu];
+        fill(count.begin(), count.end(), 0);
+        for (uint32_t x : a) ++count[(x >> shift) & 0xFFu];
         // Skip this pass entirely if every key shares the same digit.
         if (count[(a[0] >> shift) & 0xFFu] == n) continue;
         size_t sum = 0;
         for (size_t d = 0; d < 256; ++d) { const size_t c = count[d]; count[d] = sum; sum += c; }
-        for (std::uint32_t x : a) buf[count[(x >> shift) & 0xFFu]++] = x;   // stable
+        for (uint32_t x : a) buf[count[(x >> shift) & 0xFFu]++] = x;   // stable
         a.swap(buf);
     }
 }
 
 // For SIGNED 32-bit ints: flip the sign bit to map int32 order onto uint32 order,
 // sort, then flip back.
-void radixSortSigned(std::vector<std::int32_t>& a) {
-    std::vector<std::uint32_t> u(a.size());
+void radixSortSigned(vector<int32_t>& a) {
+    vector<uint32_t> u(a.size());
     for (size_t i = 0; i < a.size(); ++i)
-        u[i] = static_cast<std::uint32_t>(a[i]) ^ 0x80000000u;
+        u[i] = static_cast<uint32_t>(a[i]) ^ 0x80000000u;
     radixSort(u);
     for (size_t i = 0; i < a.size(); ++i)
-        a[i] = static_cast<std::int32_t>(u[i] ^ 0x80000000u);
+        a[i] = static_cast<int32_t>(u[i] ^ 0x80000000u);
 }
 ```
 
@@ -987,6 +1003,8 @@ BUCKET-SORT(A, n)
 6  for i = 0 to n−1:  sort list B[i] with insertion sort
 8  concatenate B[0], B[1], …, B[n−1] in order
 ```
+
+→ **C++ implementation:** [A9 BUCKET-SORT](#a9-bucket-sort)
 
 **Correctness.** For `A[i] ≤ A[j]`, `⌊n·A[i]⌋ ≤ ⌊n·A[j]⌋`, so `A[i]` lands in the same or a lower-indexed bucket. Same bucket → line 6 orders them; different buckets → line 8 does.
 
@@ -1066,7 +1084,7 @@ Initialization: if `n` is odd, set both min and max to the first element. If `n`
 
 // Both extremes in at most 3*floor(n/2) comparisons.
 template <typename T>
-std::pair<T,T> minMax(const std::vector<T>& v) {
+pair<T,T> minMax(const vector<T>& v) {
     const int n = static_cast<int>(v.size());
     T mn, mx;
     int i;
@@ -1076,7 +1094,7 @@ std::pair<T,T> minMax(const std::vector<T>& v) {
                       i = 2; }
     for (; i + 1 < n; i += 2) {              // 3 comparisons per pair
         T lo = v[i], hi = v[i + 1];
-        if (hi < lo) std::swap(lo, hi);
+        if (hi < lo) swap(lo, hi);
         if (lo < mn) mn = lo;
         if (mx < hi) mx = hi;
     }
@@ -1099,6 +1117,8 @@ RANDOMIZED-SELECT(A, p, r, i)
 7  elseif i < k:   return RANDOMIZED-SELECT(A, p, q − 1, i)
 9  else:           return RANDOMIZED-SELECT(A, q + 1, r, i − k)
 ```
+
+→ **C++ implementation:** [A10 RANDOMIZED-SELECT](#a10-randomized-select)
 
 Note `i − k` on the last line: you already know `k` values below the target, so you want the `(i−k)`-th smallest of the high side.
 
@@ -1175,11 +1195,11 @@ namespace detail {
 // 3-way partition around an explicit pivot VALUE. Returns [lt, gt] with
 // v[lo..lt-1] < pivot, v[lt..gt] == pivot, v[gt+1..hi] > pivot.
 template <typename T>
-std::pair<int,int> partitionAround(std::vector<T>& v, int lo, int hi, const T& pivot) {
+pair<int,int> partitionAround(vector<T>& v, int lo, int hi, const T& pivot) {
     int lt = lo, i = lo, gt = hi;
     while (i <= gt) {
-        if      (v[i] < pivot) std::swap(v[lt++], v[i++]);
-        else if (pivot < v[i]) std::swap(v[i], v[gt--]);
+        if      (v[i] < pivot) swap(v[lt++], v[i++]);
+        else if (pivot < v[i]) swap(v[i], v[gt--]);
         else                   ++i;
     }
     return {lt, gt};
@@ -1190,11 +1210,11 @@ std::pair<int,int> partitionAround(std::vector<T>& v, int lo, int hi, const T& p
 // Quickselect: v[k] becomes the k-th smallest (0-indexed); the array is
 // partially reordered. O(n) expected, O(n^2) worst case.
 template <typename T>
-T quickSelect(std::vector<T> v, int k) {
-    std::mt19937 rng(std::random_device{}());
+T quickSelect(vector<T> v, int k) {
+    mt19937 rng(random_device{}());
     int lo = 0, hi = static_cast<int>(v.size()) - 1;
     while (lo < hi) {
-        std::uniform_int_distribution<int> pick(lo, hi);
+        uniform_int_distribution<int> pick(lo, hi);
         const T pivot = v[pick(rng)];
         auto [lt, gt] = detail::partitionAround(v, lo, hi, pivot);
         if      (k < lt) hi = lt - 1;
@@ -1206,19 +1226,19 @@ T quickSelect(std::vector<T> v, int k) {
 
 // Median-of-medians: O(n) WORST case. Slower in practice than quickSelect.
 template <typename T>
-T selectWorstCaseLinear(std::vector<T> v, int k) {
-    std::vector<T> cur = std::move(v);
+T selectWorstCaseLinear(vector<T> v, int k) {
+    vector<T> cur = move(v);
     while (true) {
         if (cur.size() <= 5) {
-            std::sort(cur.begin(), cur.end());
+            sort(cur.begin(), cur.end());
             return cur[k];
         }
         // Median of each group of 5.
-        std::vector<T> medians;
+        vector<T> medians;
         medians.reserve((cur.size() + 4) / 5);
         for (size_t i = 0; i < cur.size(); i += 5) {
-            const size_t j = std::min(i + 5, cur.size());
-            std::sort(cur.begin() + i, cur.begin() + j);
+            const size_t j = min(i + 5, cur.size());
+            sort(cur.begin() + i, cur.begin() + j);
             medians.push_back(cur[i + (j - i - 1) / 2]);
         }
         const T pivot = selectWorstCaseLinear(medians,
@@ -1427,6 +1447,568 @@ Called as an expert witness in a case about high-performance sorting programs, S
 28. Define a "helpful" partition and sketch the `8n₀` bound. *(§8)*
 29. Give median-of-medians' recurrence and explain where `n/5` and `7n/10` come from. Why not groups of 3? *(§8)*
 30. Why did external sorting turn out not to care about in-place algorithms? *(§9)*
+
+---
+
+## Practice — where to drill this module
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| Write a sort yourself | [912 · Sort an Array](https://leetcode.com/problems/sort-an-array/) | `std::sort` is banned in spirit; submit heapsort, then merge sort, then quicksort — and watch the deterministic pivot TLE |
+| Heap as a priority queue | [215 · Kth Largest Element in an Array](https://leetcode.com/problems/kth-largest-element-in-an-array/) · [703 · Kth Largest Element in a Stream](https://leetcode.com/problems/kth-largest-element-in-a-stream/) | 215 wants quickselect *or* a size-`k` heap; 703 is the streaming version |
+| Two heaps | [295 · Find Median from Data Stream](https://leetcode.com/problems/find-median-from-data-stream/) | max-heap + min-heap; the single most-asked heap design question |
+| `MERGE` as the combine step | [23 · Merge k Sorted Lists](https://leetcode.com/problems/merge-k-sorted-lists/) | heap-of-`k`-heads is `Θ(n lg k)`; pairwise merging is the D&C route |
+| Counting frequencies then ordering | [347 · Top K Frequent Elements](https://leetcode.com/problems/top-k-frequent-elements/) | bucket sort by frequency gives `Θ(n)` — the linear-sort idea applied |
+| `QUICKSELECT` | [215 · Kth Largest Element in an Array](https://leetcode.com/problems/kth-largest-element-in-an-array/) | `RANDOMIZED-SELECT` verbatim; `A10` below has both recursive and iterative |
+| Stability matters | [937 · Reorder Data in Log Files](https://leetcode.com/problems/reorder-data-in-log-files/) | `stable_sort` vs `sort` gives different accepted/rejected answers |
+| Counting while merging | [493 · Reverse Pairs](https://leetcode.com/problems/reverse-pairs/) | the merge step does the work; see [M03](M03-divide-conquer.md) |
+| Sorting by a custom order | [179 · Largest Number](https://leetcode.com/problems/largest-number/) | the comparator is the whole problem — and it must be a **strict weak ordering** |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *Sorting and Searching* is the best single set of drills for this module. [Codeforces `sortings` tag](https://codeforces.com/problemset?tags=sortings) · [`data structures` tag](https://codeforces.com/problemset?tags=data+structures).
+
+**The drill that matters here:** for every sort you write, answer four questions without looking — *in place? stable? worst case? what input triggers it?* `A5` below shows what happens when you get the last one wrong.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 1 and §6.9 / §7.2.2.*
+
+### 1. Comparators, and the strict-weak-ordering contract
+
+Weiss motivates function objects [§1.6.4, p.41] with precisely the sorting problem: a `Rectangle` has no natural `<`, so the ordering must be passed in. Three ways, all equivalent to the compiler:
+
+```cpp
+struct ByLength {                                        // 1. a function object (Weiss's form)
+    bool operator()(const string& a, const string& b) const { return a.size() < b.size(); }
+};
+bool byLengthFn(const string& a, const string& b) { return a.size() < b.size(); }  // 2. free function
+
+void comparatorDemo(vector<string>& v) {
+    sort(v.begin(), v.end(), ByLength{});
+    sort(v.begin(), v.end(), byLengthFn);
+    sort(v.begin(), v.end(),                             // 3. a lambda -- same thing, less typing
+         [](const string& a, const string& b) { return a.size() < b.size(); });
+}
+```
+
+**The contract `std::sort` requires is a *strict weak ordering*.** Concretely: `cmp(a, a)` must be `false`. Writing `<=` instead of `<` violates it, and libstdc++'s introsort will then **run off the end of the array** — a real segfault, not a wrong answer, and only on inputs big enough to hit the quicksort path. This is the most expensive one-character bug in competitive C++.
+
+### 2. `sort`, `stable_sort`, `partial_sort`, `nth_element`
+
+| Function | Guarantee | Cost | Use when |
+|---|---|---|---|
+| `sort` | not stable | `O(n lg n)` worst case (introsort) | the default |
+| `stable_sort` | **stable** | `O(n lg² n)`, or `O(n lg n)` with memory | equal keys must keep input order |
+| `partial_sort(b, m, e)` | first `m` sorted | `O(n lg m)` | "top `m`" |
+| **`nth_element(b, nth, e)`** | `*nth` is correct; both sides partitioned | **`O(n)` expected** | **this is `RANDOMIZED-SELECT`** |
+| `is_sorted`, `is_heap` | — | `O(n)` | assertions in tests |
+
+`nth_element` is the standard library's `RANDOMIZED-SELECT` (`A10`), and `priority_queue` is `MAX-HEAP` (`A4`). Knowing that the STL *is* this chapter is half the value of the chapter.
+
+### 3. `priority_queue` is a **max**-heap by default
+
+```cpp
+void pqDemo() {
+    priority_queue<int> maxq;                                          // top() is the LARGEST
+    priority_queue<int, vector<int>, greater<int>> minq;               // top() is the SMALLEST
+    // The comparator is the THIRD template argument, so you must spell out the
+    // second (the container) even though you did not want to change it.
+    (void)maxq; (void)minq;
+}
+```
+
+Getting this backwards is the second-most-common heap bug. And note `priority_queue` has **no `decrease-key`** — which is why [M14](M14-mst.md) and [M15](M15-shortest-paths.md) use the "push a new entry and skip stale pops" idiom instead.
+
+### 4. 1-based arrays: why this module wastes index 0
+
+CLRS's heap indexing depends on it:
+
+```cpp
+inline int PARENT(int i) { return i / 2; }      // 1-based: clean
+inline int LEFT(int i)   { return 2 * i; }
+inline int RIGHT(int i)  { return 2 * i + 1; }
+// 0-based equivalents are uglier and easier to get wrong:
+//   parent = (i - 1) / 2,  left = 2i + 1,  right = 2i + 2
+```
+
+The appendix keeps 1-based indexing (`A[0]` unused) so every line matches CLRS. In production, use the 0-based forms — or better, use `priority_queue`.
+
+### 5. `swap` is three moves, not three copies
+
+Weiss [§1.5.5, p.29]: `std::swap` on a large type used to cost three full copies; since C++11 it is three **moves** — *"little more than a pointer change"* for a `vector` or `string`. That is why `HEAPSORT` and `PARTITION`, which are swap-heavy, are cheap even on heavy element types. It is also why `swap(a, a)` is harmless but not free: guard it with `if (i != j)` when the element type is expensive.
+
+### 6. Templates and `Comparable` — the assumption goes in a comment
+
+Weiss [§1.6.1, p.37]: *"it is customary to include, prior to any template, comments that explain what assumptions are made about the template argument(s)."* The appendix below is written for `int` to keep the pseudocode correspondence exact; the templated versions in the body state their `Comparable` requirement in a comment, as Weiss instructs.
+
+### 7. Instrumentation: counting without changing the algorithm
+
+Every appendix entry threads a `long long` counter through so its complexity claim can be measured:
+
+```cpp
+long long partitionCompares = 0;   // a file-scope counter, reset before each measurement
+```
+
+A global is the wrong design for production code (not thread-safe, invisible coupling) and the right one for a notes file, where the alternative — an extra parameter on every function — would obscure the correspondence with the pseudocode. **`long long`, never `int`:** at `n = 4000` the sorted-array quicksort below performs 7 998 000 comparisons, and `n²/2` at `n = 100 000` is `5 × 10⁹`.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+**Shared prelude** — the random source (see [M04](M04-randomization.md)) and CLRS's heap index functions:
+
+```cpp
+mt19937& rng() { static mt19937 gen(20260903u); return gen; }   // fixed seed: reproducible
+int randomInt(int a, int b) { return uniform_int_distribution<int>(a, b)(rng()); }
+
+// 1-BASED heap indexing, exactly as CLRS. A[0] is unused throughout this appendix.
+inline int PARENT(int i) { return i / 2; }
+inline int LEFT(int i)   { return 2 * i; }
+inline int RIGHT(int i)  { return 2 * i + 1; }
+```
+
+### A1 MAX-HEAPIFY
+
+*Pseudocode: §3, "Algorithm: MAX-HEAPIFY".*
+
+```cpp
+long long heapifySteps = 0;      // instrumentation (toolkit 7)
+
+// Precondition: the subtrees rooted at LEFT(i) and RIGHT(i) are max-heaps, but
+// A[i] may be smaller than a child. Postcondition: the subtree at i is a max-heap.
+//
+// `heapSize` is passed explicitly rather than being A.size(): HEAPSORT shrinks
+// the heap while leaving the sorted suffix in the same array, so "how much of A
+// is still a heap" is NOT a property of the vector.
+void maxHeapify(vector<int>& A, int i, int heapSize) {
+    int l = LEFT(i), r = RIGHT(i);
+    int largest;
+    // SHORT-CIRCUIT ORDER MATTERS: `l <= heapSize` must come first, or A[l] is
+    // read out of bounds when i is a leaf. && evaluates left to right and stops.
+    if (l <= heapSize && A[l] > A[i]) largest = l;
+    else                              largest = i;
+    if (r <= heapSize && A[r] > A[largest]) largest = r;
+    if (largest != i) {
+        ++heapifySteps;
+        swap(A[i], A[largest]);
+        maxHeapify(A, largest, heapSize);      // TAIL call -- see the loop version
+    }
+}
+
+// The recursive call above is in tail position, so this is the mechanical
+// conversion. Prefer it: the depth is only lg n, but writing the loop costs
+// nothing and removes any dependence on the compiler doing TCO (M03 toolkit 2).
+void maxHeapifyIterative(vector<int>& A, int i, int heapSize) {
+    for (;;) {
+        int l = LEFT(i), r = RIGHT(i), largest = i;
+        if (l <= heapSize && A[l] > A[largest]) largest = l;
+        if (r <= heapSize && A[r] > A[largest]) largest = r;
+        if (largest == i) return;          // A[i] is already >= both children: done
+        swap(A[i], A[largest]);
+        i = largest;                       // "recurse" by reassigning the parameter
+    }
+}
+```
+
+**Complexity.** `T(n) ≤ T(2n/3) + Θ(1)` → master case 2 → **`O(lg n)`**. The `2n/3` is the worst case: when the bottom level is exactly half full, one subtree holds up to `2n/3` nodes. Equivalently, the cost is `O(h)` for a node at height `h`.
+
+> *Verified:* the recursive and iterative forms produce **identical arrays** on 400 heaps with a deliberately corrupted root.
+
+### A2 BUILD-MAX-HEAP
+
+*Pseudocode: §3, "Algorithm: BUILD-MAX-HEAP".*
+
+```cpp
+void buildMaxHeap(vector<int>& A) {
+    const int n = (int)A.size() - 1;
+    // Start at floor(n/2), not at n: elements A[n/2+1 .. n] are LEAVES, and a
+    // leaf is already a one-element max-heap. Half the array needs no work at all.
+    // Go DOWNWARD so that when maxHeapify(i) runs, both children of i are
+    // already heaps -- that is its precondition.
+    for (int i = n / 2; i >= 1; --i)
+        maxHeapify(A, i, n);
+}
+
+bool isMaxHeap(const vector<int>& A, int heapSize) {
+    for (int i = 2; i <= heapSize; ++i)
+        if (A[PARENT(i)] < A[i]) return false;
+    return true;
+}
+```
+
+**Complexity — `Θ(n)`, not `Θ(n lg n)`.** The loose bound is "`n/2` calls × `O(lg n)` each". The tight one uses the fact that **most nodes are near the bottom, where `maxHeapify` is cheap**: there are at most `⌈n/2^{h+1}⌉` nodes of height `h`, and each costs `O(h)`, so
+
+```
+Σ_{h=0}^{⌊lg n⌋} ⌈n/2^{h+1}⌉ · O(h)  =  O( n · Σ_{h=0}^{∞} h/2^h )  =  O(n · 2)  =  O(n)
+```
+
+using `Σ h/2^h = 2` (the standard geometric-derivative sum from [M02](M02-asymptotics.md)).
+
+> *Verified* — measured swaps, against both `n` and `n lg n`:
+>
+> | `n` | swaps | swaps / `n` | `n lg n` |
+> |---|---|---|---|
+> | 1 000 | 720 | 0.720 | 9 966 |
+> | 10 000 | 7 470 | 0.747 | 132 877 |
+> | 100 000 | 74 581 | 0.746 | 1 660 964 |
+> | 1 000 000 | **744 192** | **0.744** | 19 931 569 |
+>
+> The ratio converges to a constant ≈ 0.744, which is exactly what `Θ(n)` means — and it is **27× below** `n lg n` at `n = 10⁶`. This is the measurement that makes the tight analysis believable.
+
+### A3 HEAPSORT
+
+*Pseudocode: §3, "Algorithm: Heapsort".*
+
+```cpp
+void heapsort(vector<int>& A) {
+    const int n = (int)A.size() - 1;
+    buildMaxHeap(A);                    // 1  Theta(n)
+    int heapSize = n;
+    for (int i = n; i >= 2; --i) {      // 2  n-1 iterations
+        swap(A[1], A[i]);               // 3  the max goes to its FINAL position
+        --heapSize;                     // 4  and leaves the heap forever
+        maxHeapify(A, 1, heapSize);     // 5  O(lg n) to restore the root
+    }
+    // Note what the array looks like throughout: A[1..heapSize] is a heap and
+    // A[heapSize+1..n] is the sorted suffix, already in final position. The two
+    // regions share one array -- which is why heapsort is IN PLACE.
+}
+```
+
+**Complexity.** `Θ(n) + (n−1)·O(lg n) = Θ(n lg n)` — **worst, average and best case alike**. Space `Θ(1)` auxiliary. **Not stable.**
+
+**Why it is not the default sort in practice**, despite the perfect worst case: every `maxHeapify` jumps between `i`, `2i` and `2i+1`, which are far apart in memory once the heap exceeds cache. Quicksort's partition is a **linear scan** and wins on cache behaviour by a factor of 2–3. `std::sort` uses introsort — quicksort, with a switch to heapsort when the recursion gets too deep — to get quicksort's speed *and* `O(n lg n)` worst case.
+
+> *Verified:* matches `std::sort` on 400 random arrays.
+
+### A4 MAX-HEAP-INSERT and MAX-HEAP-INCREASE-KEY
+
+*Pseudocode: §3, "`INCREASE-KEY` and `INSERT`".*
+
+```cpp
+// A max-priority-queue on ints. Compare with std::priority_queue, which is this
+// class with the same algorithms and a nicer interface.
+class MaxPriorityQueue {
+public:
+    int size() const { return (int)heap_.size() - 1; }   // -1 for the unused slot 0
+    bool empty() const { return size() == 0; }
+
+    // MAX-HEAP-INSERT: append at -infinity, then increase the key into place.
+    // The two-step dance is not decoration -- it is how the pseudocode reuses
+    // INCREASE-KEY's sift-up loop instead of writing a second one.
+    void insert(int key) {
+        heap_.push_back(numeric_limits<int>::min());     // x.key = -infinity
+        increaseKey(size(), key);                        // then raise it to `key`
+    }
+
+    // `.at(1)` not `[1]`: at() throws std::out_of_range on an empty queue,
+    // while operator[] is UNDEFINED BEHAVIOUR -- it would read past the end and
+    // return whatever was there. In a data structure whose whole job is
+    // bookkeeping, prefer the checked accessor at the boundary.
+    int maximum() const { return heap_.at(1); }
+
+    int extractMax() {
+        int mx = heap_.at(1);
+        heap_[1] = heap_.back();       // move the LAST leaf to the root
+        heap_.pop_back();
+        if (size() >= 1) siftDown(1);  // and let it sink
+        return mx;
+    }
+
+    // MAX-HEAP-INCREASE-KEY, the sift-UP loop.
+    void increaseKey(int i, int key) {
+        // The pseudocode says error "new key is smaller than current key".
+        // An exception is the C++ way to say that: it cannot be ignored, unlike
+        // a returned error code, and it carries a message.
+        if (key < heap_[i]) throw invalid_argument("new key is smaller than current key");
+        heap_[i] = key;
+        while (i > 1 && heap_[PARENT(i)] < heap_[i]) {   // i > 1 FIRST: no parent of the root
+            swap(heap_[i], heap_[PARENT(i)]);
+            i = PARENT(i);
+        }
+    }
+private:
+    // heap_[0] is a permanently unused sentinel so that PARENT/LEFT/RIGHT are
+    // the clean 1-based formulas. The `{0}` initialises the vector with that
+    // one dummy element.
+    vector<int> heap_{0};
+
+    void siftDown(int i) {
+        const int n = size();
+        for (;;) {
+            int l = LEFT(i), r = RIGHT(i), largest = i;
+            if (l <= n && heap_[l] > heap_[largest]) largest = l;
+            if (r <= n && heap_[r] > heap_[largest]) largest = r;
+            if (largest == i) return;
+            swap(heap_[i], heap_[largest]);
+            i = largest;
+        }
+    }
+};
+```
+
+**Complexity.** `INSERT`, `INCREASE-KEY`, `EXTRACT-MAX`: **`O(lg n)`**. `MAXIMUM`: `O(1)`.
+
+**The line the pseudocode hides.** Step 3 of `MAX-HEAP-INCREASE-KEY` says *"find the index `i` where object `x` occurs"* — that is `Θ(n)` unless you maintain an object→index map alongside the heap, updating it on **every swap**. CLRS 4e makes this explicit; most textbook implementations quietly ignore it. It is exactly why `std::priority_queue` offers no `decrease-key`, and why Dijkstra ([M15](M15-shortest-paths.md)) uses the lazy "push a duplicate, skip stale pops" idiom instead of maintaining that map.
+
+> *Verified:* against `std::priority_queue` over **20 000 random insert / peek / extract operations** — identical results and identical sizes throughout. `increaseKey` with a smaller key throws, as specified.
+
+### A5 QUICKSORT and PARTITION
+
+*Pseudocode: §4, "Pseudocode".*
+
+```cpp
+long long partitionSwaps = 0, partitionCompares = 0;
+
+// LOMUTO partition. Invariant, maintained for every j:
+//     A[p   .. i  ] <= x        (the "low" side)
+//     A[i+1 .. j-1] >  x        (the "high" side)
+//     A[j   .. r-1] unexamined
+//     A[r] == x                 (the pivot, parked at the end)
+int partitionLomuto(vector<int>& A, int p, int r) {
+    int x = A[r];                       // 1  pivot = LAST element
+    int i = p - 1;                      // 2  low side is empty
+    for (int j = p; j <= r - 1; ++j) {  // 3
+        ++partitionCompares;
+        if (A[j] <= x) {                // 4  <= not < : keeps the invariant on ties
+            i = i + 1;                  // 5
+            ++partitionSwaps;
+            swap(A[i], A[j]);           // 6  grow the low side by one
+        }
+    }
+    ++partitionSwaps;
+    swap(A[i + 1], A[r]);               // 7  drop the pivot between the two sides
+    return i + 1;                       // 8  its FINAL index -- it never moves again
+}
+
+void quicksort(vector<int>& A, int p, int r) {
+    if (p < r) {                                // 1
+        int q = partitionLomuto(A, p, r);       // 2
+        quicksort(A, p, q - 1);                 // 3  note: q is EXCLUDED from both
+        quicksort(A, q + 1, r);                 // 4  calls -- it is already correct
+    }
+}
+```
+
+**Complexity.** `PARTITION` is `Θ(r − p)` — one linear scan. Quicksort:
+
+- **Worst case `Θ(n²)`**, when every partition is maximally unbalanced: `T(n) = T(n−1) + Θ(n)`.
+- **Best/average `Θ(n lg n)`**. Even a fixed 9-to-1 split gives `T(n) = T(9n/10) + T(n/10) + Θ(n) = Θ(n lg n)` — the recursion tree just has depth `log_{10/9} n` instead of `lg n`.
+- **Space `Θ(lg n)` expected stack**, `Θ(n)` worst case. Recurse on the smaller side first and loop on the larger to force `Θ(lg n)`.
+
+**The worst case is an already-sorted array**, which is the single most common real-world input. That is not a corner case; that is Tuesday.
+
+> *Verified*, on an **already-sorted** array of `n = 4000`:
+>
+> | pivot rule | comparisons | predicted |
+> |---|---|---|
+> | last element (deterministic) | **7 998 000** | `n²/2` = 8 000 000 |
+> | random (`A6`) | **57 085** | `2n ln n` = 66 352 |
+>
+> **140× fewer comparisons**, and the randomized version's recursion depth was 27 against `lg 4000 ≈ 12`. Both sorted correctly; only one of them finished quickly.
+
+### A6 RANDOMIZED-PARTITION
+
+*Pseudocode: §4, "Randomized quicksort".*
+
+```cpp
+// Three lines that convert a worst case over INPUTS into an expectation over
+// COIN FLIPS. There is no longer any input an adversary can hand you that is
+// reliably bad -- the bad case now depends on the random draws, which they
+// cannot see.
+int randomizedPartition(vector<int>& A, int p, int r) {
+    int i = randomInt(p, r);        // 1  RANDOM(p, r) -- INCLUSIVE both ends
+    swap(A[r], A[i]);               // 2  move the chosen pivot to the end...
+    return partitionLomuto(A, p, r);// 3  ...so PARTITION is reused UNCHANGED
+}
+
+long long quicksortDepth = 0;
+
+// The default argument tracks recursion depth for the measurement below; it is
+// not part of the algorithm.
+void randomizedQuicksort(vector<int>& A, int p, int r, long long depth = 1) {
+    quicksortDepth = max(quicksortDepth, depth);
+    if (p < r) {
+        int q = randomizedPartition(A, p, r);
+        randomizedQuicksort(A, p, q - 1, depth + 1);
+        randomizedQuicksort(A, q + 1, r, depth + 1);
+    }
+}
+```
+
+**Complexity. `O(n lg n)` expected**, for **every** input — the expectation is over the algorithm's own randomness, not over a distribution of inputs. The worst case is still `Θ(n²)`, but it now requires an astronomically unlucky sequence of draws rather than a sorted array.
+
+**Expected comparisons ≈ `2n ln n ≈ 1.39 n lg n`.** The proof is the indicator-variable argument of [M04](M04-randomization.md): `zᵢ` and `z_j` are compared at most once, exactly when one of them is the first of `{zᵢ, …, z_j}` to be chosen as a pivot, which has probability `2/(j − i + 1)`.
+
+> *Verified:* 57 085 comparisons on the sorted `n = 4000` input against the predicted 66 352 — see the table in `A5`.
+
+### A7 COUNTING-SORT
+
+*Pseudocode: §6, "Algorithm: Counting Sort".*
+
+```cpp
+// Requires keys in [0, k]. Returns a NEW array -- counting sort is not in place.
+vector<int> countingSort(const vector<int>& A, int k) {
+    const int n = (int)A.size() - 1;
+    vector<int> B(n + 1);                      // output
+    vector<int> C(k + 1, 0);                   // C[i] will count value i
+
+    for (int j = 1; j <= n; ++j) C[A[j]] = C[A[j]] + 1;   // histogram
+    for (int i = 1; i <= k; ++i)  C[i] = C[i] + C[i - 1]; // PREFIX SUMS:
+                                    // C[i] is now "how many values are <= i",
+                                    // i.e. the last output slot value i may occupy
+
+    for (int j = n; j >= 1; --j) {             // <-- REVERSE order. See below.
+        B[C[A[j]]] = A[j];
+        C[A[j]] = C[A[j]] - 1;                 // next equal key goes one slot earlier
+    }
+    return B;
+}
+
+struct Rec { int key; int id; };               // id = original position, to test stability
+
+vector<Rec> countingSortStable(const vector<Rec>& A, int k) {
+    const int n = (int)A.size() - 1;
+    vector<Rec> B(n + 1);
+    vector<int> C(k + 1, 0);
+    for (int j = 1; j <= n; ++j) C[A[j].key]++;
+    for (int i = 1; i <= k; ++i)  C[i] += C[i - 1];
+    for (int j = n; j >= 1; --j) { B[C[A[j].key]] = A[j]; C[A[j].key]--; }
+    return B;
+}
+```
+
+**Complexity.** `Θ(n + k)` time, `Θ(n + k)` space. **Linear when `k = O(n)`** — and useless when `k` is large: sorting 1000 32-bit integers this way needs a `4 × 10⁹`-element counter array.
+
+**No comparisons are performed**, which is why the `Ω(n lg n)` decision-tree lower bound does not apply.
+
+**The reversed final loop is the entire stability argument.** Walking `j` from `n` down to `1` while decrementing `C` places the *last* occurrence of a key in the *last* slot available for that key — so equal elements come out in their original relative order. Walk it forward and the order of equal elements is **reversed**. And stability is not a nicety here: `RADIX-SORT` is built on it and is simply wrong without it.
+
+> *Verified:* matches `std::sort` on 400 arrays. On 500 records with 9 distinct keys, the reverse-loop version is **stable** (equal keys emerge with increasing original index); the identical code with a **forward** final loop was measured to invert the order of equal keys — the bug is real, not theoretical.
+
+### A8 RADIX-SORT
+
+*Pseudocode: §6, "Algorithm: Radix Sort".*
+
+```cpp
+// d passes of a STABLE sort, LEAST significant digit first.
+// A is taken BY VALUE because each pass overwrites it.
+vector<int> radixSort(vector<int> A, int d, int base = 10) {
+    const int n = (int)A.size() - 1;
+    vector<int> B(n + 1);
+    long long place = 1;                         // 1, base, base^2, ...  long long: base^d
+                                                 // overflows int for d around 10
+    for (int pass = 1; pass <= d; ++pass) {      // 1  for i = 1 to d
+        // 2  "use a STABLE sort on digit i" -- counting sort, inlined
+        vector<int> C(base, 0);
+        for (int j = 1; j <= n; ++j) C[(A[j] / place) % base]++;
+        for (int i = 1; i < base; ++i) C[i] += C[i - 1];
+        for (int j = n; j >= 1; --j) {           // reversed: STABILITY, see A7
+            int digit = (int)((A[j] / place) % base);
+            B[C[digit]] = A[j];
+            C[digit]--;
+        }
+        A = B;                                   // copy back; a swap() would avoid the copy
+        place *= base;
+    }
+    return A;
+}
+```
+
+**Complexity.** `Θ(d(n + base))`. With `base = n` and `b`-bit keys, `d = ⌈b / lg n⌉` and the total is `Θ(n · b/lg n)` — **`Θ(n)` for fixed-width keys**.
+
+**Why LSD, and why stability is load-bearing.** After sorting on digit `i`, the array is correctly ordered by digits `1..i`. Sorting on digit `i+1` must **not disturb** that order among elements whose digit `i+1` is equal — which is precisely stability. Use a non-stable sort per pass and radix sort silently returns garbage.
+
+**Is it faster than quicksort?** Not automatically. Skiena's and CLRS's shared verdict: radix sort touches every bit of every key `d` times with poor locality, while quicksort's partition is a cache-friendly linear scan. Radix wins on large `n` with short keys; measure before switching.
+
+> *Verified:* `d = 6` decimal digits, keys in `[0, 999999]` — matches `std::sort` on 300 arrays.
+
+### A9 BUCKET-SORT
+
+*Pseudocode: §6, "Algorithm: Bucket Sort".*
+
+```cpp
+void insertionSortList(vector<double>& v) {
+    for (size_t i = 1; i < v.size(); ++i) {
+        double key = v[i];
+        size_t j = i;
+        // `j > 0` first, then v[j-1]: with SIZE_T indices, j-1 at j==0 wraps to
+        // SIZE_MAX and reads far out of bounds. Short-circuiting saves us.
+        while (j > 0 && v[j - 1] > key) { v[j] = v[j - 1]; --j; }
+        v[j] = key;
+    }
+}
+
+// Assumes the input is drawn UNIFORMLY from [0, 1). That assumption is the
+// entire analysis -- it is what makes the buckets evenly filled.
+vector<double> bucketSort(const vector<double>& A) {
+    const int n = (int)A.size() - 1;
+    vector<vector<double>> B(n);                  // 1  n empty lists
+    for (int i = 1; i <= n; ++i) {
+        int idx = (int)(n * A[i]);                // 4  bucket floor(n * A[i])
+        if (idx >= n) idx = n - 1;                // guard: A[i] == 1.0 would index n
+        B[idx].push_back(A[i]);
+    }
+    vector<double> out;
+    out.reserve(n + 1);
+    out.push_back(0.0);                           // keep the 1-based convention
+    for (int i = 0; i < n; ++i) {
+        insertionSortList(B[i]);                  // 6  sort each bucket
+        for (double x : B[i]) out.push_back(x);   // 8  concatenate in order
+    }
+    return out;
+}
+```
+
+**Complexity.** `Θ(n)` **expected** under the uniform-input assumption, `Θ(n²)` worst case (everything in one bucket). The analysis is `E[Σ nᵢ²] = 2n − 1`: bucket sizes are `Binomial(n, 1/n)`, so `E[nᵢ²] = Var + mean² = (1 − 1/n) + 1 = 2 − 1/n`, and summing over `n` buckets gives `2n − 1`.
+
+**This is an average-case bound that depends on the input distribution** — unlike randomized quicksort, whose expectation comes from the algorithm's own coins. Feed `bucketSort` a non-uniform distribution and it degrades, and randomizing will not save it. (Skiena's fix: choose bucket boundaries from a *sample* of the data.)
+
+> *Verified:* matches `std::sort` on 300 uniform arrays. At `n = 100 000` uniform inputs the **fullest bucket held 7 elements**, and `Σ nᵢ² = 200 382` against the predicted `2n − 1 = 199 999` — agreement to 0.2%.
+
+### A10 RANDOMIZED-SELECT
+
+*Pseudocode: §7, "Algorithm: RANDOMIZED-SELECT".*
+
+```cpp
+// Returns the i-th SMALLEST element of A[p..r], with i counted from 1.
+// Same partition as quicksort -- but recurses into only ONE side, which is the
+// entire reason the cost drops from n lg n to n.
+int randomizedSelect(vector<int>& A, int p, int r, int i) {
+    if (p == r) return A[p];                       // 1  one element: it is the answer
+    int q = randomizedPartition(A, p, r);          // 3
+    int k = q - p + 1;                             // 4  rank of the pivot WITHIN A[p..r]
+    if (i == k)      return A[q];                  // 5  the pivot is the answer
+    else if (i < k)  return randomizedSelect(A, p, q - 1, i);        // 7  left side
+    else             return randomizedSelect(A, q + 1, r, i - k);    // 9  right side,
+                     // and note `i - k`: the rank must be RE-BASED, because the
+                     // k elements at or before the pivot are gone. Forgetting
+                     // this is the classic quickselect bug.
+}
+
+// Both recursive calls are in tail position, so quickselect becomes a loop --
+// and that drops the space from O(lg n) expected to O(1).
+int randomizedSelectIterative(vector<int>& A, int p, int r, int i) {
+    while (p != r) {
+        int q = randomizedPartition(A, p, r);
+        int k = q - p + 1;
+        if (i == k) return A[q];
+        if (i < k)  r = q - 1;                     // shrink to the left side
+        else      { p = q + 1; i -= k; }           // shrink right AND re-base i
+    }
+    return A[p];
+}
+```
+
+**Complexity. `Θ(n)` expected, `Θ(n²)` worst case.** The intuition for linear: each level partitions and then discards one side, so the work is `n + n/2 + n/4 + … = 2n` when splits are balanced — a **geometric** series, not the `n` levels of `n` work that sorting pays. Formally `E[T(n)] ≤ E[T(3n/4)] + Θ(n)`, master case 3, `Θ(n)`.
+
+**The deterministic `Θ(n)` alternative** is `SELECT` (median of medians): split into groups of 5, take the median of each, recursively select the median of those medians, use it as the pivot. It guarantees a 30/70 split, giving `T(n) ≤ T(n/5) + T(7n/10) + Θ(n) = Θ(n)`. The constant is bad enough that `RANDOMIZED-SELECT` wins in practice — median of medians is a *worst-case guarantee*, not a speedup.
+
+**In real code, use `std::nth_element`** — it is this algorithm, with introselect's fallback for the worst case.
+
+> *Verified:* both forms return `sorted[i−1]` on 500 random arrays. At `n = 200 000`, selecting the median cost **1 157 759 comparisons (≈ 5.8 n)** while a full randomized quicksort of the same array cost **4 525 961 (≈ 1.3 n lg n)** — a 3.9× saving, which is the practical content of "selection is linear, sorting is not".
+
 
 ---
 

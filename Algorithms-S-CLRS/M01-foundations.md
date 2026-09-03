@@ -95,6 +95,8 @@ NearestNeighbor(P)
     Return to p₀ from pₙ₋₁
 ```
 
+→ **C++ implementation:** [A1 NearestNeighbor](#a1-nearestneighbor)
+
 Simple, fast, intuitive — and **wrong**. Counterexample: points on a line at positions `−21, −5, −1, 0, 1, 3, 11`. Starting at `0`, the rule hops left–right–left–right across the origin. The optimal tour sweeps from the leftmost point rightward and returns. [Skiena Fig. 1.3, p.6]
 
 The natural patch ("start from the leftmost point") dies immediately: rotate the instance 90°, and now all points are equally leftmost. **No choice of starting rule saves nearest-neighbour.**
@@ -111,6 +113,8 @@ ClosestPair(P)
         Connect (sₘ, tₘ) by an edge
     Connect the two remaining endpoints by an edge
 ```
+
+→ **C++ implementation:** [A2 ClosestPair](#a2-closestpair)
 
 This fixes the previous counterexample — and then dies on a new one: two rows of points, rows separated by `1 − ε`, neighbours within a row separated by `1 + ε`. The closest pairs stretch *across* the gap rather than along the rows, and the resulting tour is over 20% longer than optimal as `ε → 0`. [Skiena Fig. 1.4, p.8]
 
@@ -143,6 +147,8 @@ OptimalScheduling(I)
         Accept the job j from I with the earliest completion date
         Delete j, and any interval intersecting j, from I
 ```
+
+→ **C++ implementation:** [A3 OptimalScheduling](#a3-optimalscheduling)
 
 ### Skiena's counterexample-hunting toolkit
 
@@ -221,6 +227,8 @@ Increment(y)
     if (y mod 2) = 1 then return 2 · Increment(⌊y/2⌋)
     else return y + 1
 ```
+
+→ **C++ implementation:** [A4 Increment](#a4-increment)
 
 For odd `y = 2m + 1`:
 `2 · Increment(⌊(2m+1)/2⌋) = 2 · Increment(m) = 2(m + 1) = 2m + 2 = y + 1` ✓
@@ -404,6 +412,8 @@ INSERTION-SORT(A, n)
 8      A[j + 1] = key
 ```
 
+→ **C++ implementation:** [A5 INSERTION-SORT](#a5-insertion-sort)
+
 ### Correctness intuition
 
 At the top of each `for` iteration the prefix left of `i` is a sorted rearrangement of the elements that started there. The inner loop makes room for `A[i]` without losing anything, because it *copies* rightward into a slot whose value is already saved in `key`.
@@ -457,17 +467,17 @@ T(n) = (c₅/2 + c₆/2 + c₇/2)·n² + (…)·n − (…)   =  an² + bn + c  
 
 // Sorts v in place, ascending. Stable. O(n + inversions) time, O(1) extra space.
 template <typename T>
-void insertionSort(std::vector<T>& v) {
+void insertionSort(vector<T>& v) {
     const int n = static_cast<int>(v.size());
     for (int i = 1; i < n; ++i) {          // 0-indexed: prefix [0, i) is sorted
-        T key = std::move(v[i]);
+        T key = move(v[i]);
         int j = i - 1;
         // Strict '>' keeps the sort stable: equal elements never cross.
         while (j >= 0 && key < v[j]) {
-            v[j + 1] = std::move(v[j]);
+            v[j + 1] = move(v[j]);
             --j;
         }
-        v[j + 1] = std::move(key);
+        v[j + 1] = move(key);
     }
 }
 ```
@@ -565,6 +575,8 @@ MERGE(A, p, q, r)
 12 while j < n_R:  A[k] = R[j];  j = j + 1;  k = k + 1
 ```
 
+→ **C++ implementation:** [A6 MERGE-SORT and MERGE](#a6-merge-sort-and-merge)
+
 ### Why it works
 
 The merge maintains: *`A[p..k−1]` holds the `k−p` smallest elements of `L ∪ R`, in sorted order; and `L[i]`, `R[j]` are the smallest not-yet-copied elements of their arrays.* Since the next output must be the smaller of `L[i]` and `R[j]`, taking it preserves the invariant. On exit, one array is exhausted and the remainder of the other is already sorted and all-larger, so appending it finishes the job. [CLRS Exercise 2.3-3]
@@ -617,7 +629,7 @@ namespace detail {
 
 // Merges the sorted runs v[lo..mid] and v[mid+1..hi] using scratch as buffer.
 template <typename T>
-void merge(std::vector<T>& v, int lo, int mid, int hi, std::vector<T>& scratch) {
+void merge(vector<T>& v, int lo, int mid, int hi, vector<T>& scratch) {
     const int nL = mid - lo + 1;
     const int nR = hi - mid;
 
@@ -628,15 +640,15 @@ void merge(std::vector<T>& v, int lo, int mid, int hi, std::vector<T>& scratch) 
     int i = 0, j = 0, k = lo;
     while (i < nL && j < nR) {
         // '<=' takes from the LEFT run on ties -> stable.
-        if (!(scratch[nL + j] < scratch[i])) v[k++] = std::move(scratch[i++]);
-        else                                 v[k++] = std::move(scratch[nL + j++]);
+        if (!(scratch[nL + j] < scratch[i])) v[k++] = move(scratch[i++]);
+        else                                 v[k++] = move(scratch[nL + j++]);
     }
-    while (i < nL) v[k++] = std::move(scratch[i++]);
-    while (j < nR) v[k++] = std::move(scratch[nL + j++]);
+    while (i < nL) v[k++] = move(scratch[i++]);
+    while (j < nR) v[k++] = move(scratch[nL + j++]);
 }
 
 template <typename T>
-void mergeSortRec(std::vector<T>& v, int lo, int hi, std::vector<T>& scratch) {
+void mergeSortRec(vector<T>& v, int lo, int hi, vector<T>& scratch) {
     if (lo >= hi) return;                 // 0 or 1 element
     const int mid = lo + (hi - lo) / 2;   // overflow-safe midpoint
     mergeSortRec(v, lo, mid, scratch);
@@ -649,9 +661,9 @@ void mergeSortRec(std::vector<T>& v, int lo, int hi, std::vector<T>& scratch) {
 
 // Θ(n log n) worst case, Θ(n) auxiliary space, stable.
 template <typename T>
-void mergeSort(std::vector<T>& v) {
+void mergeSort(vector<T>& v) {
     if (v.size() < 2) return;
-    std::vector<T> scratch(v.size());
+    vector<T> scratch(v.size());
     detail::mergeSortRec(v, 0, static_cast<int>(v.size()) - 1, scratch);
 }
 ```
@@ -824,6 +836,430 @@ Answer without looking. If you can't, the section is named next to the question.
 12. Draw the recursion tree for `T(n) = 2T(n/2) + c₂n` and explain why every level costs the same. *(§10)*
 13. Computer A is 1000× faster than B, runs `2n²`; B runs `50 n lg n`. Who wins at `n = 10⁷`, and by how much? *(§11)*
 14. Estimate the largest `n` for which an `O(n²)` algorithm finishes in one second, and say what you assumed. *(§11)*
+
+---
+
+## Practice — where to drill this module
+
+These are the problems that actually exercise M01's ideas. Numbers are LeetCode's.
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| Insertion sort, exactly as written | [147 · Insertion Sort List](https://leetcode.com/problems/insertion-sort-list/) | forces you to write the shift-and-insert loop on a structure with no random access |
+| `MERGE` on its own | [88 · Merge Sorted Array](https://leetcode.com/problems/merge-sorted-array/) | the merge step in isolation — and in-place from the back, which is the trick `MERGE` avoids by copying |
+| Merge sort end to end | [912 · Sort an Array](https://leetcode.com/problems/sort-an-array/) · [148 · Sort List](https://leetcode.com/problems/sort-list/) | 912 wants an `O(n lg n)` sort you wrote yourself; 148 is merge sort on a linked list, where it is genuinely the best choice |
+| Merging many runs | [23 · Merge k Sorted Lists](https://leetcode.com/problems/merge-k-sorted-lists/) | the divide-and-conquer generalization of `MERGE` |
+| Earliest-completion-first (movie scheduling) | [435 · Non-overlapping Intervals](https://leetcode.com/problems/non-overlapping-intervals/) · [452 · Minimum Number of Arrows to Burst Balloons](https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/) · [646 · Maximum Length of Pair Chain](https://leetcode.com/problems/maximum-length-of-pair-chain/) | all three are `OptimalScheduling` with the words changed; if you can see that, the module landed |
+| Interval bookkeeping | [57 · Insert Interval](https://leetcode.com/problems/insert-interval/) | the "specify the problem precisely" discipline — the edge cases are the whole problem |
+| Why exhaustive TSP is hopeless | [847 · Shortest Path Visiting All Nodes](https://leetcode.com/problems/shortest-path-visiting-all-nodes/) | the `2ⁿ·n` Held–Karp shape, which is what "exponential but not `n!`" buys you |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — the *Sorting and Searching* section is the closest thing to a curriculum for this module. [Codeforces problemset, `sortings` tag](https://codeforces.com/problemset?tags=sortings) and [`greedy` tag](https://codeforces.com/problemset?tags=greedy) for counterexample-hunting practice under time pressure.
+
+**How to drill the actual skill of this module** — which is *counterexample hunting*, not coding: take any greedy rule you invent, and before writing a line, spend two minutes trying to break it with (a) tiny instances, (b) ties, (c) extreme ratios, (d) a rotation or reflection of a "fixed" instance. Skiena's whole point is that this is a *method*.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 1. Everything below is assumed by the appendix code.*
+
+Every snippet in these notes compiles under `g++ -std=c++17 -Wall -Wextra` with this prelude:
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+```
+
+### 1. Parameter passing — the decision you make on every function
+
+Weiss gives a two-part test [§1.5.3, p.27]:
+
+> 1. If the formal parameter should be able to change the value of the actual argument, **use call-by-reference** (`T&`).
+> 2. Otherwise: a primitive type goes **by value** (`T`); a class type goes **by constant reference** (`const T&`), *"unless it is an unusually small and easily copyable type."*
+
+| Signature | Name | Use for |
+|---|---|---|
+| `void f(int n)` | call-by-value | small, unmodified |
+| `void f(const vector<Point>& P)` | call-by-**constant**-reference | large, unmodified — **the default for containers** |
+| `void f(vector<int>& A)` | call-by-reference | anything the function must modify |
+| `void f(vector<int>&& A)` | call-by-rvalue-reference | you intend to *move* from a temporary |
+
+Weiss's own example of the mistake: `string randomItem(vector<string> arr)` copies the entire vector *"a tremendously expensive operation compared to the cost of computing and returning a randomly chosen array index, and… completely unnecessary."* The appendix's `nearestNeighborTour(const vector<Point>& P, int start)` shows both halves of the rule in one signature.
+
+### 2. Return passing — and why returning a `vector` is now free
+
+Weiss [§1.5.4, p.28–29]. Returning a large object used to mean a copy, which is why old C++ code passes an output parameter instead. **In C++11 and later, return-by-value moves.** `partialSum` in Weiss's Figure 1.13 returns a `vector<int>` by value and *"the vector implementation is optimized to allow this to be done with little more than a pointer change."*
+
+So `vector<int> nearestNeighborTour(...)` is the right signature. Do **not** contort it into `void f(..., vector<int>& out)` for performance — that reflex is a decade out of date.
+
+The exception Weiss flags: returning a reference into an existing object (`const T& randomItem2(...)`) still avoids a copy, **but only if the caller also uses a reference** — `auto& x = randomItem2(vec);`. Write `auto x = ...` and you copied anyway.
+
+### 3. References as aliases, and the range-`for` trap
+
+Weiss [§1.5.2, p.24–25]. An lvalue reference is *"another name for the object it references."* Three uses, all of which appear in this module's code:
+
+```cpp
+void rangeForDemo(vector<int>& arr, const vector<string>& names) {
+    for (auto x : arr) ++x;          // BROKEN: x is a COPY; arr is unchanged
+    for (auto& x : arr) ++x;         // works:  x is another NAME for each element
+    for (const auto& s : names)      // read-only, and no copy of each string
+        (void)s.size();              // (void) silences the unused-value warning
+}
+```
+
+The appendix writes `for (const Interval& j : I)` for exactly this reason: `Interval` holds a `string`, so a by-value loop variable would copy that string on every iteration.
+
+### 4. `const` correctness
+
+`const` on a parameter (`const vector<Point>&`) promises the function will not modify it. `const` after a member function (`double area() const`) promises the function will not modify the object. Both are checked by the compiler, and both are how a reader knows what a function does without reading it. `const int n = (int)P.size();` also documents "this never changes" to the reader *and* to the optimizer.
+
+### 5. Templates — writing the algorithm once
+
+Weiss [§1.6.1, p.37]: a function template *"is not an actual function, but instead is a pattern for what could become a function."* The sorting code in the appendix is templated on `Comparable`, which Weiss defines as a type providing `operator<` (and a copy constructor and `operator=`):
+
+```cpp
+template <typename Comparable>
+void insertionSort1Indexed(vector<Comparable>& A, int n);
+```
+
+Weiss's warning applies directly: *"it is customary to include, prior to any template, comments that explain what assumptions are made about the template argument(s)."* A template that needs `<` and is handed a type without `<` fails at **instantiation**, with an error message pointing inside your function rather than at the call — which is why the assumption goes in a comment.
+
+### 6. Lambdas and function objects — passing a comparison
+
+Weiss motivates function objects [§1.6.4, p.41] with exactly the problem `OptimalScheduling` has: an `Interval` has no natural `<`. Do we order by start, by finish, by length? The answer is *"completely decoupled from the objects"* and passed in. Weiss's mechanism is a class with `operator()`; C++11's lambda is the same thing with less typing:
+
+```cpp
+struct Job { int start, finish; };
+
+void sortByFinish(vector<Job>& I) {
+    sort(I.begin(), I.end(),
+         [](const Job& a, const Job& b) { return a.finish < b.finish; });
+}
+```
+
+That lambda **is** a function object — the compiler writes the class for you. `sort` requires a **strict weak ordering**: `cmp(a,a)` must be `false`. Writing `<=` here is undefined behaviour and really does crash `std::sort` in libstdc++ on large inputs.
+
+### 7. `size()` returns an unsigned type
+
+`vector::size()` returns `size_t`. `for (int i = 0; i < (int)v.size() - 1; ++i)` is safe; `for (int i = 0; i < v.size() - 1; ++i)` on an **empty** vector computes `0u - 1 = 18446744073709551615` and loops forever. Every appendix function casts once: `const int n = (int)P.size();`.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+Every pseudocode block in this module, translated **literally**, line for line, with the pseudocode's own variable names kept wherever C++ allows. These are deliberately *not* the tuned versions — the point is that you can put the pseudocode and the C++ side by side and see the correspondence.
+
+All of it compiles as one translation unit under `g++ -std=c++17 -Wall -Wextra` and is exercised by the tests quoted at the end of each entry.
+
+### A1 NearestNeighbor
+
+*Pseudocode: §2, "Case study 1: Robot tour optimization".*
+
+```cpp
+// A point in the plane. Aggregate initialisation ({1.0, 2.0}) works because
+// this is a plain struct with public members and no user-declared constructor.
+// The `= 0` are default member initialisers (C++11): Point p; gives {0,0}
+// rather than garbage, which is a real class of bug removed for free.
+struct Point {
+    double x = 0, y = 0;
+};
+
+// `const Point&` — call-by-constant-reference [Weiss §1.5.3, p.26]. A Point is
+// only 16 bytes, so by-value would be fine here; the reference form is written
+// out because it is the habit you want for every larger type.
+double dist(const Point& a, const Point& b) {
+    return hypot(a.x - b.x, a.y - b.y);   // hypot avoids overflow that sqrt(dx*dx+dy*dy) can hit
+}
+
+// Returns the visiting ORDER as indices into P, not the points themselves:
+// indices are cheap to copy and let the caller map back to whatever it likes.
+// Return-by-value is correct and free — C++11 moves the vector out [Weiss §1.5.4].
+vector<int> nearestNeighborTour(const vector<Point>& P, int start = 0) {
+    const int n = (int)P.size();          // cast ONCE: size() is unsigned (size_t)
+    if (n == 0) return {};                // `{}` value-initialises the return type: an empty vector
+
+    // vector<char>, not vector<bool>! vector<bool> is a bit-packed SPECIALISATION
+    // that does not behave like a normal container (operator[] returns a proxy,
+    // you cannot take &v[i]). For flags, vector<char> is the safe default.
+    vector<char> visited(n, 0);
+
+    vector<int> tour;
+    tour.reserve(n);                      // one allocation instead of O(lg n) reallocations
+
+    int p = start;                        // "Pick and visit an initial point p0 from P"
+    visited[p] = 1;
+    tour.push_back(p);
+
+    for (int step = 1; step < n; ++step) {          // "While there are still unvisited points"
+        int best = -1;
+        double bestD = numeric_limits<double>::infinity();   // <limits>: the honest "infinity"
+        for (int q = 0; q < n; ++q) {               // "Select p_i closest to p_{i-1}"
+            if (visited[q]) continue;
+            double d = dist(P[p], P[q]);
+            if (d < bestD) { bestD = d; best = q; }
+        }
+        visited[best] = 1;
+        tour.push_back(best);
+        p = best;
+    }
+    return tour;                          // "Return to p0" is implicit: the tour is a cycle
+}
+
+// Cost of a closed tour. The modulo is what closes the cycle: the last point's
+// successor is tour[0].
+double tourLength(const vector<Point>& P, const vector<int>& tour) {
+    double total = 0;
+    for (size_t i = 0; i < tour.size(); ++i)
+        total += dist(P[tour[i]], P[tour[(i + 1) % tour.size()]]);
+    return total;
+}
+```
+
+**Complexity.** `Θ(n²)`: `n − 1` rounds, each scanning all `n` points. **Correct? No — this is a heuristic.**
+
+> *Verified:* on Skiena's line instance (points at `−21, −5, −1, 0, 1, 3, 11`, starting at `0`) the code visits `0, −1, 1, 3, −5, −21, 11` — the zigzag across the origin, exactly as Figure 1.3 shows. Tour length **72** against the **exact optimum 64** (computed by Held–Karp over all orderings): **12.5% worse.**
+
+### A2 ClosestPair
+
+*Pseudocode: §2, "Attempt 2 — Closest pair".*
+
+```cpp
+// The pseudocode says "endpoints from distinct vertex chains", so we need to
+// know which chain a point belongs to. That is a union-find (M10) — here in its
+// smallest useful form, with path halving and no union-by-rank.
+struct ChainSet {
+    vector<int> parent;
+    // `explicit` stops the compiler from silently converting an int into a
+    // ChainSet [Weiss §1.4.2]. Single-argument constructors should almost
+    // always be explicit.
+    explicit ChainSet(int n) : parent(n) {        // member-initialiser list, not assignment
+        for (int i = 0; i < n; ++i) parent[i] = i;
+    }
+    int find(int x) {
+        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+        return x;
+    }
+    void join(int a, int b) { parent[find(a)] = find(b); }
+};
+
+// Returns the tour as a list of edges. pair<int,int> is the lightweight
+// two-field struct the standard library already wrote for us.
+vector<pair<int,int>> closestPairTour(const vector<Point>& P) {
+    const int n = (int)P.size();
+    if (n < 2) return {};
+    vector<pair<int,int>> edges;
+    vector<int> deg(n, 0);                // a tour is a cycle: every vertex ends with degree 2
+    ChainSet chain(n);
+
+    for (int i = 1; i <= n - 1; ++i) {                 // "For i = 1 to n-1"
+        double d = numeric_limits<double>::infinity(); // "d = infinity"
+        int sm = -1, tm = -1;
+        for (int s = 0; s < n; ++s) {                  // "For each pair of endpoints (s,t)"
+            if (deg[s] >= 2) continue;                 //   an endpoint has degree < 2
+            for (int t = s + 1; t < n; ++t) {
+                if (deg[t] >= 2) continue;
+                // "from distinct vertex chains" — this is the premature-cycle guard.
+                // On the very last edge we WANT to close the cycle, so we drop it.
+                if (i < n - 1 && chain.find(s) == chain.find(t)) continue;
+                double dst = dist(P[s], P[t]);
+                if (dst <= d) { d = dst; sm = s; tm = t; }   // `<=` matches the pseudocode
+            }
+        }
+        edges.push_back({sm, tm});                     // "Connect (s_m, t_m) by an edge"
+        ++deg[sm]; ++deg[tm];
+        chain.join(sm, tm);
+    }
+
+    // "Connect the two remaining endpoints by an edge."
+    int a = -1, b = -1;
+    for (int v = 0; v < n; ++v) if (deg[v] < 2) { (a < 0 ? a : b) = v; }
+    // The conditional operator yields an LVALUE when both arms are lvalues of
+    // the same type, so it can appear on the LEFT of `=`. Legal, and a compact
+    // way to say "fill a first, then b".
+    if (a >= 0 && b >= 0) edges.push_back({a, b});
+    return edges;
+}
+```
+
+**Complexity.** `Θ(n³)` as written: `n − 1` rounds × `O(n²)` endpoint pairs. **Also a heuristic.**
+
+> *Verified:* on the two-row instance (rows `1 − ε` apart, neighbours within a row `1 + ε` apart, `ε = 0.01`) against the **exact** optimum from Held–Karp:
+>
+> | points | closest-pair heuristic | exact optimum | worse by |
+> |---|---|---|---|
+> | 8 | 9.2196 | 8.0400 | 14.7% |
+> | 12 | 16.5404 | 12.0800 | 36.9% |
+> | 16 | 22.5333 | 16.1200 | **39.8%** |
+>
+> Skiena's figure claims "over 20%"; with more points it is worse than that, and the gap keeps growing. Every returned tour was a genuine cycle — every vertex had degree exactly 2.
+
+### A3 OptimalScheduling
+
+*Pseudocode: §2, "Case study 2: Movie scheduling".*
+
+```cpp
+struct Interval {
+    int start = 0, finish = 0;
+    string name;                     // a std::string member is why we pass Interval by const&
+};
+
+// Takes its argument BY VALUE on purpose: we need to sort, and sorting the
+// caller's vector would be a surprise. Taking by value + sorting the local copy
+// is the honest signature, and if the caller passes a temporary
+// (`optimalScheduling(makeIntervals())`) the copy is elided into a move.
+vector<Interval> optimalScheduling(vector<Interval> I) {
+    // "the job with the earliest completion date" — so order by `finish`.
+    // The lambda IS a function object [Weiss §1.6.4, p.42]; the compiler
+    // generates a class with operator() from it.
+    // Must be a STRICT weak ordering: `<`, never `<=`.
+    sort(I.begin(), I.end(),
+         [](const Interval& a, const Interval& b) { return a.finish < b.finish; });
+
+    vector<Interval> accepted;
+    int lastFinish = numeric_limits<int>::min();       // "nothing accepted yet"
+
+    // `const Interval&` in the range-for: no copy of the string member per
+    // iteration [Weiss §1.5.2, p.25].
+    for (const Interval& j : I) {
+        // "Delete j, and any interval intersecting j, from I" — sorting by
+        // finish time turns that deletion into a single comparison: anything
+        // starting before lastFinish intersects something already accepted.
+        if (j.start >= lastFinish) {
+            accepted.push_back(j);
+            lastFinish = j.finish;
+        }
+    }
+    return accepted;
+}
+```
+
+**Complexity.** `Θ(n lg n)` for the sort, `Θ(n)` for the sweep. The pseudocode's literal "delete every intersecting interval" would be `Θ(n²)`; sorting by finish time is what collapses it.
+
+**This one is not a heuristic — it is optimal**, and the proof is the exchange argument sketched in §2 and formalized in [M12](M12-greedy.md).
+
+> *Verified:* on the *War and Peace* instance it picks 4 of 5. Against **brute force over all `2ⁿ` subsets** on 500 random instances (`n ≤ 10`), the greedy answer matched the true optimum **every time**.
+
+### A4 Increment
+
+*Pseudocode: §4, "Strengthening the hypothesis".*
+
+```cpp
+// Skiena's deliberately odd function. The point is not the code — it is that
+// proving it correct REQUIRES strong induction, because the recursion drops
+// from y to floor(y/2), not to y-1.
+//
+// `long long` because the doubling on the odd branch makes intermediate values
+// grow if you get the recursion wrong, and because 32-bit overflow is UB.
+long long incrementSkiena(long long y) {
+    if (y == 0) return 1;                              // if (y = 0) return 1
+    if (y % 2 == 1) return 2 * incrementSkiena(y / 2); // odd: 2 * Increment(floor(y/2))
+    return y + 1;                                      // even: y + 1
+}
+// NOTE on integer division: for NON-NEGATIVE y, `y / 2` in C++ is exactly
+// floor(y/2), which is what the pseudocode means. For NEGATIVE operands C++
+// truncates toward zero, so -3 / 2 == -1, NOT floor(-1.5) == -2. Any time
+// pseudocode says floor() and your input can be negative, that mismatch is a
+// real bug — here the function is only defined for y >= 0.
+```
+
+**Why it works.** For odd `y = 2m + 1`: `2·Increment(m) = 2(m + 1) = 2m + 2 = y + 1`. ✓ The inductive hypothesis has to be *"holds for all `k ≤ y − 1`"*, not just `y − 1`, because the call is to `m ≈ y/2`.
+
+> *Verified:* `incrementSkiena(y) == y + 1` for every `y` in `[0, 200000)`.
+
+### A5 INSERTION-SORT
+
+*Pseudocode: §8, "Pseudocode (CLRS, 1-indexed)".*
+
+```cpp
+// CLRS indexes A[1..n]. Rather than silently shifting to 0-based (which is what
+// the practical version in the body does), this translation keeps 1-based
+// indexing so every line matches the book: the caller passes a vector of size
+// n+1 whose slot 0 is unused. Wasting one element to avoid off-by-one bugs in a
+// transcription is a fair trade.
+//
+// TEMPLATE ASSUMPTION [Weiss §1.6.1, p.37]: Comparable must provide operator>
+// (used at the loop test), a copy constructor, and operator=. int, double and
+// string all qualify.
+template <typename Comparable>
+void insertionSort1Indexed(vector<Comparable>& A, int n) {   // `&`: we sort in place
+    for (int i = 2; i <= n; ++i) {          // 1  for i = 2 to n
+        Comparable key = A[i];              // 2      key = A[i]      (a real COPY — needed:
+                                            //        A[i] is about to be overwritten)
+        int j = i - 1;                      // 4      j = i - 1
+        // 5  while j > 0 and A[j] > key
+        // The order of the && operands matters: C++ SHORT-CIRCUITS, so `j > 0`
+        // is tested first and A[j] is never read at j == 0. Swap them and you
+        // read A[0]... which here exists, so the bug would be silent. In the
+        // 0-indexed version it would be out-of-bounds.
+        while (j > 0 && A[j] > key) {
+            A[j + 1] = A[j];                // 6          A[j+1] = A[j]
+            j = j - 1;                      // 7          j = j - 1
+        }
+        A[j + 1] = key;                     // 8      A[j+1] = key
+    }
+}
+```
+
+**Complexity.** `Θ(n)` best case (already sorted — the `while` never fires), `Θ(n²)` worst and average. Space `Θ(1)` auxiliary: it sorts **in place**.
+
+**Stable**, because `A[j] > key` is strict: an element *equal* to `key` stops the shift, so equal elements keep their original relative order.
+
+> *Verified:* agrees with `std::sort` on 400 random arrays of length 0–59.
+
+### A6 MERGE-SORT and MERGE
+
+*Pseudocode: §10, "Pseudocode".*
+
+```cpp
+// MERGE(A, p, q, r): A[p..q] and A[q+1..r] are each sorted; make A[p..r] sorted.
+template <typename Comparable>
+void merge1Indexed(vector<Comparable>& A, int p, int q, int r) {
+    const int nL = q - p + 1;               // 1  n_L = q - p + 1
+    const int nR = r - q;                   //    n_R = r - q
+
+    // 2-3  "let L and R be new arrays; copy A[p..q] into L, A[q+1..r] into R"
+    // The iterator-pair constructor copies a RANGE. Note the asymmetry that
+    // trips everyone up: the range is [first, last) — last is ONE PAST the end.
+    // A[p..q] inclusive therefore becomes [begin+p, begin+q+1).
+    vector<Comparable> L(A.begin() + p, A.begin() + q + 1);
+    vector<Comparable> R(A.begin() + q + 1, A.begin() + r + 1);
+
+    int i = 0, j = 0, k = p;                // 4  i = 0; j = 0; k = p
+    while (i < nL && j < nR) {              // 5  while i < n_L and j < n_R
+        // CLRS writes `if L[i] <= R[j]`. Comparable is only promised operator<
+        // [Weiss §1.6.3, p.39], so express "L[i] <= R[j]" as "not (R[j] < L[i])".
+        // This is the standard library's own convention and it is what keeps
+        // the merge STABLE: on a tie we take from L, the earlier half.
+        if (!(R[j] < L[i])) { A[k] = L[i]; ++i; }   // 6-7
+        else                { A[k] = R[j]; ++j; }   // 8-9
+        ++k;                                         // 10
+    }
+    while (i < nL) { A[k] = L[i]; ++i; ++k; }        // 11  drain L
+    while (j < nR) { A[k] = R[j]; ++j; ++k; }        // 12  drain R
+}
+
+template <typename Comparable>
+void mergeSort1Indexed(vector<Comparable>& A, int p, int r) {
+    if (p >= r) return;                     // 1-2  zero or one element: already sorted
+    // 3  q = floor((p+r)/2), written to avoid overflow.
+    // `(p + r) / 2` can overflow int when p and r are both large; `p + (r-p)/2`
+    // cannot, and equals the same floor for p <= r. This is the famous bug that
+    // sat in java.util.Arrays.binarySearch for nine years.
+    int q = p + (r - p) / 2;
+    mergeSort1Indexed(A, p, q);             // 4
+    mergeSort1Indexed(A, q + 1, r);         // 5
+    merge1Indexed(A, p, q, r);              // 6
+}
+```
+
+**Complexity.** `T(n) = 2T(n/2) + Θ(n) = Θ(n lg n)`, every case — there is no best case, because the recursion does not look at the data. **Space `Θ(n)` auxiliary** for `L` and `R`, plus `Θ(lg n)` recursion stack.
+
+**The copy into `L` and `R` is not laziness.** You cannot merge two adjacent sorted runs in place without either extra space or a much slower rotation-based algorithm; this is exactly why merge sort loses to quicksort in practice despite the better worst case ([M05](M05-sorting.md)).
+
+**`Comparable` here needs only `operator<`** — see the `!(R[j] < L[i])` comment. That is the same contract `std::sort` imposes, and adopting it means your code works with any type that already works with the standard library.
+
+> *Verified:* agrees with `std::sort` on 400 random arrays; and on an array of `(key, id)` pairs sorted by key alone, every run of equal keys came out with **increasing `id`** — i.e. `MERGE` as written really is stable.
+
 
 ---
 

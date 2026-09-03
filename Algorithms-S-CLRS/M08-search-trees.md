@@ -80,6 +80,8 @@ INORDER-TREE-WALK(x)
 4      INORDER-TREE-WALK(x.right)
 ```
 
+→ **C++ implementation:** [A1 INORDER-TREE-WALK](#a1-inorder-tree-walk)
+
 **Theorem 12.1.** If `x` is the root of an `n`-node subtree, `INORDER-TREE-WALK(x)` takes `Θ(n)` time.
 
 *Proof skeleton.* Let `T(n)` be the time. `T(0) = c` for the `NIL` test. For `n > 0` with `k` nodes in the left subtree and `n−k−1` in the right, `T(n) = T(k) + T(n−k−1) + d`. Guess `T(n) = (c+d)n + c` and verify by substitution: it holds for `n = 0`, and
@@ -102,6 +104,8 @@ TREE-SEARCH(x, k)                       ITERATIVE-TREE-SEARCH(x, k)
 5  else return TREE-SEARCH(x.right, k)   5  return x
 ```
 
+→ **C++ implementation:** [A2 TREE-SEARCH, ITERATIVE-TREE-SEARCH, TREE-MINIMUM, TREE-MAXIMUM](#a2-tree-search-iterative-tree-search-tree-minimum-tree-maximum)
+
 Both follow a single **simple downward path** and cost `O(h)`. The iterative version is preferred on most machines — no call overhead, no recursion stack.
 
 `TREE-MINIMUM` follows `left` until `NIL`; `TREE-MAXIMUM` follows `right`. Skiena's justification is worth internalizing because it is the BST property applied once: the smallest key must be in the left subtree of the root (everything left is smaller), and recursively, so it is the **left-most descendant** of the root.
@@ -117,6 +121,8 @@ TREE-SUCCESSOR(x)
 7          y = y.p
 8      return y
 ```
+
+→ **C++ implementation:** [A3 TREE-SUCCESSOR](#a3-tree-successor)
 
 **Why case B works.** If `x` has no right subtree, the successor is *the lowest ancestor of `x` whose left subtree contains `x`*. Walking up while `x` is a right child skips every ancestor smaller than `x`; the first time we arrive from the left, that ancestor is bigger than everything in its left subtree, i.e. bigger than `x`, and it is the smallest such. If we run off the root, `x` was the maximum and the successor is `NIL`.
 
@@ -160,6 +166,8 @@ TRANSPLANT(T, u, v)                     // replace subtree u by subtree v
 4  if v ≠ NIL  v.p = u.p
 ```
 
+→ **C++ implementation:** [A4 TRANSPLANT](#a4-transplant)
+
 ```
 TREE-DELETE(T, z)
 1  if z.left == NIL                     // case 1: 0 or 1 (right) child
@@ -175,6 +183,8 @@ TREE-DELETE(T, z)
 11     y.left = z.left
 12     y.left.p = y
 ```
+
+→ **C++ implementation:** [A5 TREE-DELETE](#a5-tree-delete)
 
 **Important 4e change.** Third edition *copied* `y`'s key into `z` and freed `y`. Fourth edition **moves the node `y` into `z`'s position and frees `z` itself**. The reason, given in the chapter notes: if other parts of the program hold pointers to tree nodes, copying keys silently makes an outside pointer to `z` now refer to a *different* key, while the pointer to `y` dangles. Moving nodes means the only invalidated pointer is the one to the node you actually asked to delete. **This is the same "handle problem" as in priority queues (M05).** Skiena's own text describes the relabeling version, and notes the full implementation "looks a little ghastly" — which it does; the `TRANSPLANT` factoring is what tames it.
 
@@ -241,7 +251,7 @@ public:
     BST& operator=(const BST&) = delete;
 
     Node* root() const { return root_; }
-    std::size_t size() const { return n_; }
+    size_t size() const { return n_; }
 
     Node* find(const Key& k) const {
         Node* x = root_;
@@ -291,11 +301,11 @@ public:
         --n_;
     }
 
-    void inorder(std::vector<Key>& out) const { walk(root_, out); }
+    void inorder(vector<Key>& out) const { walk(root_, out); }
 
 private:
     Node* root_ = nullptr;
-    std::size_t n_ = 0;
+    size_t n_ = 0;
 
     void transplant(Node* u, Node* v) {
         if (!u->p)                root_ = v;
@@ -303,7 +313,7 @@ private:
         else                      u->p->right = v;
         if (v) v->p = u->p;
     }
-    static void walk(Node* x, std::vector<Key>& out) {
+    static void walk(Node* x, vector<Key>& out) {
         if (!x) return;
         walk(x->left, out);
         out.push_back(x->key);
@@ -393,6 +403,8 @@ LEFT-ROTATE(T, x)                         // assumes x.right ≠ T.nil
 9  x.p = y
 ```
 
+→ **C++ implementation:** [A6 LEFT-ROTATE and RIGHT-ROTATE](#a6-left-rotate-and-right-rotate)
+
 `O(1)` — a fixed number of pointer writes. `RIGHT-ROTATE` is the mirror image. **Both change only pointers, never keys.**
 
 ### Insertion
@@ -421,6 +433,8 @@ RB-INSERT-FIXUP(T, z)
 16      else  (same with "right" and "left" exchanged)
 17  T.root.color = BLACK
 ```
+
+→ **C++ implementation:** [A7 RB-INSERT-FIXUP](#a7-rb-insert-fixup)
 
 **The three cases, by the color of the uncle `y`:**
 
@@ -463,6 +477,8 @@ RB-TRANSPLANT(T, u, v)
 4  v.p = u.p                       // UNCONDITIONAL — v may be T.nil, and we need its parent
 ```
 
+→ **C++ implementation:** [A8 RB-TRANSPLANT](#a8-rb-transplant)
+
 That unconditional line 4 is the difference from `TRANSPLANT`, and it is not cosmetic: `RB-DELETE-FIXUP` reads `x.p` repeatedly, and `x` may *be* the sentinel.
 
 ```
@@ -486,6 +502,8 @@ RB-DELETE(T, z)
 17  if y-original-color == BLACK
 18      RB-DELETE-FIXUP(T, x)
 ```
+
+→ **C++ implementation:** [A9 RB-DELETE](#a9-rb-delete)
 
 **The reasoning, compressed:**
 
@@ -521,6 +539,8 @@ RB-DELETE-FIXUP(T, x)                     // shown for x a LEFT child; mirror ot
 44  x.color = BLACK
 ```
 
+→ **C++ implementation:** [A10 RB-DELETE-FIXUP](#a10-rb-delete-fixup)
+
 **Why `w ≠ T.nil`:** `x` is doubly black, so the path from `x.p` through `x` already counts an extra black; if the sibling were the sentinel, the path from `x.p` to that (singly black) leaf would have strictly fewer blacks — contradicting property 5.
 
 | Case | Condition (sibling `w`) | Action | Outcome |
@@ -554,7 +574,7 @@ This one implementation serves the rest of the module. The template parameter `A
 #include <cstddef>
 #include <functional>
 
-template <class Aug, class Compare = std::less<typename Aug::Key>>
+template <class Aug, class Compare = less<typename Aug::Key>>
 class RBTree {
 public:
     using Key = typename Aug::Key;
@@ -577,7 +597,7 @@ public:
 
     Node* nil()  const { return nil_; }
     Node* root() const { return root_; }
-    std::size_t size() const { return n_; }
+    size_t size() const { return n_; }
 
     Node* find(const Key& k) const {
         Node* x = root_;
@@ -645,7 +665,7 @@ public:
 private:
     Node* root_;
     Node* nil_;
-    std::size_t n_ = 0;
+    size_t n_ = 0;
     Compare less_{};
 
     void pull(Node* x)   { if (x != nil_) x->aug.pull(x); }
@@ -854,6 +874,8 @@ OS-SELECT(x, i)                          // i-th smallest in x's subtree, 1-inde
 4  else         return OS-SELECT(x.right, i - r)
 ```
 
+→ **C++ implementation:** [A11 OS-SELECT](#a11-os-select)
+
 *Intuition:* `x.left.size` elements sit below `x`, so `x` itself is the `r`-th. If we want something smaller, recurse left with the same `i`; if larger, recurse right after **subtracting the `r` elements we skipped**. That subtraction is the whole trick and the most common place to be off by one.
 
 ```
@@ -866,6 +888,8 @@ OS-RANK(T, x)                            // position of x in the sorted order
 6      y = y.p
 7  return r
 ```
+
+→ **C++ implementation:** [A12 OS-RANK](#a12-os-rank)
 
 **Loop invariant:** at the start of each iteration, `r` is the rank of `x.key` in the subtree rooted at `y`.
 - *Initialization:* `r = x.left.size + 1` is `x`'s rank in `x`'s own subtree; `y = x`. ✓
@@ -911,6 +935,8 @@ INTERVAL-SEARCH(T, i)
 5      else x = x.right      // no overlap in left subtree
 6  return x
 ```
+
+→ **C++ implementation:** [A13 INTERVAL-SEARCH](#a13-interval-search)
 
 Each iteration is `O(1)` and the tree is `O(lg n)` tall, so `INTERVAL-SEARCH` is `O(lg n)`.
 
@@ -981,8 +1007,8 @@ struct IntervalAug {
     long long maxHigh = LLONG_MIN;       // sentinel keeps -infinity (the identity)
     template <class Node>
     void pull(const Node* x) {
-        maxHigh = std::max(x->key.high,
-                           std::max(x->left->aug.maxHigh, x->right->aug.maxHigh));
+        maxHigh = max(x->key.high,
+                           max(x->left->aug.maxHigh, x->right->aug.maxHigh));
     }
 };
 
@@ -1009,7 +1035,7 @@ typename Tree::Node* intervalSearch(const Tree& t, const Interval& i) {
 >   #include <ext/pb_ds/assoc_container.hpp>
 >   #include <ext/pb_ds/tree_policy.hpp>
 >   using namespace __gnu_pbds;
->   using OST = tree<int, null_type, std::less<int>,
+>   using OST = tree<int, null_type, less<int>,
 >                    rb_tree_tag, tree_order_statistics_node_update>;
 >   ```
 >   This is *the* competitive-programming shortcut. It is a GNU extension — not portable, not available in an interview's online judge unless you check.
@@ -1105,6 +1131,8 @@ B-TREE-SEARCH(x, k)
 9      return B-TREE-SEARCH(x.cᵢ, k)
 ```
 
+→ **C++ implementation:** [A14 B-TREE-SEARCH](#a14-b-tree-search)
+
 An `(x.n + 1)`-way branch instead of a 2-way branch. Lines 1–3 find the smallest `i` with `k ≤ x.keyᵢ`, or set `i = x.n + 1`.
 
 **Complexity:** `O(h) = O(log_t n)` **disk accesses**. CPU time is `O(t)` per node (linear scan) for `O(t·h) = O(t log_t n)` total. Exercise 18.2-6: replacing the linear scan with a binary search inside the node makes the CPU time `O(lg n)` **independent of `t`** — which is what real implementations do, since `t` can be in the thousands.
@@ -1139,6 +1167,8 @@ B-TREE-SPLIT-CHILD(x, i)        // x nonfull, x.cᵢ full; both in memory
 18  DISK-WRITE(y) ; DISK-WRITE(z) ; DISK-WRITE(x)
 ```
 
+→ **C++ implementation:** [A15 B-TREE-SPLIT-CHILD](#a15-b-tree-split-child)
+
 `Θ(t)` CPU time, `O(1)` disk operations.
 
 ```
@@ -1151,6 +1181,8 @@ B-TREE-INSERT(T, k)                    B-TREE-SPLIT-ROOT(T)
                                        6  B-TREE-SPLIT-CHILD(s, 1)
                                        7  return s
 ```
+
+→ **C++ implementation:** [A16 B-TREE-INSERT and B-TREE-SPLIT-ROOT](#a16-b-tree-insert-and-b-tree-split-root)
 
 ```
 B-TREE-INSERT-NONFULL(x, k)
@@ -1169,6 +1201,8 @@ B-TREE-INSERT-NONFULL(x, k)
 15          if k > x.keyᵢ  i = i + 1   // which half does k belong in?
 17      B-TREE-INSERT-NONFULL(x.cᵢ, k)
 ```
+
+→ **C++ implementation:** [A17 B-TREE-INSERT-NONFULL](#a17-b-tree-insert-nonfull)
 
 **Splitting the root is the only way a B-tree grows taller** — and unlike a BST, **a B-tree grows at the top, not at the bottom.** That is why all leaves stay at the same depth: every leaf gains a level at the same instant.
 
@@ -1216,8 +1250,8 @@ public:
     struct Node {
         int  n = 0;
         bool leaf = true;
-        std::array<Key, 2 * T - 1> key{};
-        std::array<Node*, 2 * T>   c{};
+        array<Key, 2 * T - 1> key{};
+        array<Node*, 2 * T>   c{};
     };
 
     BTree() { root_ = new Node(); }
@@ -1243,7 +1277,7 @@ public:
         }
     }
 
-    void inorder(std::vector<Key>& out) const { walk(root_, out); }
+    void inorder(vector<Key>& out) const { walk(root_, out); }
 
 private:
     Node* root_;
@@ -1381,7 +1415,7 @@ private:
         eraseFrom(x->c[i], k);
     }
 
-    static void walk(const Node* x, std::vector<Key>& out) {
+    static void walk(const Node* x, vector<Key>& out) {
         for (int i = 0; i < x->n; ++i) {
             if (!x->leaf) walk(x->c[i], out);
             out.push_back(x->key[i]);
@@ -1484,6 +1518,891 @@ Recursion-stack space: `O(h)` for the recursive walks — worth converting the h
 - **Interval tree:** keyed on `low`, augmented with `max` of `high`. Overlap ⟺ `a.low ≤ b.high && b.low ≤ a.high`. Search goes left iff `x.left.max ≥ i.low`; correctness needs both the key and the augmentation (Theorem 17.2).
 - **B-tree:** minimum degree `t`; every non-root node has `t−1` to `2t−1` keys; all leaves at equal depth; **`h ≤ log_t((n+1)/2)`**. Insert splits full nodes on the way down; delete fills thin nodes on the way down; both are single passes. The tree grows and shrinks **at the root**. Branching factor 50–2000 in practice because a node is one disk block.
 - **The meta-lesson:** the cost model chooses the structure. RAM model → red-black. Block-transfer model → B-tree. Skewed accesses → splay. Only membership → hash table.
+
+---
+
+## Practice — where to drill this module
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| The BST property, precisely | [98 · Validate Binary Search Tree](https://leetcode.com/problems/validate-binary-search-tree/) | the naive "check parent vs children" answer is **wrong**; you need a range, which is the property stated correctly |
+| `INORDER-TREE-WALK` | [94 · Binary Tree Inorder Traversal](https://leetcode.com/problems/binary-tree-inorder-traversal/solutions/325449/) | recursive, then iterative with an explicit stack, then Morris — three ways to say the same thing |
+| `TREE-SUCCESSOR` as an iterator | [173 · Binary Search Tree Iterator](https://leetcode.com/problems/binary-search-tree-iterator/) | `next()` in amortized `O(1)` **is** `TREE-SUCCESSOR`; this is `A3` as a submission |
+| `TREE-DELETE`, all four cases | [450 · Delete Node in a BST](https://leetcode.com/problems/delete-node-in-a-bst/) | the two-children case is where everyone gets it wrong |
+| Order statistics | [230 · Kth Smallest Element in a BST](https://leetcode.com/problems/kth-smallest-element-in-a-bst/) | the "what if it's called often?" follow-up is asking for the `size` augmentation — `A11` |
+| Augmentation, live | [1649 · Create Sorted Array through Instructions](https://leetcode.com/problems/create-sorted-array-through-instructions/) | rank queries under insertion; a BIT is the easy answer, an OS-tree the general one |
+| Interval overlap | [729 · My Calendar I](https://leetcode.com/problems/my-calendar-i/) | `INTERVAL-SEARCH` with a `std::set` and `lower_bound` — the practical form of `A13` |
+| Interval overlap, harder | [715 · Range Module](https://leetcode.com/problems/range-module/) | dynamic intervals with merging; where an interval tree earns its keep |
+| Balanced-tree behaviour | [1206 · Design Skiplist](https://leetcode.com/problems/design-skiplist/) | a randomized alternative to red-black; same `O(lg n)`, far less code |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *Range Queries* and *Tree Algorithms*. [Codeforces `trees` tag](https://codeforces.com/problemset?tags=trees) · [`data structures` tag](https://codeforces.com/problemset?tags=data+structures).
+
+**The honest advice for interviews:** you will almost never be asked to write `RB-INSERT-FIXUP`. You *will* be asked what `std::map` guarantees, why it is `O(lg n)`, when to prefer `unordered_map`, and how you would add order statistics to a balanced tree. Learn `A1`–`A5` and `A11`–`A13` cold; read `A6`–`A10` twice and know the *shape* of the argument.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 4 and §1.5–1.6.*
+
+### 1. Interface and implementation, separated
+
+Weiss [§1.4.3, p.16] presents every class as an interface followed by out-of-line member definitions. This appendix follows that convention exactly: the class declarations come first, then each pseudocode block's implementation is given as an out-of-line definition:
+
+```cpp
+struct Example {
+    int f(int x);            // declaration, in the class
+};
+int Example::f(int x) {      // definition, outside -- note the Example:: qualifier
+    return x + 1;
+}
+```
+
+That is what makes it possible for each appendix entry below to be a self-contained code block that still compiles as part of one program.
+
+### 2. The sentinel `nil` node, and why red-black trees need it
+
+`A1`–`A5` (plain BST) use `nullptr` for "no child". `A6`–`A13` (red-black) use a shared **sentinel** `nil_` node instead, for two reasons that are specific to red-black trees:
+
+- **`nil` must have a colour.** `RB-DELETE-FIXUP` reads `w.left.color` and `w.right.color`, where those children may be absent. With `nullptr` that is a crash; with a sentinel coloured `BLACK` it is exactly the right answer.
+- **`nil` must have a parent.** `RB-TRANSPLANT` sets `v.p = u.p` *unconditionally*, even when `v` is `nil`, because `RB-DELETE-FIXUP` then walks up from `x` — and `x` can be `nil`.
+
+One sentinel is shared by every leaf position in the tree, so the cost is a single node ([M06](M06-elementary-ds.md)'s sentinel discussion, applied where it genuinely pays).
+
+### 3. `enum class` for colours
+
+```cpp
+enum class Color { Red, Black };     // scoped: Color::Red, and no implicit int conversion
+```
+
+A plain `enum { RED, BLACK }` leaks its enumerators into the enclosing scope and converts silently to `int`, so `if (x->color)` compiles and means something accidental. `enum class` makes both mistakes compile errors.
+
+### 4. Raw owning pointers, and the Big-Five — again
+
+Every structure here allocates nodes with `new`. Weiss's rule from [M06](M06-elementary-ds.md) applies unchanged: **a class holding raw owning pointers must declare all five special members**, because the compiler's shallow copy would give two trees sharing nodes and then a double free. The classes below `= delete` their copy operations for that reason. A production tree would implement a deep copy; a notes implementation is better off making the mistake impossible.
+
+### 5. `struct` vs `class`
+
+`struct` members default to `public`, `class` members to `private`. Nothing else differs. The convention used below: `struct` for the plain node types (they are transparent data), `class` for the trees (they maintain invariants and must control access).
+
+### 6. Recursion depth is a real constraint
+
+`INORDER-TREE-WALK` recurses to depth `h`. For a **balanced** tree `h = O(lg n)` and nothing can go wrong. For an unbalanced BST built from sorted input, `h = n` — and at `n ≈ 10⁵` that overflows the default 8 MB stack and **segfaults**. This is not a theoretical worry: "insert 1..n in order" is the most natural test input anyone writes.
+
+### 7. What the standard library already gives you
+
+| CLRS structure | C++ |
+|---|---|
+| red-black tree | `std::map`, `std::set`, `std::multimap`, `std::multiset` |
+| B-tree | *(none)* — this is a disk structure; databases implement it |
+| order-statistic tree | *(none portable)* — GNU `__gnu_pbds::tree` on libstdc++ only |
+| interval tree | *(none)* — `std::map` + `lower_bound` covers the common cases |
+
+`std::map::erase` moves nodes rather than copying keys, which is exactly the CLRS 4e `TREE-DELETE` guarantee discussed in `A5`. C++17 adds `extract()` and `merge()`, which splice nodes between containers with no allocation — the same "move the node, not the key" idea made public.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+**Structure declarations.** Every entry below is an out-of-line definition of one of these members (toolkit §1).
+
+```cpp
+// ---------- plain BST (A1-A5) ----------
+struct BstNode {
+    int key;
+    BstNode* left  = nullptr;
+    BstNode* right = nullptr;
+    BstNode* p     = nullptr;          // parent: TREE-SUCCESSOR needs to climb
+    explicit BstNode(int k) : key(k) {}
+};
+
+class Bst {
+public:
+    Bst() = default;
+    ~Bst() { destroy(root_); }
+    Bst(const Bst&)            = delete;    // owns raw pointers (toolkit 4)
+    Bst& operator=(const Bst&) = delete;
+
+    void inorderWalk(BstNode* x, vector<int>& out) const;      // A1
+    BstNode* search(BstNode* x, int k) const;                  // A2
+    BstNode* iterativeSearch(BstNode* x, int k) const;         // A2
+    BstNode* minimum(BstNode* x) const;                        // A2
+    BstNode* maximum(BstNode* x) const;                        // A2
+    BstNode* successor(BstNode* x) const;                      // A3
+    void transplant(BstNode* u, BstNode* v);                   // A4
+    void erase(BstNode* z);                                    // A5
+
+    // An ordinary BST insert: descend to a leaf position, then link. Included
+    // so the appendix is runnable; CLRS gives it as TREE-INSERT.
+    BstNode* insert(int k) {
+        BstNode* y = nullptr;
+        BstNode* x = root_;
+        while (x) { y = x; x = (k < x->key) ? x->left : x->right; }
+        BstNode* z = new BstNode(k);
+        z->p = y;
+        if (!y)                 root_ = z;
+        else if (k < y->key)    y->left  = z;
+        else                    y->right = z;
+        return z;
+    }
+    BstNode* root() const { return root_; }
+    vector<int> inorder() const { vector<int> v; inorderWalk(root_, v); return v; }
+private:
+    BstNode* root_ = nullptr;
+    static void destroy(BstNode* x) { if (!x) return; destroy(x->left); destroy(x->right); delete x; }
+};
+
+// ---------- red-black tree (A6-A10) ----------
+enum class Color { Red, Black };
+
+struct RbNode {
+    int key = 0;
+    Color color = Color::Black;
+    RbNode* left  = nullptr;
+    RbNode* right = nullptr;
+    RbNode* p     = nullptr;
+    int size = 1;                      // A11/A12 augmentation: nodes in this subtree
+};
+
+class RbTree {
+public:
+    RbTree() {
+        nil_ = new RbNode();
+        nil_->color = Color::Black;
+        nil_->size  = 0;               // the sentinel contributes nothing to any count
+        nil_->left = nil_->right = nil_->p = nil_;
+        root_ = nil_;
+    }
+    ~RbTree() { destroy(root_); delete nil_; }
+    RbTree(const RbTree&)            = delete;
+    RbTree& operator=(const RbTree&) = delete;
+
+    void leftRotate(RbNode* x);                    // A6
+    void rightRotate(RbNode* y);                   // A6
+    RbNode* insert(int k);
+    void insertFixup(RbNode* z);                   // A7
+    void rbTransplant(RbNode* u, RbNode* v);       // A8
+    void erase(RbNode* z);                         // A9
+    void deleteFixup(RbNode* x);                   // A10
+    RbNode* osSelect(RbNode* x, int i) const;      // A11
+    int osRank(RbNode* x) const;                   // A12
+
+    RbNode* minimum(RbNode* x) const { while (x->left != nil_) x = x->left; return x; }
+    RbNode* find(int k) const {
+        RbNode* x = root_;
+        while (x != nil_ && x->key != k) x = (k < x->key) ? x->left : x->right;
+        return x == nil_ ? nullptr : x;
+    }
+    RbNode* root() const { return root_; }
+    RbNode* nil()  const { return nil_; }
+    int size() const { return root_->size; }
+    void inorder(RbNode* x, vector<int>& out) const {
+        if (x == nil_) return;
+        inorder(x->left, out); out.push_back(x->key); inorder(x->right, out);
+    }
+    vector<int> inorder() const { vector<int> v; inorder(root_, v); return v; }
+private:
+    RbNode* root_ = nullptr;
+    RbNode* nil_  = nullptr;
+    void destroy(RbNode* x) { if (x == nil_) return; destroy(x->left); destroy(x->right); delete x; }
+    // Recompute one node's augmented data from its children. Called after every
+    // structural change -- this is step 4 of CLRS's four-step augmentation method.
+    void pull(RbNode* x) { if (x != nil_) x->size = x->left->size + x->right->size + 1; }
+    // Recompute from x up to the root. After a structural change, EVERY ancestor
+    // of the deepest changed node has a stale count, so one bottom-up sweep
+    // fixes them all -- and it is O(lg n), the same as the operation itself.
+    void pullUp(RbNode* x) { while (x != nil_) { pull(x); x = x->p; } }
+};
+```
+
+### A1 INORDER-TREE-WALK
+
+*Pseudocode: §1, "Inorder traversal".*
+
+```cpp
+// Appends this subtree's keys to `out` in SORTED order.
+//
+// `out` is a reference parameter (Weiss 1.5.3, p.26): the recursion must all
+// append to ONE vector. Returning a vector by value from each call instead would
+// be Theta(n lg n) work in copies for a balanced tree, and Theta(n^2) for a
+// degenerate one.
+void Bst::inorderWalk(BstNode* x, vector<int>& out) const {
+    if (x != nullptr) {                       // 1  if x != NIL
+        inorderWalk(x->left, out);            // 2      INORDER-TREE-WALK(x.left)
+        out.push_back(x->key);                // 3      print x.key
+        inorderWalk(x->right, out);           // 4      INORDER-TREE-WALK(x.right)
+    }
+}
+```
+
+**Complexity. `Θ(n)`** — every node is visited exactly once, and the two recursive calls cost `Θ(1)` of bookkeeping each. Space is `Θ(h)` for the call stack: `Θ(lg n)` balanced, **`Θ(n)` degenerate** (toolkit §6).
+
+**The invariant that makes it work** is the BST property itself: everything in `x.left` is `≤ x.key`, everything in `x.right` is `≥ x.key`. Visiting left-node-right therefore emits keys in nondecreasing order. Swap two lines and you get preorder or postorder — and neither is sorted.
+
+### A2 TREE-SEARCH, ITERATIVE-TREE-SEARCH, TREE-MINIMUM, TREE-MAXIMUM
+
+*Pseudocode: §1, "Querying".*
+
+```cpp
+// Recursive form -- a direct transcription.
+BstNode* Bst::search(BstNode* x, int k) const {
+    if (x == nullptr || k == x->key) return x;      // 1-2
+    if (k < x->key) return search(x->left, k);      // 3-4
+    else            return search(x->right, k);     // 5
+}
+
+// Iterative form. Both recursive calls above are TAIL calls, so this conversion
+// is mechanical -- and it matters here more than usual, because h can be n on a
+// degenerate tree, and Theta(n) recursion depth is a segfault (toolkit 6).
+BstNode* Bst::iterativeSearch(BstNode* x, int k) const {
+    while (x != nullptr && k != x->key) {           // 1
+        if (k < x->key) x = x->left;                // 2-3
+        else            x = x->right;               // 4
+    }
+    return x;                                       // 5  nullptr if absent
+}
+
+// TREE-MINIMUM: "the leftmost node". No comparison with k at all -- the
+// structure alone answers the question.
+BstNode* Bst::minimum(BstNode* x) const {
+    while (x != nullptr && x->left != nullptr) x = x->left;
+    return x;
+}
+BstNode* Bst::maximum(BstNode* x) const {
+    while (x != nullptr && x->right != nullptr) x = x->right;
+    return x;
+}
+```
+
+**Complexity. `O(h)` for all four.** That is `O(lg n)` on a balanced tree and `Θ(n)` on a degenerate one — which is precisely why the rest of this module exists. **A BST's `O(lg n)` is a property of the tree's shape, not of the algorithm**, and nothing in `TREE-SEARCH` maintains that shape.
+
+**Randomly built BSTs are fine on average:** expected height is `≈ 4.311 ln n`, so random insertion order gives `O(lg n)` expected. **Sorted insertion order gives a linked list.** Real data is very often sorted.
+
+### A3 TREE-SUCCESSOR
+
+*Pseudocode: §1, "Querying".*
+
+```cpp
+// The next key in sorted order, or nullptr if x is the maximum.
+// Two genuinely different cases, and the second is the one people forget.
+BstNode* Bst::successor(BstNode* x) const {
+    // CASE A: x has a right subtree. The successor is the SMALLEST thing bigger
+    // than x, which is the leftmost node of that subtree.
+    if (x->right != nullptr) return minimum(x->right);   // 1-2
+
+    // CASE B: no right subtree. Everything below x is smaller than x, so the
+    // successor must be an ANCESTOR -- specifically the lowest ancestor whose
+    // LEFT subtree contains x. Climb while x is a right child.
+    BstNode* y = x->p;                                   // 4
+    while (y != nullptr && x == y->right) {              // 5
+        x = y;                                           // 6
+        y = y->p;                                        // 7
+    }
+    return y;                                            // 8  nullptr if x was the maximum
+}
+```
+
+**Complexity. `O(h)`** — one descent or one ascent, never both.
+
+**Why this is worth knowing beyond trees:** repeatedly calling `TREE-SUCCESSOR` from the minimum walks the whole tree in sorted order in `Θ(n)` total (each edge is traversed at most twice), using `O(1)` extra space rather than the `O(h)` stack of `INORDER-TREE-WALK`. That is exactly what `std::map::iterator::operator++` does, and it is why iterating a `map` needs no stack.
+
+### A4 TRANSPLANT
+
+*Pseudocode: §1, "Deletion".*
+
+```cpp
+// Replace the subtree rooted at u with the subtree rooted at v.
+// TRANSPLANT does NOT touch v's children -- it only fixes the link from above,
+// plus v's parent pointer. Everything else is the caller's job.
+void Bst::transplant(BstNode* u, BstNode* v) {
+    if (u->p == nullptr)          root_ = v;         // 1  u was the root
+    else if (u == u->p->left)     u->p->left  = v;   // 2  u was a left child
+    else                          u->p->right = v;   // 3  u was a right child
+    if (v != nullptr) v->p = u->p;                   // 4  NULL-CHECKED here...
+    // ...but the red-black version (A8) drops the check, because there v can be
+    // the SENTINEL and RB-DELETE-FIXUP genuinely needs nil's parent set.
+    // That one difference is the reason two nearly identical procedures exist.
+}
+```
+
+**Complexity. `Θ(1)`.** Three pointer writes at most.
+
+**This is the abstraction that makes `TREE-DELETE` readable.** Without it, delete is a thicket of "was z the root / a left child / a right child" tests repeated in every case.
+
+### A5 TREE-DELETE
+
+*Pseudocode: §1, "Deletion — three shapes, four code paths".*
+
+```cpp
+void Bst::erase(BstNode* z) {
+    if (z->left == nullptr) {                    // 1  CASE 1: no left child
+        transplant(z, z->right);                 // 2      (covers "no children" too)
+    } else if (z->right == nullptr) {            // 3  CASE 2: exactly one child, on the left
+        transplant(z, z->left);                  // 4
+    } else {
+        // Two children. Replace z with its SUCCESSOR y, which is the minimum of
+        // z's right subtree and therefore has NO LEFT CHILD -- that is what makes
+        // it removable by a single transplant.
+        BstNode* y = minimum(z->right);          // 5
+        if (y != z->right) {                     // 6  CASE 4: y is deeper than z.right
+            transplant(y, y->right);             // 7      lift y out of where it lives
+            y->right = z->right;                 // 8      give y all of z's right subtree
+            y->right->p = y;                     // 9
+        }
+        transplant(z, y);                        // 10 CASE 3 joins here: y takes z's slot
+        y->left = z->left;                       // 11
+        y->left->p = y;                          // 12
+    }
+    delete z;   // the pseudocode ends at line 12; C++ makes you free the node
+}
+```
+
+**Complexity. `O(h)`** — dominated by `TREE-MINIMUM`.
+
+**The 4th-edition change worth knowing.** Older presentations *copy y's key into z* and then delete `y`. CLRS 4e **moves the node** instead. The difference is invisible on paper and load-bearing in practice: if a client holds a pointer (or an iterator) to a node, copying keys silently changes what that pointer refers to, whereas moving nodes keeps every surviving pointer valid. This is exactly the guarantee `std::map` gives — `erase` invalidates only the erased element's iterator — and it is why the standard could later expose `extract()`.
+
+**Deletion is not commutative.** Deleting `x` then `y` can produce a different tree shape than `y` then `x`. Nothing is wrong; the BST property just does not pin down a unique shape.
+
+### A6 LEFT-ROTATE and RIGHT-ROTATE
+
+*Pseudocode: §2, "Rotations".*
+
+```cpp
+// Rotate x down-left and its right child y up. PRESERVES the BST property:
+//
+//        x                y
+//       / \              / \
+//      a   y    ---->   x   c
+//         / \          / \
+//        b   c        a   b
+//
+// Before: a < x < b < y < c.   After: a < x < b < y < c.   Same order, new shape.
+void RbTree::leftRotate(RbNode* x) {
+    RbNode* y = x->right;                              // 1  assumes x->right != nil
+    x->right = y->left;                                // 2  y's left subtree becomes x's right
+    if (y->left != nil_) y->left->p = x;               // 3
+    y->p = x->p;                                       // 4  link y to x's parent
+    if (x->p == nil_)            root_ = y;            // 5
+    else if (x == x->p->left)    x->p->left  = y;      // 6
+    else                         x->p->right = y;      // 7
+    y->left = x;                                       // 8  put x on y's left
+    x->p = y;                                          // 9
+    // AUGMENTATION MAINTENANCE (Theorem 17.1): x and y changed children, so
+    // their subtree sizes must be recomputed -- x FIRST, because it is now
+    // y's child and y's size depends on it. Order matters.
+    pull(x);
+    pull(y);
+}
+
+// The exact mirror image. Writing it out rather than parameterising by direction
+// is deliberate: the mirrored version is where transcription bugs hide, and
+// having both side by side makes them visible.
+void RbTree::rightRotate(RbNode* y) {
+    RbNode* x = y->left;
+    y->left = x->right;
+    if (x->right != nil_) x->right->p = y;
+    x->p = y->p;
+    if (y->p == nil_)            root_ = x;
+    else if (y == y->p->right)   y->p->right = x;
+    else                         y->p->left  = x;
+    x->right = y;
+    y->p = x;
+    pull(y);
+    pull(x);
+}
+```
+
+**Complexity. `Θ(1)`** — a fixed number of pointer updates, regardless of subtree size. That is the entire reason rebalancing can be cheap: **a rotation restructures an arbitrarily large tree in constant time.**
+
+### A7 RB-INSERT-FIXUP
+
+*Pseudocode: §2, "Insertion".*
+
+```cpp
+// A new node is inserted RED (so black-heights are untouched) and may therefore
+// violate property 4: "a red node has two black children".
+//
+// LOOP INVARIANT, three parts:
+//   a. z is red.
+//   b. if z.p is the root, then z.p is black.
+//   c. at most one red-black property is violated, and if so it is either
+//      property 2 (root is black, when z IS the root) or property 4 (z and z.p
+//      are both red).
+void RbTree::insertFixup(RbNode* z) {
+    while (z->p->color == Color::Red) {                       // 1
+        if (z->p == z->p->p->left) {                          // 2  parent is a LEFT child
+            RbNode* y = z->p->p->right;                       // 3  y = z's UNCLE
+            if (y->color == Color::Red) {                     // 4  ---- CASE 1: red uncle
+                z->p->color   = Color::Black;                 // 5
+                y->color      = Color::Black;                 // 6
+                z->p->p->color = Color::Red;                  // 7  push blackness DOWN
+                z = z->p->p;                                  // 8  violation moves up TWO levels
+                // No rotation at all. This is the only case that iterates, and
+                // it climbs by 2, which is why the loop runs O(lg n) times.
+            } else {
+                if (z == z->p->right) {                       // 10 ---- CASE 2: black uncle, zig-zag
+                    z = z->p;                                 // 11
+                    leftRotate(z);                            // 12 straighten into Case 3
+                }
+                z->p->color   = Color::Black;                 // 13 ---- CASE 3: black uncle, straight
+                z->p->p->color = Color::Red;                  // 14
+                rightRotate(z->p->p);                         // 15 loop EXITS after this: z->p
+                                                              //    is now black, so the test fails
+            }
+        } else {                                              // 16 mirror image
+            RbNode* y = z->p->p->left;
+            if (y->color == Color::Red) {
+                z->p->color = Color::Black;
+                y->color = Color::Black;
+                z->p->p->color = Color::Red;
+                z = z->p->p;
+            } else {
+                if (z == z->p->left) { z = z->p; rightRotate(z); }
+                z->p->color = Color::Black;
+                z->p->p->color = Color::Red;
+                leftRotate(z->p->p);
+            }
+        }
+    }
+    root_->color = Color::Black;                              // 17 restores property 2 unconditionally
+}
+
+// The insert itself: an ordinary BST insert, coloured red, then fix up.
+RbNode* RbTree::insert(int k) {
+    RbNode* z = new RbNode();
+    z->key = k;
+    z->left = z->right = z->p = nil_;
+    z->color = Color::Red;
+    z->size = 1;
+
+    RbNode* y = nil_;
+    RbNode* x = root_;
+    while (x != nil_) { y = x; ++x->size; x = (k < x->key) ? x->left : x->right; }
+    //                        ^^^^^^^^^^ the augmentation, updated on the way DOWN:
+    //                        every node on the search path gains one descendant.
+    z->p = y;
+    if (y == nil_)            root_ = z;
+    else if (k < y->key)      y->left = z;
+    else                      y->right = z;
+
+    insertFixup(z);
+    return z;
+}
+```
+
+**Complexity. `O(lg n)`, with at most 2 rotations.** The loop only *iterates* in Case 1, which moves `z` up two levels, so it runs at most `⌊h/2⌋` times. Cases 2 and 3 each rotate and then terminate.
+
+**Why the tree is `O(lg n)` tall at all** is Lemma 13.1: a red-black tree with `n` internal nodes has height `h ≤ 2 lg(n + 1)`. The proof is two steps — a subtree rooted at `x` contains at least `2^{bh(x)} − 1` internal nodes (induction), and at least half the nodes on any root-to-leaf path are black (property 4) — so `n ≥ 2^{h/2} − 1`.
+
+### A8 RB-TRANSPLANT
+
+*Pseudocode: §2, "Deletion".*
+
+```cpp
+void RbTree::rbTransplant(RbNode* u, RbNode* v) {
+    if (u->p == nil_)             root_ = v;         // 1
+    else if (u == u->p->left)     u->p->left  = v;   // 2
+    else                          u->p->right = v;   // 3
+    v->p = u->p;                                     // 4  UNCONDITIONAL -- no null check
+    // This single line is the whole difference from A4's TRANSPLANT. v may be
+    // the sentinel nil_, and RB-DELETE-FIXUP will climb from x == nil_ using
+    // exactly this parent pointer. Guarding it with `if (v != nil_)` -- the
+    // instinct every reader has -- breaks deletion in a way that only shows up
+    // on specific shapes. It is the single most common red-black bug.
+}
+```
+
+**Complexity. `Θ(1)`.**
+
+### A9 RB-DELETE
+
+*Pseudocode: §2, "Deletion".*
+
+```cpp
+void RbTree::erase(RbNode* z) {
+    RbNode* y = z;                                   // 1  y is the node actually REMOVED
+    Color yOriginal = y->color;                      // 2      or MOVED within the tree
+    RbNode* x = nil_;                                //    x takes y's place
+    RbNode* from = nil_;                             //    deepest node whose subtree changed
+
+    if (z->left == nil_) {                           // 3
+        x = z->right;                                // 4
+        from = z->p;
+        rbTransplant(z, z->right);
+    } else if (z->right == nil_) {                   // 5
+        x = z->left;                                 // 6
+        from = z->p;
+        rbTransplant(z, z->left);
+    } else {
+        y = minimum(z->right);                       // 7  y = z's successor
+        yOriginal = y->color;                        // 8
+        x = y->right;                                // 9
+        if (y != z->right) {                         // 10 y is farther down
+            from = y->p;                             //    y's old parent lost a subtree
+            rbTransplant(y, y->right);               // 11
+            y->right = z->right;                     // 12
+            y->right->p = y;
+        } else {
+            x->p = y;                                // 13 "in case x is nil_" -- and it
+            from = y;                                //    matters, see A8
+        }
+        rbTransplant(z, y);                          // 14
+        y->left = z->left;                           // 15
+        y->left->p = y;
+        y->color = z->color;                         // 16 y INHERITS z's colour, so no
+    }                                                //    violation is introduced HERE
+
+    // AUGMENTATION MAINTENANCE. Do NOT try to decrement counts on the way down:
+    // in the two-children case the successor MOVES, so the set of nodes whose
+    // subtree changed is not simply "the ancestors of z", and an ad-hoc
+    // decrement double-counts. One bottom-up recompute from the deepest changed
+    // node is both simpler and correct -- and after the transplants the parent
+    // chain from `from` passes through y, so this covers y too.
+    pullUp(from);
+
+    // Removing a RED node cannot break anything: black-heights are unchanged and
+    // no red-red pair can be created. Removing a BLACK node removes one black
+    // from every path through it -- that is the violation the fixup repairs.
+    // (deleteFixup's rotations call pull() themselves, so sizes stay correct.)
+    if (yOriginal == Color::Black) deleteFixup(x);   // 17-18
+    delete z;
+}
+```
+
+**Complexity. `O(lg n)`**, dominated by `TREE-MINIMUM` and the fixup.
+
+### A10 RB-DELETE-FIXUP
+
+*Pseudocode: §2, "Deletion".*
+
+```cpp
+// x carries an "extra black" -- the black that was lost when y was removed.
+// Think of x as holding 2 units of blackness (doubly black) or, if x is red,
+// 1.5 (red-and-black). The loop pushes that extra unit up the tree until it can
+// be absorbed: by a red node (which just turns black), or by the root (where it
+// simply evaporates, since every path loses one black equally).
+void RbTree::deleteFixup(RbNode* x) {
+    while (x != root_ && x->color == Color::Black) {                      // 1
+        if (x == x->p->left) {                                            // 2
+            RbNode* w = x->p->right;                                      // 3  w = x's SIBLING
+            // w can never be nil_: x is doubly black, so the path through x
+            // already has >= 2 blacks, so x's sibling subtree must be non-empty.
+            if (w->color == Color::Red) {                                 // 4  -- CASE 1
+                w->color   = Color::Black;                                // 5
+                x->p->color = Color::Red;
+                leftRotate(x->p);                                         // 7
+                w = x->p->right;   // ...and now w is BLACK: cases 2/3/4 follow
+            }
+            if (w->left->color == Color::Black &&
+                w->right->color == Color::Black) {                        // 9  -- CASE 2
+                w->color = Color::Red;                                    // 10 take a black off w
+                x = x->p;                                                 //    and push the extra
+                                                                          //    black up to the parent
+                // THE ONLY case that iterates. It climbs one level, so the loop
+                // runs O(lg n) times -- and does no rotation.
+            } else {
+                if (w->right->color == Color::Black) {                    // 13 -- CASE 3
+                    w->left->color = Color::Black;                        // 14
+                    w->color = Color::Red;
+                    rightRotate(w);                                       // 16
+                    w = x->p->right;   // turn Case 3 into Case 4
+                }
+                w->color = x->p->color;                                   // 18 -- CASE 4
+                x->p->color   = Color::Black;                             // 19
+                w->right->color = Color::Black;
+                leftRotate(x->p);                                         // 21
+                x = root_;                                                //    DONE: forces exit
+            }
+        } else {                                                          // mirror image
+            RbNode* w = x->p->left;
+            if (w->color == Color::Red) {
+                w->color = Color::Black; x->p->color = Color::Red;
+                rightRotate(x->p); w = x->p->left;
+            }
+            if (w->right->color == Color::Black && w->left->color == Color::Black) {
+                w->color = Color::Red; x = x->p;
+            } else {
+                if (w->left->color == Color::Black) {
+                    w->right->color = Color::Black; w->color = Color::Red;
+                    leftRotate(w); w = x->p->left;
+                }
+                w->color = x->p->color;
+                x->p->color = Color::Black;
+                w->left->color = Color::Black;
+                rightRotate(x->p);
+                x = root_;
+            }
+        }
+    }
+    x->color = Color::Black;    // absorb the extra black; also fixes a red x
+}
+```
+
+**Complexity. `O(lg n)` time, at most 3 rotations.** Cases 1, 3 and 4 each rotate and then either terminate or lead directly to termination; only Case 2 loops, and it climbs one level per iteration.
+
+**Compare with insertion: at most 2 rotations, 3 cases. Deletion: at most 3 rotations, 4 cases.** Both are `O(lg n)` with a constant number of structural changes — and that bounded number of rotations is exactly what makes red-black trees suitable for augmentation (Theorem 17.1: augmenting is cheap precisely because only `O(1)` nodes change shape per operation).
+
+### A11 OS-SELECT
+
+*Pseudocode: §3, "Order-statistic trees".*
+
+```cpp
+// The i-th smallest key in x's subtree, 1-indexed. Requires the `size`
+// augmentation, which leftRotate/rightRotate/insert/erase above maintain.
+RbNode* RbTree::osSelect(RbNode* x, int i) const {
+    if (x == nil_) return nullptr;
+    int r = x->left->size + 1;              // 1  x's own rank WITHIN ITS SUBTREE
+    //      ^^^^^^^^^^^^^^ this is why nil_->size == 0: no special case needed
+    if (i == r)      return x;              // 2
+    else if (i < r)  return osSelect(x->left, i);       // 3
+    else             return osSelect(x->right, i - r);  // 4
+    //                                          ^^^^^ RE-BASE: the r elements at
+    //                 or before x are gone from consideration. Forgetting this
+    //                 subtraction is the same bug as in quickselect (M05 A10).
+}
+```
+
+**Complexity. `O(lg n)`** — one root-to-node descent, `Θ(1)` per level.
+
+### A12 OS-RANK
+
+*Pseudocode: §3, "Order-statistic trees".*
+
+```cpp
+// The position of x in the tree's sorted order, 1-indexed. The inverse of osSelect.
+int RbTree::osRank(RbNode* x) const {
+    int r = x->left->size + 1;              // 1  rank within x's own subtree
+    const RbNode* y = x;                    // 2
+    while (y != root_) {                    // 3  climb to the root
+        if (y == y->p->right)               // 4  y is a RIGHT child, so its parent
+            r += y->p->left->size + 1;      // 5  and the parent's entire LEFT subtree
+                                            //    all precede x -- add them in
+        y = y->p;                           // 6
+    }
+    return r;                               // 7
+}
+```
+
+**Complexity. `O(lg n)`** — one node-to-root ascent.
+
+**These two functions are the payoff of Theorem 17.1**, CLRS's four-step augmentation method: (1) choose the underlying structure — red-black tree; (2) choose the extra data — `size`; (3) verify it can be maintained — `size(x) = size(left) + size(right) + 1` depends only on the children, so a rotation fixes it in `Θ(1)`; (4) develop the new operations. **Step 3 is the whole theorem: if the augmented field at a node is computable from its children's fields, it costs nothing asymptotically to maintain.**
+
+### A13 INTERVAL-SEARCH
+
+*Pseudocode: §3, "Interval trees".*
+
+```cpp
+struct Interval { long long low, high; };
+
+// Interval trichotomy (CLRS): exactly one of these holds for any i and j --
+//   (a) they overlap, (b) i.high < j.low, (c) j.high < i.low.
+// So "overlap" is the NEGATION of the two easy cases, which is why the test is
+// written this way rather than as four comparisons.
+static bool overlaps(const Interval& a, const Interval& b) {
+    return a.low <= b.high && b.low <= a.high;
+}
+
+struct IntervalNode {
+    Interval interval{0, 0};
+    long long maxHigh = LLONG_MIN;   // the augmentation: max `high` in this subtree
+    Color color = Color::Black;
+    IntervalNode *left = nullptr, *right = nullptr, *p = nullptr;
+};
+
+// Keyed by interval.low; augmented with maxHigh = max over the subtree.
+IntervalNode* intervalSearch(IntervalNode* root, IntervalNode* nil, const Interval& i) {
+    IntervalNode* x = root;                                    // 1
+    while (x != nil && !overlaps(i, x->interval)) {            // 2
+        if (x->left != nil && x->left->maxHigh >= i.low)       // 3
+            x = x->left;                                       // 4
+        else
+            x = x->right;                                      // 5
+    }
+    return x == nil ? nullptr : x;                             // 6
+}
+```
+
+**Complexity. `O(lg n)`** — a single root-to-leaf descent with no backtracking.
+
+**Why going left is safe (Theorem 17.2), and it is the only subtle part.** The loop makes one choice per level and never backtracks, so the choice must be *provably* right:
+
+- **If it goes left** (`x.left.max ≥ i.low`): either the left subtree contains an overlapping interval, or it does not — and in the latter case, CLRS proves the *right* subtree cannot contain one either. So going left loses nothing.
+- **If it goes right** (`x.left.max < i.low`): every interval in the left subtree ends before `i` begins, so none of them can overlap. Going right loses nothing.
+
+**One more property worth remembering:** it returns *some* overlapping interval, not all of them and not a specific one. Finding all `k` overlaps takes `O(k lg n)` by repeated search-and-delete, or `O(lg n + k)` with a modified traversal.
+
+### A14 B-TREE-SEARCH
+
+*Pseudocode: §4, "Searching".*
+
+```cpp
+// Minimum degree t: every node except the root holds between t-1 and 2t-1 keys,
+// and between t and 2t children. `t` is a template parameter so the arrays can
+// be fixed-size -- a real B-tree sizes t so that one node fills one disk block.
+template <int T>
+struct BTreeNode {
+    int n = 0;                                  // number of keys currently stored
+    bool leaf = true;
+    array<int, 2 * T - 1> key{};                // 1-indexed in the pseudocode;
+    array<BTreeNode*, 2 * T> c{};               // 0-indexed here, hence the -1s below
+};
+
+// Returns (node, index) or (nullptr, -1). `pair` rather than two out-parameters:
+// the two values are meaningless apart.
+template <int T>
+pair<BTreeNode<T>*, int> bTreeSearch(BTreeNode<T>* x, int k) {
+    int i = 0;                                          // 1  (pseudocode: i = 1)
+    while (i < x->n && k > x->key[i]) ++i;              // 2-3  linear scan WITHIN the node
+    // A binary search here would be O(lg t) instead of O(t), but t is chosen so
+    // a node fits one disk block: the scan is in RAM and free next to the I/O.
+    if (i < x->n && k == x->key[i]) return {x, i};      // 4-5  found
+    if (x->leaf) return {nullptr, -1};                  // 6-7  absent
+    // 8  DISK-READ(x.c_i) -- in a real B-tree this is the expensive line, and
+    //    it is the only one the complexity analysis counts.
+    return bTreeSearch(x->c[i], k);                     // 9
+}
+```
+
+**Complexity. `O(log_t n)` disk accesses, `O(t · log_t n)` CPU.**
+
+> *Measured:* 200 000 keys inserted into a B-tree with `t = 50` gives **height 2**; the same keys with `t = 3` give **height 9**. Same data, same algorithm, one parameter — and that parameter is the base of the logarithm.
+
+**The point of a B-tree is the base of that logarithm.** Theorem 18.1: `h ≤ log_t((n+1)/2)`. With `t = 1001`, a tree holding **one billion** keys has height **2** — a root plus two levels — so any key is three disk reads away. A red-black tree over the same data is 30 levels deep, and on disk that is 30 seeks. **The structure exists because a disk seek costs ~10⁵ times a memory access**, so the design minimises seeks even at the cost of far more CPU work per node.
+
+### A15 B-TREE-SPLIT-CHILD
+
+*Pseudocode: §4, "Insertion".*
+
+```cpp
+// x is NONFULL, x->c[i] is FULL (2t-1 keys). Split that child into two nodes of
+// t-1 keys each and push its MEDIAN key up into x. x gains one key and one child.
+template <int T>
+void bTreeSplitChild(BTreeNode<T>* x, int i) {
+    BTreeNode<T>* y = x->c[i];                           // 1
+    BTreeNode<T>* z = new BTreeNode<T>();                // 2  ALLOCATE-NODE()
+    z->leaf = y->leaf;                                   // 3
+    z->n = T - 1;                                        // 4
+
+    for (int j = 0; j < T - 1; ++j)                      // 5  z takes y's GREATEST t-1 keys
+        z->key[j] = y->key[j + T];                       // 6
+    if (!y->leaf)                                        // 7
+        for (int j = 0; j < T; ++j)                      // 8  ...and the matching t children
+            z->c[j] = y->c[j + T];                       // 9
+    y->n = T - 1;                                        // 10 y keeps the SMALLEST t-1 keys
+                                                         //    and y->key[T-1], the median, moves up
+
+    for (int j = x->n; j >= i + 1; --j)                  // 11 shift x's children right
+        x->c[j + 1] = x->c[j];                           // 12  -- DOWNWARD loop, because the
+    x->c[i + 1] = z;                                     // 13     ranges overlap and an upward
+    for (int j = x->n - 1; j >= i; --j)                  // 14     loop would overwrite entries
+        x->key[j + 1] = x->key[j];                       // 15     before reading them
+    x->key[i] = y->key[T - 1];                           // 16 the MEDIAN moves up into x
+    x->n = x->n + 1;                                     // 17
+    // 18 DISK-WRITE(y); DISK-WRITE(z); DISK-WRITE(x)
+}
+```
+
+**Complexity. `Θ(t)` CPU, `O(1)` disk accesses** — three writes, no reads beyond the two nodes already in memory.
+
+### A16 B-TREE-INSERT and B-TREE-SPLIT-ROOT
+
+*Pseudocode: §4, "Insertion — split full nodes on the way down".*
+
+```cpp
+// Forward declarations: BTree::insert calls these before they are defined
+// (A15 and A17 give the definitions). A template must be DECLARED before use.
+template <int T> void bTreeSplitChild(BTreeNode<T>* x, int i);
+template <int T> void bTreeInsertNonfull(BTreeNode<T>* x, int k);
+
+template <int T>
+class BTree {
+public:
+    BTree() : root_(new BTreeNode<T>()) {}
+    ~BTree() { destroy(root_); }
+    BTree(const BTree&)            = delete;
+    BTree& operator=(const BTree&) = delete;
+
+    void insert(int k);
+    bool contains(int k) const { return bTreeSearch(root_, k).first != nullptr; }
+    int height() const { int h = 0; for (auto* x = root_; !x->leaf; x = x->c[0]) ++h; return h; }
+    BTreeNode<T>* root() const { return root_; }
+private:
+    BTreeNode<T>* root_;
+    BTreeNode<T>* splitRoot();
+    static void destroy(BTreeNode<T>* x) {
+        if (!x) return;
+        if (!x->leaf) for (int i = 0; i <= x->n; ++i) destroy(x->c[i]);
+        delete x;
+    }
+};
+
+// B-TREE-SPLIT-ROOT: the ONLY operation that makes a B-tree taller.
+template <int T>
+BTreeNode<T>* BTree<T>::splitRoot() {
+    BTreeNode<T>* s = new BTreeNode<T>();   // 1
+    s->leaf = false;                        // 2
+    s->n = 0;                               // 3
+    s->c[0] = root_;                        // 4  the old root becomes s's only child
+    root_ = s;                              // 5
+    bTreeSplitChild<T>(s, 0);               // 6  then split it, giving s one key and two children
+    return s;                               // 7
+}
+
+template <int T>
+void BTree<T>::insert(int k) {
+    BTreeNode<T>* r = root_;                        // 1
+    if (r->n == 2 * T - 1) {                        // 2  root is full
+        BTreeNode<T>* s = splitRoot();              // 3
+        bTreeInsertNonfull<T>(s, k);                // 4
+    } else {
+        bTreeInsertNonfull<T>(r, k);                // 5
+    }
+}
+```
+
+**Complexity. `O(log_t n)` disk accesses, `O(t log_t n)` CPU** — one pass down, no pass back up.
+
+**A B-tree grows at the TOP, not the bottom.** That single fact is why **all leaves stay at the same depth**: the tree gains a level only when the root splits, and at that instant *every* leaf gets one level deeper simultaneously. A BST grows at the bottom, which is exactly why its leaves end up at wildly different depths.
+
+### A17 B-TREE-INSERT-NONFULL
+
+*Pseudocode: §4, "Insertion".*
+
+```cpp
+// PRECONDITION: x is not full. That precondition is maintained by splitting any
+// full child BEFORE descending into it -- the "proactive splitting" that lets
+// insertion finish in ONE downward pass, with no recursion back up the tree.
+template <int T>
+void bTreeInsertNonfull(BTreeNode<T>* x, int k) {
+    int i = x->n - 1;                                     // 1  (pseudocode: i = x.n)
+    if (x->leaf) {                                        // 2
+        while (i >= 0 && k < x->key[i]) {                 // 3  shift to make room
+            x->key[i + 1] = x->key[i];                    // 4
+            --i;
+        }
+        x->key[i + 1] = k;                                // 6  -- this is INSERTION-SORT's
+        x->n = x->n + 1;                                  //     inner loop (M01 A5), on one node
+        // 8 DISK-WRITE(x)
+    } else {
+        while (i >= 0 && k < x->key[i]) --i;              // 9-10 find the child to descend into
+        ++i;                                              // 11
+        // 12 DISK-READ(x.c_i)
+        if (x->c[i]->n == 2 * T - 1) {                    // 13 child is FULL: split it NOW,
+            bTreeSplitChild<T>(x, i);                     // 14 while we are still here and x
+                                                          //    is guaranteed to have room
+            if (k > x->key[i]) ++i;                       // 15 the split pushed a median up;
+        }                                                 //    decide which half k belongs in
+        bTreeInsertNonfull<T>(x->c[i], k);                // 17 tail call -> a loop, so only
+    }                                                     //    O(1) nodes need be resident
+}
+```
+
+**Complexity. `O(log_t n)` disk accesses, `O(t log_t n)` CPU.**
+
+**Why split *before* descending rather than after overflowing.** The reactive approach — descend, insert, and split on the way back up if the node overflowed — needs a second pass upward and forces you to keep every node on the path in memory. Proactive splitting guarantees the parent always has room for a promoted median, so insertion is one downward pass with `O(1)` nodes resident. The tail-recursive call above makes that explicit: convert it to a `while` loop and the memory requirement is manifestly constant.
+
+**The cost is splitting nodes that did not strictly need it** — a node that is full gets split even if the insertion would not have overflowed it. That is a deliberate trade of a little wasted work for a much simpler, single-pass, low-memory algorithm.
+
 
 ---
 

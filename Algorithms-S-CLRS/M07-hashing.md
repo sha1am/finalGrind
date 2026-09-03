@@ -39,6 +39,8 @@ DIRECT-ADDRESS-INSERT(T, x):  T[x.key] = x
 DIRECT-ADDRESS-DELETE(T, x):  T[x.key] = NIL
 ```
 
+→ **C++ implementation:** [A1 DIRECT-ADDRESS-SEARCH / INSERT / DELETE](#a1-direct-address-search--insert--delete)
+
 All `O(1)` **worst case**. CLRS's nice observation:
 
 > Rather than storing an element's key and satellite data in an object external to the table, save space by storing the object directly in the slot. … Then again, **why store the key of the object at all? The index of the object is its key!**
@@ -88,6 +90,8 @@ CHAINED-HASH-INSERT(T, x):  LIST-PREPEND(T[h(x.key)], x)
 CHAINED-HASH-SEARCH(T, k):  return LIST-SEARCH(T[h(k)], k)
 CHAINED-HASH-DELETE(T, x):  LIST-DELETE(T[h(x.key)], x)
 ```
+
+→ **C++ implementation:** [A2 CHAINED-HASH-INSERT / SEARCH / DELETE](#a2-chained-hash-insert--search--delete)
 
 | Operation | Time | Note |
 |---|---|---|
@@ -176,13 +180,13 @@ Both books also note: initializing an `m`-slot table costs `O(m)`.
 
 // Dictionary via chaining. All operations O(1) expected under a good hash.
 // Grows (rehashes) when the load factor exceeds maxLoad.
-template <typename K, typename V, typename Hash = std::hash<K>>
+template <typename K, typename V, typename Hash = hash<K>>
 class ChainedHashMap {
 public:
-    explicit ChainedHashMap(std::size_t buckets = 16, double maxLoad = 1.0)
+    explicit ChainedHashMap(size_t buckets = 16, double maxLoad = 1.0)
         : table_(buckets), count_(0), maxLoad_(maxLoad) {}
 
-    std::size_t size() const { return count_; }
+    size_t size() const { return count_; }
     double loadFactor() const { return double(count_) / table_.size(); }
 
     V* find(const K& key) {
@@ -206,18 +210,18 @@ public:
     }
 
 private:
-    std::vector<std::list<std::pair<K, V>>> table_;
-    std::size_t count_;
+    vector<list<pair<K, V>>> table_;
+    size_t count_;
     double maxLoad_;
     Hash hash_;
 
-    std::size_t slot(const K& key) const { return hash_(key) % table_.size(); }
+    size_t slot(const K& key) const { return hash_(key) % table_.size(); }
 
-    void rehash(std::size_t newBuckets) {
-        std::vector<std::list<std::pair<K, V>>> fresh(newBuckets);
+    void rehash(size_t newBuckets) {
+        vector<list<pair<K, V>>> fresh(newBuckets);
         for (auto& chain : table_)
             for (auto& kv : chain)
-                fresh[hash_(kv.first) % newBuckets].push_front(std::move(kv));
+                fresh[hash_(kv.first) % newBuckets].push_front(move(kv));
         table_.swap(fresh);
     }
 };
@@ -254,6 +258,8 @@ For a string `S` over an alphabet of size `α`, treat the characters as digits i
 H(S) = Σ_{i=0}^{|S|−1} α^{|S|−(i+1)} · char(sᵢ)
 ```
 
+→ **C++ implementation:** [A4 The hash functions](#a4-the-hash-functions)
+
 then reduce: `H′(S) = H(S) mod m`.
 
 > If the table size is selected with enough finesse (**ideally `m` is a large prime not too close to `2ⁱ − 1`**), the resulting hash values should be fairly uniformly distributed.
@@ -263,6 +269,8 @@ then reduce: `H′(S) = H(S) mod m`.
 ```
 h(k) = k mod m
 ```
+
+→ **C++ implementation:** [A4 The hash functions](#a4-the-hash-functions)
 
 > Since it requires only a single division, hashing by division is quite fast. The division method **may work well when `m` is a prime not too close to an exact power of 2**. There is no guarantee that this method provides good average-case performance, however, and it may complicate applications since **it constrains the size of the hash tables to be prime.**
 
@@ -281,6 +289,8 @@ h(k) = ⌊m · (kA mod 1)⌋        for a constant 0 < A < 1
 ```
 h_a(k) = (ka mod 2^w) >> (w − ℓ)                    ← CLRS eq. (11.2)
 ```
+
+→ **C++ implementation:** [A4 The hash functions](#a4-the-hash-functions)
 
 Multiplying two `w`-bit words gives `2w` bits; taking mod `2^w` keeps the **low** word `r₀`; the right shift extracts the `ℓ` **most significant bits of `r₀`**. Three machine instructions: multiply, subtract (the shift amount), logical right shift.
 
@@ -326,6 +336,8 @@ h_{ab}(k) = ((ak + b) mod p) mod m
 H_{pm} = { h_{ab} : a ∈ Z_p^*, b ∈ Z_p }        — p(p−1) functions
 ```
 
+→ **C++ implementation:** [A4 The hash functions](#a4-the-hash-functions)
+
 Example: `p = 17, m = 6`: `h_{3,4}(8) = ((3·8 + 4) mod 17) mod 6 = (28 mod 17) mod 6 = 11 mod 6 = 5`.
 
 > **This family is universal.** [Theorem 11.4]
@@ -362,19 +374,19 @@ Example: `p = 17, m = 6`: `h_{3,4}(8) = ((3·8 + 4) mod 17) mod 6 = (28 mod 17) 
 //     Provably 1/m-universal.  p = 2^61 - 1 (a Mersenne prime).
 class UniversalHash {
 public:
-    explicit UniversalHash(std::uint64_t m)
+    explicit UniversalHash(uint64_t m)
         : m_(m) {
-        std::mt19937_64 rng(std::random_device{}());
+        mt19937_64 rng(random_device{}());
         a_ = rng() % (kP - 1) + 1;      // a in [1, p-1]
         b_ = rng() % kP;                // b in [0, p-1]
     }
-    std::uint64_t operator()(std::uint64_t k) const {
+    uint64_t operator()(uint64_t k) const {
         const __uint128_t t = static_cast<__uint128_t>(a_) * (k % kP) + b_;
-        return static_cast<std::uint64_t>(t % kP) % m_;
+        return static_cast<uint64_t>(t % kP) % m_;
     }
 private:
-    static constexpr std::uint64_t kP = (1ULL << 61) - 1;
-    std::uint64_t a_, b_, m_;
+    static constexpr uint64_t kP = (1ULL << 61) - 1;
+    uint64_t a_, b_, m_;
 };
 
 // (2) Multiply-shift: h_a(k) = (k*a mod 2^64) >> (64 - l).  Provably 2/m-universal
@@ -382,14 +394,14 @@ private:
 class MultiplyShiftHash {
 public:
     explicit MultiplyShiftHash(int l) : shift_(64 - l) {
-        std::mt19937_64 rng(std::random_device{}());
+        mt19937_64 rng(random_device{}());
         a_ = rng() | 1ULL;              // MUST be odd
     }
-    std::uint64_t operator()(std::uint64_t k) const {
+    uint64_t operator()(uint64_t k) const {
         return (k * a_) >> shift_;      // k*a_ wraps mod 2^64 automatically
     }
 private:
-    std::uint64_t a_;
+    uint64_t a_;
     int shift_;
 };
 
@@ -399,20 +411,20 @@ private:
 class StringHash {
 public:
     StringHash() {
-        std::mt19937_64 rng(std::random_device{}());
+        mt19937_64 rng(random_device{}());
         b_ = rng() % (kP - 256) + 256;  // base larger than the alphabet
     }
-    std::uint64_t operator()(const std::string& s) const {
-        std::uint64_t acc = 0;
+    uint64_t operator()(const string& s) const {
+        uint64_t acc = 0;
         for (unsigned char c : s)
             acc = mulMod(acc, b_) + c, acc %= kP;      // Horner's rule
         return acc;
     }
 private:
-    static constexpr std::uint64_t kP = (1ULL << 61) - 1;
-    std::uint64_t b_;
-    static std::uint64_t mulMod(std::uint64_t x, std::uint64_t y) {
-        return static_cast<std::uint64_t>(
+    static constexpr uint64_t kP = (1ULL << 61) - 1;
+    uint64_t b_;
+    static uint64_t mulMod(uint64_t x, uint64_t y) {
+        return static_cast<uint64_t>(
                    (static_cast<__uint128_t>(x) * y) % kP);
     }
 };
@@ -469,6 +481,8 @@ HASH-INSERT(T, k)                    HASH-SEARCH(T, k)
 8  until i == m                      8  return NIL
 9  error "hash table overflow"
 ```
+
+→ **C++ implementation:** [A3 HASH-INSERT / HASH-SEARCH (open addressing)](#a3-hash-insert--hash-search-open-addressing)
 
 **Why search may stop at an empty slot:** the search probes exactly the sequence insertion used, so `k` would have been placed at the first empty slot — if we reach an empty slot, `k` is not there.
 
@@ -556,18 +570,18 @@ The idea: a search for `k` reproduces `k`'s insertion probe sequence. If `k` was
 
 // Open-addressed hash map with linear probing and backward-shift deletion
 // (no tombstones -- see CLRS section 11.5.1). Table size is a power of two.
-template <typename K, typename V, typename Hash = std::hash<K>>
+template <typename K, typename V, typename Hash = hash<K>>
 class LinearProbeMap {
 public:
-    explicit LinearProbeMap(std::size_t capacityPow2 = 16, double maxLoad = 0.6)
+    explicit LinearProbeMap(size_t capacityPow2 = 16, double maxLoad = 0.6)
         : slots_(capacityPow2), used_(capacityPow2, false),
           count_(0), maxLoad_(maxLoad) {}
 
-    std::size_t size() const { return count_; }
+    size_t size() const { return count_; }
 
     V* find(const K& key) {
-        const std::size_t mask = slots_.size() - 1;
-        for (std::size_t q = slot(key); used_[q]; q = (q + 1) & mask)
+        const size_t mask = slots_.size() - 1;
+        for (size_t q = slot(key); used_[q]; q = (q + 1) & mask)
             if (slots_[q].first == key) return &slots_[q].second;
         return nullptr;                                  // hit an empty slot -> absent
     }
@@ -575,8 +589,8 @@ public:
     void insert(const K& key, const V& value) {
         if (V* p = find(key)) { *p = value; return; }
         if (double(count_ + 1) / slots_.size() > maxLoad_) rehash(slots_.size() * 2);
-        const std::size_t mask = slots_.size() - 1;
-        std::size_t q = slot(key);
+        const size_t mask = slots_.size() - 1;
+        size_t q = slot(key);
         while (used_[q]) q = (q + 1) & mask;
         slots_[q] = {key, value};
         used_[q] = true;
@@ -587,18 +601,18 @@ public:
     // back any key whose ideal position is at or before q (CLRS LINEAR-PROBING-
     // HASH-DELETE). Correct only for LINEAR probing.
     bool erase(const K& key) {
-        const std::size_t mask = slots_.size() - 1;
-        std::size_t q = slot(key);
+        const size_t mask = slots_.size() - 1;
+        size_t q = slot(key);
         while (used_[q] && !(slots_[q].first == key)) q = (q + 1) & mask;
         if (!used_[q]) return false;
 
         used_[q] = false;
         --count_;
-        std::size_t j = q;
+        size_t j = q;
         while (true) {
             j = (j + 1) & mask;
             if (!used_[j]) return true;                  // run ended
-            const std::size_t ideal = slot(slots_[j].first);
+            const size_t ideal = slot(slots_[j].first);
             // Does the key at j need to move back into the hole at q?
             // Equivalent to g(k',q) < g(k',j) with g(k,s) = (s - h1(k)) mod m.
             if (((q - ideal) & mask) < ((j - ideal) & mask)) {
@@ -611,20 +625,20 @@ public:
     }
 
 private:
-    std::vector<std::pair<K, V>> slots_;
-    std::vector<bool> used_;
-    std::size_t count_;
+    vector<pair<K, V>> slots_;
+    vector<bool> used_;
+    size_t count_;
     double maxLoad_;
     Hash hash_;
 
-    std::size_t slot(const K& key) const {
+    size_t slot(const K& key) const {
         return hash_(key) & (slots_.size() - 1);         // power-of-two mask
     }
 
-    void rehash(std::size_t newCap) {
-        std::vector<std::pair<K, V>> oldSlots;
+    void rehash(size_t newCap) {
+        vector<pair<K, V>> oldSlots;
         oldSlots.reserve(count_);
-        for (std::size_t i = 0; i < slots_.size(); ++i)
+        for (size_t i = 0; i < slots_.size(); ++i)
             if (used_[i]) oldSlots.push_back(slots_[i]);
         slots_.assign(newCap, {});
         used_.assign(newCap, false);
@@ -781,6 +795,8 @@ Hash each key with **`k` different hash functions**. Insert: set all `k` bits `h
 p_k = (km/n)^k
 ```
 
+→ **C++ implementation:** [A6 The Bloom filter](#a6-the-bloom-filter)
+
 > This is a peculiar expression, because **a probability raised to the `k`-th power quickly becomes smaller with increasing `k`, yet here the probability being raised simultaneously increases with `k`.** To find the `k` that minimizes `p_k`, we could take the derivative and set it to zero.
 
 **The trade-off curve** [Fig. 6.7]:
@@ -817,22 +833,22 @@ class BloomFilter {
 public:
     // Size for an expected number of items and a target false-positive rate.
     // Optimal:  n = -expected*ln(p) / (ln 2)^2  bits,  k = (n/expected)*ln 2.
-    BloomFilter(std::size_t expectedItems, double falsePositiveRate) {
-        const double bits = -double(expectedItems) * std::log(falsePositiveRate)
-                            / (std::log(2.0) * std::log(2.0));
-        nBits_ = std::max<std::size_t>(64, static_cast<std::size_t>(bits) + 1);
-        k_ = std::max<int>(1, static_cast<int>(
-                 std::round(bits / double(expectedItems) * std::log(2.0))));
+    BloomFilter(size_t expectedItems, double falsePositiveRate) {
+        const double bits = -double(expectedItems) * log(falsePositiveRate)
+                            / (log(2.0) * log(2.0));
+        nBits_ = max<size_t>(64, static_cast<size_t>(bits) + 1);
+        k_ = max<int>(1, static_cast<int>(
+                 round(bits / double(expectedItems) * log(2.0))));
         bits_.assign((nBits_ + 63) / 64, 0);
     }
 
-    void insert(const std::string& s) {
+    void insert(const string& s) {
         auto [h1, h2] = baseHashes(s);
         for (int i = 0; i < k_; ++i) setBit(nth(h1, h2, i));
     }
 
     // false  => DEFINITELY absent.   true => probably present.
-    bool mightContain(const std::string& s) const {
+    bool mightContain(const string& s) const {
         auto [h1, h2] = baseHashes(s);
         for (int i = 0; i < k_; ++i)
             if (!testBit(nth(h1, h2, i))) return false;
@@ -840,27 +856,27 @@ public:
     }
 
     int numHashes() const { return k_; }
-    std::size_t numBits() const { return nBits_; }
+    size_t numBits() const { return nBits_; }
 
 private:
-    std::vector<std::uint64_t> bits_;
-    std::size_t nBits_ = 0;
+    vector<uint64_t> bits_;
+    size_t nBits_ = 0;
     int k_ = 0;
 
     // Kirsch-Mitzenmacher: k hashes from 2 via g_i(x) = h1 + i*h2.
     // Provably as good asymptotically as k independent hashes.
-    std::size_t nth(std::uint64_t h1, std::uint64_t h2, int i) const {
-        return static_cast<std::size_t>((h1 + std::uint64_t(i) * h2) % nBits_);
+    size_t nth(uint64_t h1, uint64_t h2, int i) const {
+        return static_cast<size_t>((h1 + uint64_t(i) * h2) % nBits_);
     }
-    static std::pair<std::uint64_t, std::uint64_t> baseHashes(const std::string& s) {
-        std::uint64_t a = 1469598103934665603ULL;      // FNV-1a
+    static pair<uint64_t, uint64_t> baseHashes(const string& s) {
+        uint64_t a = 1469598103934665603ULL;      // FNV-1a
         for (unsigned char c : s) { a ^= c; a *= 1099511628211ULL; }
-        std::uint64_t b = 14695981039346656037ULL;     // a second, different seed
+        uint64_t b = 14695981039346656037ULL;     // a second, different seed
         for (unsigned char c : s) { b = (b * 31) + c; }
         return {a, b | 1ULL};                          // keep h2 nonzero
     }
-    void setBit(std::size_t i)        { bits_[i >> 6] |= (1ULL << (i & 63)); }
-    bool testBit(std::size_t i) const { return (bits_[i >> 6] >> (i & 63)) & 1ULL; }
+    void setBit(size_t i)        { bits_[i >> 6] |= (1ULL << (i & 63)); }
+    bool testBit(size_t i) const { return (bits_[i >> 6] >> (i & 63)) & 1ULL; }
 };
 ```
 
@@ -938,6 +954,8 @@ With `H(S, j) = Σ_{i=0}^{m−1} α^{m−(i+1)} · char(s_{i+j})`, the next wind
 H(S, j+1) = α·(H(S, j) − α^{m−1}·char(s_j)) + char(s_{j+m})
 ```
 
+→ **C++ implementation:** [A5 The rolling hash (Rabin–Karp)](#a5-the-rolling-hash-rabinkarp)
+
 > Once we know the hash value from the `j`-th position, we can find the hash value from the `(j+1)`-th for the cost of **two multiplications, one addition, and one subtraction.** … This math works even if we compute `H(S,j) mod M`, where `M` is a reasonably large prime.
 
 **Total: `Θ(n + m)` expected.**
@@ -958,25 +976,25 @@ H(S, j+1) = α·(H(S, j) − α^{m−1}·char(s_j)) + char(s_{j+m})
 
 // Rabin-Karp substring search. Expected O(n + m); worst case O(nm) if the
 // adversary knows the modulus (hence the randomized base).
-std::vector<int> rabinKarp(const std::string& text, const std::string& pat) {
-    std::vector<int> hits;
+vector<int> rabinKarp(const string& text, const string& pat) {
+    vector<int> hits;
     const int n = static_cast<int>(text.size());
     const int m = static_cast<int>(pat.size());
     if (m == 0 || m > n) return hits;
 
-    constexpr std::uint64_t kMod = (1ULL << 61) - 1;          // Mersenne prime
-    static std::mt19937_64 rng(std::random_device{}());
-    const std::uint64_t base = rng() % (kMod - 300) + 257;    // randomized base
+    constexpr uint64_t kMod = (1ULL << 61) - 1;          // Mersenne prime
+    static mt19937_64 rng(random_device{}());
+    const uint64_t base = rng() % (kMod - 300) + 257;    // randomized base
 
-    auto mulMod = [](std::uint64_t x, std::uint64_t y) {
-        return static_cast<std::uint64_t>((static_cast<__uint128_t>(x) * y) % kMod);
+    auto mulMod = [](uint64_t x, uint64_t y) {
+        return static_cast<uint64_t>((static_cast<__uint128_t>(x) * y) % kMod);
     };
 
     // highPow = base^(m-1) mod kMod -- the weight of the character leaving the window.
-    std::uint64_t highPow = 1;
+    uint64_t highPow = 1;
     for (int i = 0; i < m - 1; ++i) highPow = mulMod(highPow, base);
 
-    std::uint64_t hPat = 0, hWin = 0;
+    uint64_t hPat = 0, hWin = 0;
     for (int i = 0; i < m; ++i) {
         hPat = (mulMod(hPat, base) + static_cast<unsigned char>(pat[i]))  % kMod;
         hWin = (mulMod(hWin, base) + static_cast<unsigned char>(text[i])) % kMod;
@@ -987,7 +1005,7 @@ std::vector<int> rabinKarp(const std::string& text, const std::string& pat) {
         if (hWin == hPat && text.compare(j, m, pat) == 0) hits.push_back(j);
         if (j + m >= n) break;
         // Roll: drop text[j], shift, add text[j+m].
-        const std::uint64_t out =
+        const uint64_t out =
             mulMod(highPow, static_cast<unsigned char>(text[j]));
         hWin = (hWin + kMod - out) % kMod;                    // +kMod avoids underflow
         hWin = (mulMod(hWin, base) + static_cast<unsigned char>(text[j + m])) % kMod;
@@ -1003,7 +1021,7 @@ std::vector<int> rabinKarp(const std::string& text, const std::string& pat) {
 - `2^61 − 1` with `__int128` products is the standard safe choice.
 - **Rabin–Karp's real strength is multi-pattern search:** put `k` pattern hashes in a set and find all of them in one pass — something KMP cannot do without Aho–Corasick.
 
-**Comparison** (full treatment in [M18](M18-strings.md)):
+**Comparison** (full treatment in [M18 *(planned)*](INDEX.md#module-map)):
 
 | Algorithm | Time | Notes |
 |---|---|---|
@@ -1189,6 +1207,525 @@ That duplicate-immunity is the essential property, and it is the seed of **Hyper
 23. Why randomize the base and modulus? *(§9)*
 24. Why is `Pr{minhashes agree}` exactly the Jaccard similarity? *(§10)*
 25. Estimate the number of distinct values in a stream in `O(1)` memory. Why is it immune to duplicates? *(§10)*
+
+---
+
+## Practice — where to drill this module
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| The hash map as a reflex | [1 · Two Sum](https://leetcode.com/problems/two-sum/) | `Θ(n²)` → `Θ(n)` by remembering what you have seen; the smallest possible demonstration |
+| Hashing a *derived* key | [49 · Group Anagrams](https://leetcode.com/problems/group-anagrams/) | the key is the sorted string (or the 26-count signature) — designing the key **is** the problem |
+| Set membership beats sorting | [128 · Longest Consecutive Sequence](https://leetcode.com/problems/longest-consecutive-sequence/) | `Θ(n)` with a hash set vs `Θ(n lg n)` sorted; and why the inner loop is still linear overall |
+| Build the table yourself | [706 · Design HashMap](https://leetcode.com/problems/design-hashmap/) · [705 · Design HashSet](https://leetcode.com/problems/design-hashset/) | `A2` and `A3` below, as a submission |
+| Hash + list for `O(1)` everything | [146 · LRU Cache](https://leetcode.com/problems/lru-cache/) · [380 · Insert Delete GetRandom O(1)](https://leetcode.com/problems/insert-delete-getrandom-o1/) | the map stores *iterators*, which is why erase is `O(1)` — see [M06](M06-elementary-ds.md) |
+| Counting with a map | [347 · Top K Frequent Elements](https://leetcode.com/problems/top-k-frequent-elements/) | frequency map then bucket sort — `Θ(n)` end to end |
+| Rolling hash | [187 · Repeated DNA Sequences](https://leetcode.com/problems/repeated-dna-sequences/) | fixed-width windows, so the rolling hash is at its simplest |
+| Rolling hash, seriously | [1044 · Longest Duplicate Substring](https://leetcode.com/problems/longest-duplicate-substring/) | binary search on length + Rabin–Karp; **the** hard hashing problem |
+| Substring search | [28 · Find the Index of the First Occurrence in a String](https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/) | submit naive, then `A5` below |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *String Algorithms* (several are Rabin–Karp by design). [Codeforces `hashing` tag](https://codeforces.com/problemset?tags=hashing) · [`strings` tag](https://codeforces.com/problemset?tags=strings). **A warning worth heeding on Codeforces:** anti-hash tests against fixed `unordered_map` seeds are a real and common hack — see toolkit §5.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 5 and §1.6.4.*
+
+### 1. `unordered_map` / `unordered_set` — separate chaining, in the standard
+
+Both libstdc++ and libc++ implement `unordered_map` as **separate chaining** (`A2`), not open addressing. That is mandated in spirit by the standard's guarantees: references to elements must stay valid across rehashing, which open addressing cannot provide.
+
+| Operation | `unordered_map` | `map` (red-black tree, [M08](M08-search-trees.md)) |
+|---|---|---|
+| find / insert / erase | `O(1)` **expected**, `O(n)` worst | `O(lg n)` **guaranteed** |
+| ordered iteration | no | yes |
+| `lower_bound` / range queries | no | yes |
+| memory per element | higher (bucket array + node) | node only |
+| adversarial input | **can be attacked** | safe |
+
+### 2. `std::hash`, and how to hash your own type
+
+`unordered_map<K, V>` needs `std::hash<K>`. It is specialised for the built-ins and `string`, but not for your struct or for `pair`:
+
+```cpp
+struct Point { int x, y; bool operator==(const Point& o) const { return x == o.x && y == o.y; } };
+
+// Option A: specialise std::hash. Note this MUST go in namespace std -- one of
+// the very few places the standard permits you to add to it.
+namespace std {
+template <> struct hash<Point> {
+    size_t operator()(const Point& p) const noexcept {
+        // Do NOT write hash<int>{}(p.x) ^ hash<int>{}(p.y): XOR is symmetric,
+        // so (3,5) and (5,3) collide, and (a,a) hashes to 0 for every a.
+        size_t h = hash<int>{}(p.x);
+        h ^= hash<int>{}(p.y) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+        return h;   // boost::hash_combine's mixer: the constant is 2^64/phi
+    }
+};
+}
+
+// Option B: a function object passed as the third template argument -- Weiss's
+// function-object idiom [1.6.4, p.41] applied to hashing.
+struct PointHash {
+    size_t operator()(const Point& p) const noexcept {
+        return (size_t)p.x * 1000003u + (size_t)p.y;
+    }
+};
+using PointSet = unordered_set<Point, PointHash>;
+```
+
+**The hash must be consistent with `operator==`:** equal keys must hash equal. That is the entire contract, and violating it produces a container that silently loses elements.
+
+### 3. `reserve` and the load factor
+
+```cpp
+void reserveDemo(int n) {
+    unordered_map<int,int> m;
+    m.reserve(n);                 // pre-size the bucket array: no rehashing during fill
+    m.max_load_factor(0.5f);      // trade memory for fewer collisions (default is 1.0)
+}
+```
+
+`reserve(n)` is worth a factor of ~2 on a large fill, because it removes the `O(lg n)` rehashes — each of which is a full `Θ(n)` rebuild ([M09](M09-amortized.md) explains why the total is still amortized `O(1)` per insert).
+
+### 4. Integer division and `%` are expensive
+
+`h(k) = k mod m` costs a hardware divide: **20–40 cycles**, versus 3 for a multiply. That is a large part of why the multiply-shift method of `A4` exists — it is a multiply and a shift, and when `m = 2^ℓ` the modulo disappears entirely. Note `k % m` with a *negative* `k` is negative in C++, which is why every hash below casts to `unsigned long long` first.
+
+### 5. Hash flooding — the attack the theory predicts
+
+`unordered_map`'s `Θ(n)` worst case is not hypothetical. If an attacker can choose your keys and knows your hash function, they can drive every key into one bucket and turn an `O(1)` lookup into `O(n)`, collapsing a web service. This was a real CVE class across PHP, Python, Ruby and Java in 2011.
+
+**The fix is exactly Theorem 11.4:** choose the hash *randomly at run time* from a universal family, so the adversary cannot know it. In competitive programming the same trick defeats anti-hash tests:
+
+```cpp
+struct SafeHash {
+    size_t operator()(uint64_t x) const {
+        // A per-process random offset the adversary cannot predict.
+        static const uint64_t FIXED =
+            chrono::steady_clock::now().time_since_epoch().count();
+        x += FIXED + 0x9e3779b97f4a7c15ULL;
+        x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;   // splitmix64
+        x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
+        return (size_t)(x ^ (x >> 31));
+    }
+};
+```
+
+### 6. `unsigned __int128` for modular multiplication
+
+`(a * k + b) % p` with 64-bit `a` and `k` overflows before the modulo. GCC/Clang's 128-bit integer type is the practical fix:
+
+```cpp
+uint64_t mulmod(uint64_t a, uint64_t k, uint64_t b, uint64_t p) {
+    return (uint64_t)(((unsigned __int128)a * k + b) % p);
+}
+```
+
+It is a compiler extension, not standard C++, but it is available on every judge and on both major compilers.
+
+### 7. `vector<bool>` — the specialisation that is not a container
+
+`vector<bool>` is bit-packed: it stores 8 booleans per byte, `operator[]` returns a **proxy object** rather than a `bool&`, and you cannot take `&v[i]`. That makes it wrong for general use (`vector<char>` is the fix) — but exactly right for a **Bloom filter**, where 8× memory density is the entire point. `A6` uses it deliberately.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+```cpp
+// Shared prelude: a random source for the universal family and the Bloom filter.
+mt19937_64& rng() { static mt19937_64 g(20260903u); return g; }
+static uint64_t randU64() { return rng()(); }
+```
+
+### A1 DIRECT-ADDRESS-SEARCH / INSERT / DELETE
+
+*Pseudocode: §1, "Direct-address tables".*
+
+```cpp
+// One slot per POSSIBLE key. Templated on the stored type, with the assumption
+// stated as Weiss instructs [1.6.1, p.37]: T is any type; we store pointers to
+// it, so T needs nothing at all.
+template <typename T>
+class DirectAddressTable {
+public:
+    // `explicit` prevents `DirectAddressTable<int> t = 1000;` from compiling --
+    // a size is not a table [Weiss 1.4.2].
+    explicit DirectAddressTable(size_t universe) : slot_(universe, nullptr) {}
+
+    T* search(size_t k) const   { return slot_[k]; }    // DIRECT-ADDRESS-SEARCH
+    void insert(size_t k, T* x) { slot_[k] = x; }       // DIRECT-ADDRESS-INSERT
+    void erase(size_t k)        { slot_[k] = nullptr; } // DIRECT-ADDRESS-DELETE
+
+    size_t universe() const { return slot_.size(); }
+private:
+    // Pointers, not values: NIL has to be representable, and nullptr is it.
+    // Storing T by value would need a separate "occupied" flag.
+    vector<T*> slot_;
+};
+```
+
+**Complexity. `Θ(1)` worst case for all three** — no hashing, no collisions, nothing to analyse.
+
+**And that is why the chapter exists.** Space is `Θ(|U|)`, the size of the *key universe*, not the number of keys. For 64-bit keys that is `1.8 × 10¹⁹` slots to store ten items. Direct addressing is the right answer exactly when the universe is small and dense — day-of-year, HTTP status code, ASCII byte — and hopeless otherwise.
+
+> *Measured:* a 1000-slot table holding 3 keys. That ratio **is** the problem it has.
+
+### A2 CHAINED-HASH-INSERT / SEARCH / DELETE
+
+*Pseudocode: §2, "The structure".*
+
+```cpp
+class ChainedHashTable {
+public:
+    explicit ChainedHashTable(size_t m) : table_(m) {}
+
+    // The cast to unsigned matters: in C++, (-7) % 97 is -7, and a negative
+    // index into a vector is undefined behaviour. Cast FIRST, then take mod.
+    size_t hash(long long key) const {
+        return (size_t)(((unsigned long long)key) % table_.size());
+    }
+
+    // CHAINED-HASH-INSERT(T, x): LIST-PREPEND(T[h(x.key)], x)
+    //
+    // Note what the pseudocode does NOT do: it does not check whether the key
+    // is already present. Insertion is O(1) precisely BECAUSE it skips that
+    // check, and the table therefore behaves like a MULTISET. CLRS is explicit:
+    // if you need set semantics, search first, and insertion becomes O(1+alpha).
+    void insert(long long key) { table_[hash(key)].push_front(key); }
+
+    // CHAINED-HASH-SEARCH(T, k): return LIST-SEARCH(T[h(k)], k)
+    bool search(long long key) const {
+        // `const list<...>&`, not a copy: binding a reference to the bucket is
+        // Weiss's "aliasing a complicated name" use of references [1.5.2, p.24].
+        const list<long long>& chain = table_[hash(key)];
+        return find(chain.begin(), chain.end(), key) != chain.end();
+    }
+
+    // CHAINED-HASH-DELETE(T, x): LIST-DELETE(T[h(x.key)], x)
+    // The pseudocode is given a POINTER to x, so it is O(1). Deleting by VALUE,
+    // as here, must search the chain first -- O(1 + alpha).
+    bool erase(long long key) {
+        list<long long>& chain = table_[hash(key)];
+        auto it = find(chain.begin(), chain.end(), key);
+        if (it == chain.end()) return false;
+        chain.erase(it);          // std::list::erase is O(1) given the iterator
+        return true;
+    }
+
+    size_t longestChain() const {
+        size_t mx = 0;
+        for (const auto& c : table_) mx = max(mx, c.size());
+        return mx;
+    }
+private:
+    vector<list<long long>> table_;
+};
+```
+
+**Complexity.** Let `α = n/m` be the **load factor** — the average chain length.
+
+- **INSERT:** `O(1)` worst case (prepend, no search).
+- **SEARCH:** `Θ(1 + α)` **average**, under simple uniform hashing; `Θ(n)` worst case (everything in one chain).
+- **DELETE:** `O(1)` given a pointer, `Θ(1 + α)` by key.
+
+**`α = O(1)` makes all operations `O(1)` on average**, which is the whole design: keep `m` proportional to `n` by rehashing, and the average chain never grows.
+
+> *Measured*, `m = 1000` slots, random keys:
+>
+> | `α` | longest chain | mean non-empty chain |
+> |---|---|---|
+> | 0.5 | 5 | 1.28 |
+> | 1.0 | 6 | 1.58 |
+> | 2.0 | 8 | 2.19 |
+> | 4.0 | 12 | 4.03 |
+> | 8.0 | 19 | 8.00 |
+>
+> The mean tracks `α` exactly, as the theory says — but note the **longest** chain is roughly `α + Θ(lg n / lg lg n)` even when the hash is perfect. Average-case `O(1)` never means "every bucket is small".
+
+### A3 HASH-INSERT / HASH-SEARCH (open addressing)
+
+*Pseudocode: §5, "The structure".*
+
+```cpp
+class OpenAddressingTable {
+public:
+    // `enum class`, not a bare enum: the enumerators are SCOPED
+    // (Probe::Linear, not just Linear) and do not implicitly convert to int.
+    enum class Probe { Linear, Quadratic, Double };
+
+    OpenAddressingTable(size_t m, Probe p) : slot_(m, EMPTY), probe_(p) {}
+
+    // Two sentinel values, and the difference between them is the whole reason
+    // deletion is hard in an open-addressed table:
+    //   EMPTY   -- never used; a search may STOP here.
+    //   DELETED -- used and then vacated; a search must CONTINUE through it,
+    //              or it would miss keys that probed past this slot.
+    // Marking deletions instead of clearing them is why search time in an
+    // open-addressed table degrades with the number of DELETIONS, not just the
+    // number of live keys. It is also why CLRS says: if you need deletion,
+    // prefer chaining.
+    static constexpr long long EMPTY   = LLONG_MIN;
+    static constexpr long long DELETED = LLONG_MIN + 1;
+
+    size_t h1(long long k) const { return (size_t)(((unsigned long long)k) % slot_.size()); }
+    size_t h2(long long k) const { return 1 + (size_t)(((unsigned long long)k) % (slot_.size() - 1)); }
+    //                             ^^^ the +1 is essential: a step of 0 would
+    //                             probe the same slot forever.
+
+    size_t probeAt(long long k, size_t i) const {
+        const size_t m = slot_.size();
+        switch (probe_) {
+            case Probe::Linear:    return (h1(k) + i) % m;                  // h1 + i
+            case Probe::Quadratic: return (h1(k) + i + 3 * i * i) % m;      // h1 + c1 i + c2 i^2
+            case Probe::Double:    return (h1(k) + i * h2(k)) % m;          // h1 + i*h2
+        }
+        return 0;
+    }
+
+    long long probesLastOp = 0;     // instrumentation
+
+    // HASH-INSERT(T, k)
+    bool insert(long long k) {
+        const size_t m = slot_.size();
+        probesLastOp = 0;
+        for (size_t i = 0; i < m; ++i) {                 // 2  repeat ... 8  until i == m
+            ++probesLastOp;
+            size_t q = probeAt(k, i);                    // 3  q = h(k, i)
+            if (slot_[q] == EMPTY || slot_[q] == DELETED) { slot_[q] = k; return true; }  // 4-5
+            if (slot_[q] == k) return true;              // already present
+        }
+        return false;                                    // 9  "hash table overflow"
+    }
+
+    // HASH-SEARCH(T, k)
+    bool search(long long k) {
+        const size_t m = slot_.size();
+        probesLastOp = 0;
+        for (size_t i = 0; i < m; ++i) {
+            ++probesLastOp;
+            size_t q = probeAt(k, i);
+            if (slot_[q] == k) return true;              // 4  if T[q] == k: return q
+            if (slot_[q] == EMPTY) return false;         // 7  until T[q] == NIL
+            // NOTE: DELETED does NOT stop the scan. That is the whole point.
+        }
+        return false;                                    // 8  return NIL
+    }
+
+    bool erase(long long k) {
+        const size_t m = slot_.size();
+        for (size_t i = 0; i < m; ++i) {
+            size_t q = probeAt(k, i);
+            if (slot_[q] == k) { slot_[q] = DELETED; return true; }   // tombstone
+            if (slot_[q] == EMPTY) return false;
+        }
+        return false;
+    }
+private:
+    vector<long long> slot_;   // no chains, no pointers: ONE contiguous array
+    Probe probe_;
+};
+```
+
+**Complexity.** With uniform hashing and `α < 1`:
+
+- **Unsuccessful search / insert:** at most `1/(1−α)` probes.
+- **Successful search:** at most `(1/α)·ln(1/(1−α))` probes.
+
+Both **blow up as `α → 1`**: `α = 0.5` costs 2 probes, `α = 0.9` costs 10, `α = 0.99` costs 100.
+
+**Why open addressing exists:** no pointers, no allocations, one contiguous array — vastly better cache behaviour than chaining. **Why it is harder:** deletion needs tombstones, and it cannot exceed `α = 1`.
+
+> *Measured*, `m = 4096`, average probes for an **unsuccessful** search:
+>
+> | `α` | `1/(1−α)` bound | linear | quadratic | double |
+> |---|---|---|---|---|
+> | 0.25 | 1.33 | 1.41 | 1.37 | **1.34** |
+> | 0.50 | 2.00 | 2.48 | **2.16** | 2.62 |
+> | 0.75 | 4.00 | 7.08 | **4.40** | 6.04 |
+> | 0.90 | 10.00 | 35.77 | **10.59** | 16.90 |
+> | 0.95 | 20.00 | **115.69** | **21.37** | 32.55 |
+>
+> **This table is primary clustering, measured.** The `1/(1−α)` bound assumes *uniform hashing* — every probe sequence equally likely — which linear probing badly violates: occupied runs merge and grow, so a long run gets longer. At `α = 0.95` linear probing costs **115.69 probes against a bound of 20**, while quadratic probing stays at 21.37. If you take one thing from this module's implementation advice: **do not use linear probing above `α ≈ 0.5`.**
+
+### A4 The hash functions
+
+*Corresponds to the `H(S)`, `h(k) = k mod m`, `h_a(k)`, and `h_{ab}(k)` formula blocks in §3–4.*
+
+```cpp
+// DIVISION METHOD: h(k) = k mod m.  Fast (one divide) and fragile.
+size_t divisionHash(long long k, size_t m) {
+    return (size_t)(((unsigned long long)k) % m);
+}
+
+// MULTIPLY-SHIFT, CLRS eq. (11.2): h_a(k) = (k*a mod 2^w) >> (w - l), m = 2^l.
+//
+// `k * a` on uint64_t wraps modulo 2^64 -- and unlike SIGNED overflow, that
+// wraparound is DEFINED behaviour, which is exactly the "mod 2^w" the formula
+// wants. The >> then keeps the l MOST SIGNIFICANT bits of the low word, which
+// mix contributions from ALL bits of k. That is why it survives the adversarial
+// input below and the division method does not.
+//
+// `a` must be ODD (so the map is a bijection mod 2^64); this constant is
+// 2^64 / phi, the golden-ratio multiplier Knuth recommends.
+size_t multiplyShiftHash(uint64_t k, unsigned ell) {
+    static const uint64_t a = 0x9E3779B97F4A7C15ULL | 1ULL;
+    return (size_t)((k * a) >> (64 - ell));
+}
+
+// THEOREM 11.4's universal family: h_{ab}(k) = ((a*k + b) mod p) mod m.
+// a and b are drawn ONCE AT CONSTRUCTION -- the randomness is in choosing the
+// FUNCTION, not in hashing each key. Two calls with the same k give the same
+// slot; two different UnversalHash objects generally do not.
+struct UniversalHash {
+    uint64_t a, b, p;
+    size_t m;
+    UniversalHash(size_t m_, uint64_t p_ = 2147483647ULL) : p(p_), m(m_) {   // p = 2^31 - 1, prime
+        a = uniform_int_distribution<uint64_t>(1, p - 1)(rng());   // a in Z_p^*  (never 0)
+        b = uniform_int_distribution<uint64_t>(0, p - 1)(rng());   // b in Z_p
+    }
+    size_t operator()(uint64_t k) const {
+        // unsigned __int128 (toolkit 6): a*k overflows 64 bits before the mod.
+        return (size_t)(((unsigned __int128)a * k + b) % p % m);
+    }
+};
+
+// Skiena's string hash: treat characters as digits in base alpha, reduce mod m.
+// Horner's rule -- one multiply-add per character, and the mod at every step
+// keeps h bounded so it never overflows.
+uint64_t stringHash(const string& s, uint64_t alpha, uint64_t mod) {
+    uint64_t h = 0;
+    // `unsigned char`, not `char`: plain char is SIGNED on x86, so a byte >= 128
+    // would contribute a negative value and wreck the hash for non-ASCII input.
+    for (unsigned char c : s) h = (h * alpha + c) % mod;
+    return h;
+}
+```
+
+> *Measured.* 100 000 **adversarial** keys — all multiples of 64 — into `m = 1024` slots:
+>
+> | hash | slots used | χ² |
+> |---|---|---|
+> | division, `k mod 1024` | **16 / 1024** | 6 300 000 |
+> | multiply-shift | **1024 / 1024** | 19.43 |
+> | universal `((ak+b) mod p) mod m` | **1024 / 1024** | 32.10 |
+>
+> The division method used **16 slots out of 1024** and left the table 98% empty with chains 6250 long. The reason is CLRS's warning made concrete: with `m = 2^p`, `h(k)` is just *the low `p` bits of `k`* — and every key here has its low 6 bits zero. Both other methods spread the same keys perfectly (a χ² near the 1023 degrees of freedom would be expected for random data; these are far below, because the keys are evenly spaced).
+>
+> And the anagram failure: with `m = 2⁸ − 1 = 255`, **`stringHash("abc") == stringHash("cab")`** — every permutation of a string collides, exactly as Exercise 11.3-3 predicts. With a large prime modulus they differ.
+
+### A5 The rolling hash (Rabin–Karp)
+
+*Corresponds to `H(S, j+1) = α·(H(S, j) − α^{m−1}·char(s_j)) + char(s_{j+m})` in §7.*
+
+```cpp
+// Returns every index where `pat` occurs in `text`.
+vector<int> rabinKarp(const string& text, const string& pat,
+                      uint64_t alpha = 257, uint64_t mod = 1000000007ULL,
+                      long long* fullCompares = nullptr) {
+    vector<int> hits;
+    const int n = (int)text.size(), m = (int)pat.size();
+    if (m == 0 || m > n) return hits;
+
+    // alpha^(m-1) mod mod -- the weight of the character LEAVING the window.
+    uint64_t high = 1;
+    for (int i = 0; i < m - 1; ++i) high = (high * alpha) % mod;
+
+    uint64_t hp = stringHash(pat, alpha, mod);
+    uint64_t ht = stringHash(text.substr(0, m), alpha, mod);
+
+    for (int j = 0; ; ++j) {
+        if (ht == hp) {
+            // A hash match is only EVIDENCE, never proof: different strings can
+            // share a hash. Verify with a real comparison. Skipping this makes
+            // the algorithm Monte Carlo (fast, occasionally wrong) instead of
+            // Las Vegas (always right, fast in expectation).
+            if (fullCompares) ++*fullCompares;
+            if (text.compare(j, m, pat) == 0) hits.push_back(j);
+        }
+        if (j + m >= n) break;
+
+        // THE ROLL, in two steps, and note the `+ mod` before subtracting:
+        //   ht - x  on unsigned types WRAPS if x > ht. Adding `mod` first keeps
+        //   the value positive; this is the single most common rolling-hash bug.
+        ht = (ht + mod - (high * (unsigned char)text[j]) % mod) % mod;   // drop text[j]
+        ht = (ht * alpha + (unsigned char)text[j + m]) % mod;            // shift, add text[j+m]
+    }
+    return hits;
+}
+```
+
+**Complexity.** `Θ(n + m)` **expected**; `Θ(nm)` worst case if every window's hash collides with the pattern's (which a randomly chosen `alpha` makes vanishingly unlikely — that is [M04](M04-randomization.md)'s lesson applied here).
+
+**Why the roll is `O(1)`:** consecutive windows share `m − 1` characters. Subtract the departing character's contribution, multiply by the base, add the arriving character — *"two multiplications, one addition, and one subtraction"*, independent of `m`.
+
+> *Measured*, on the input that is worst-case for **naive** matching (`text` = 200 000 `a`s, `pat` = 99 `a`s then a `b`): Rabin–Karp performed **0 full string comparisons** across 199 901 windows and finished in 2 255 µs. Naive matching would perform **19 990 100** character comparisons on the same input.
+
+### A6 The Bloom filter
+
+*Corresponds to `p_k = (km/n)^k` in §8.*
+
+```cpp
+class BloomFilter {
+public:
+    // bits = total bit array size, k = number of hash functions.
+    BloomFilter(size_t bits, int k) : bits_(bits, false), k_(k) {
+        // k independent hashes, made by k random odd multipliers. Drawing them
+        // at run time is the universal-hashing idea again: an adversary cannot
+        // pre-compute a set of keys that all collide.
+        for (int i = 0; i < k; ++i) seeds_.push_back(randU64() | 1ULL);
+    }
+
+    void insert(uint64_t key) { for (size_t idx : positions(key)) bits_[idx] = true; }
+
+    // The name is the specification: a `true` MIGHT be wrong, a `false` never is.
+    bool mightContain(uint64_t key) const {
+        for (size_t idx : positions(key)) if (!bits_[idx]) return false;
+        return true;
+    }
+
+    size_t bitsSet() const { return (size_t)count(bits_.begin(), bits_.end(), true); }
+    size_t size() const { return bits_.size(); }
+private:
+    // vector<bool> is the bit-packed specialisation (toolkit 7). Everywhere else
+    // it is a trap; here its 8x density is the entire reason the structure exists.
+    vector<bool> bits_;
+    int k_;
+    vector<uint64_t> seeds_;
+
+    vector<size_t> positions(uint64_t key) const {
+        vector<size_t> out;
+        out.reserve(k_);
+        for (uint64_t s : seeds_) {
+            uint64_t h = key * s;              // multiply...
+            h ^= h >> 29; h *= 0xBF58476D1CE4E5B9ULL; h ^= h >> 32;   // ...then AVALANCHE:
+            // the shift-xor-multiply chain (splitmix64's finaliser) makes every
+            // input bit affect every output bit. Without it, `key * s` leaves the
+            // low bits barely mixed and the filter's error rate is far worse than
+            // the formula predicts.
+            out.push_back((size_t)(h % bits_.size()));
+        }
+        return out;
+    }
+};
+```
+
+**Complexity.** `O(k)` per insert and per query — **independent of `n`**. Space `m` bits total, typically 8–16 bits *per key* regardless of key size, which is the point: a Bloom filter for 10 million 100-byte URLs fits in 12 MB.
+
+**The guarantee is one-sided.** **No false negatives, ever**: if a key was inserted, all `k` of its bits are set, so `mightContain` cannot return `false`. **False positives are possible** at rate `≈ (1 − e^{−kn/m})^k`, minimised at `k = (m/n)·ln 2`, where roughly **half the bits are set**.
+
+> *Measured*, `n = 10 000` keys inserted, 100 000 absent keys queried:
+>
+> | bits/key | `k` | measured FP rate | predicted | fill |
+> |---|---|---|---|---|
+> | 4 | 3 | 0.14451 | 0.14689 | 52.7% |
+> | 8 | 5 | 0.02161 | 0.02168 | 46.7% |
+> | 10 | 7 | 0.00769 | 0.00819 | 50.3% |
+> | 16 | 11 | **0.00047** | 0.00046 | 49.8% |
+>
+> Measured and predicted agree to three decimal places, the fill sits at ~50% exactly as the optimality condition requires, and **no configuration ever produced a false negative**. 16 bits per key — 2 bytes — buys a 1-in-2000 error rate on membership queries of arbitrary-length keys.
+
 
 ---
 

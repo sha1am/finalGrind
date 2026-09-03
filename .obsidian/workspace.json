@@ -11,15 +11,10 @@
             "id": "d82e221421c41906",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Algorithms-S-CLRS/M03divideconquer.md",
-                "mode": "source",
-                "source": false,
-                "backlinks": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "M03divideconquer"
+              "title": "New tab"
             }
           }
         ]
@@ -100,7 +95,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Algorithms-S-CLRS/M03divideconquer.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -119,7 +113,6 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Algorithms-S-CLRS/M03divideconquer.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -162,7 +155,6 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Algorithms-S-CLRS/M03divideconquer.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -191,6 +183,20 @@
   },
   "active": "d82e221421c41906",
   "lastOpenFiles": [
+    "Algorithms-S-CLRS/README.md",
+    "Algorithms-S-CLRS/M08-search-trees.md",
+    "Algorithms-S-CLRS/M06-elementary-ds.md",
+    "Algorithms-S-CLRS/M04-randomization.md",
+    "Algorithms-S-CLRS/M03-divide-conquer.md",
+    "Algorithms-S-CLRS/INDEX.md",
+    "Algorithms-S-CLRS/M08-searchtrees.md",
+    "Algorithms-S-CLRS/M07-hashing.md",
+    "Algorithms-S-CLRS/M06-elementaryds.md",
+    "Algorithms-S-CLRS/M05-sorting.md",
+    "Algorithms-S-CLRS/M03divideconquer.md",
+    "Algorithms-S-CLRS/M03-divideconquer.md",
+    "Algorithms-S-CLRS/M02-asymptotics.md",
+    "Algorithms-S-CLRS/M01-foundations.md",
     "Algorithms-S-CLRS/M15shortestpaths.md",
     "Algorithms-S-CLRS/M14mst.md",
     "Algorithms-S-CLRS/M13graphstraversal.md",
@@ -199,7 +205,6 @@
     "Algorithms-S-CLRS/Untitled Folder",
     "Algorithms-S-CLRS/M01foundations.md",
     "Algorithms-S-CLRS/M10unionfind.md",
-    "Algorithms-S-CLRS/M11dynamicprogramming.md",
-    "Algorithms-S-CLRS/INDEX.md"
+    "Algorithms-S-CLRS/M11dynamicprogramming.md"
   ]
 }
