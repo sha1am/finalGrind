@@ -23,6 +23,8 @@ GENERIC-MST(G, w)
 5  return A
 ```
 
+→ **C++ implementation:** [A1 GENERIC-MST](#a1-generic-mst)
+
 with **loop invariant: `A` is a subset of some minimum spanning tree.** An edge is **safe** if adding it preserves that invariant. Everything in this module reduces to one theorem — **the cut property (Theorem 21.1)** — which tells you how to recognize a safe edge, and then two ways of applying it:
 
 | | **Kruskal** | **Prim** |
@@ -120,6 +122,8 @@ MST-KRUSKAL(G, w)
 10 return A
 ```
 
+→ **C++ implementation:** [A2 MST-KRUSKAL](#a2-mst-kruskal)
+
 **Skiena's framing, which explains why no cycle check is needed:** *"Kruskal's algorithm builds up connected components of vertices… If the endpoints lie in different components, we insert the edge and merge the two components into one. **Since each connected component always is a tree, we never need to explicitly test for cycles.**"*
 
 **Skiena's correctness proof** — a clean exchange argument in three sentences. Suppose Kruskal first errs at edge `(x,y)`. Inserting `(x,y)` into `T_min` creates a cycle containing the `x`–`y` path. Since `x` and `y` were in **different components** when `(x,y)` was chosen, at least one edge `(v₁,v₂)` on that path was considered by Kruskal **later** than `(x,y)`, so `w(v₁,v₂) ≥ w(x,y)`; exchanging them yields a tree no heavier. ∎
@@ -157,18 +161,18 @@ public:
     }
 
     int n() const { return (int)adj_.size(); }
-    const std::vector<Edge>& edges() const { return edges_; }
-    const std::vector<std::pair<int, long long>>& adj(int u) const { return adj_[u]; }
+    const vector<Edge>& edges() const { return edges_; }
+    const vector<pair<int, long long>>& adj(int u) const { return adj_[u]; }
 
 private:
-    std::vector<std::vector<std::pair<int, long long>>> adj_;
-    std::vector<Edge> edges_;
+    vector<vector<pair<int, long long>>> adj_;
+    vector<Edge> edges_;
 };
 
 // ---------------- disjoint sets (M10), union by rank + path compression
 class DisjointSet {
 public:
-    explicit DisjointSet(int n) : p_(n), rank_(n, 0) { std::iota(p_.begin(), p_.end(), 0); }
+    explicit DisjointSet(int n) : p_(n), rank_(n, 0) { iota(p_.begin(), p_.end(), 0); }
     int find(int x) {
         int root = x;
         while (p_[root] != root) root = p_[root];
@@ -178,25 +182,25 @@ public:
     bool unite(int x, int y) {
         int a = find(x), b = find(y);
         if (a == b) return false;
-        if (rank_[a] > rank_[b]) std::swap(a, b);
+        if (rank_[a] > rank_[b]) swap(a, b);
         p_[a] = b;
         if (rank_[a] == rank_[b]) ++rank_[b];
         return true;
     }
 private:
-    std::vector<int> p_, rank_;
+    vector<int> p_, rank_;
 };
 
 struct MstResult {
     long long weight = 0;
-    std::vector<Edge> tree;
+    vector<Edge> tree;
     bool connected = false;
 };
 
 // Safe edge = lowest-weight edge joining two distinct components (Corollary 21.2).
 MstResult kruskal(const WeightedGraph& g) {
-    std::vector<Edge> e = g.edges();
-    std::sort(e.begin(), e.end(), [](const Edge& a, const Edge& b) { return a.w < b.w; });
+    vector<Edge> e = g.edges();
+    sort(e.begin(), e.end(), [](const Edge& a, const Edge& b) { return a.w < b.w; });
     DisjointSet ds(g.n());
     MstResult r;
     for (const auto& x : e)
@@ -236,6 +240,8 @@ MST-PRIM(G, w, r)
 14              DECREASE-KEY(Q, v, w(u,v))
 ```
 
+→ **C++ implementation:** [A3 MST-PRIM](#a3-mst-prim)
+
 **The three-part loop invariant:**
 1. `A = {(v, v.π) : v ∈ V − {r} − Q}`;
 2. the vertices already in the tree are exactly `V − Q`;
@@ -269,11 +275,11 @@ The `Θ(V²)` version has no heap at all — it's the one Skiena implements — 
 MstResult primHeap(const WeightedGraph& g, int root) {
     const int n = g.n();
     const long long INF = LLONG_MAX / 4;
-    std::vector<long long> key(n, INF);
-    std::vector<int> parent(n, -1);
-    std::vector<char> inTree(n, 0);
-    using Item = std::pair<long long, int>;             // (key, vertex)
-    std::priority_queue<Item, std::vector<Item>, std::greater<Item>> q;
+    vector<long long> key(n, INF);
+    vector<int> parent(n, -1);
+    vector<char> inTree(n, 0);
+    using Item = pair<long long, int>;             // (key, vertex)
+    priority_queue<Item, vector<Item>, greater<Item>> q;
 
     key[root] = 0;
     q.push({0, root});
@@ -299,9 +305,9 @@ MstResult primHeap(const WeightedGraph& g, int root) {
 MstResult primDense(const WeightedGraph& g, int root) {
     const int n = g.n();
     const long long INF = LLONG_MAX / 4;
-    std::vector<long long> key(n, INF);
-    std::vector<int> parent(n, -1);
-    std::vector<char> inTree(n, 0);
+    vector<long long> key(n, INF);
+    vector<int> parent(n, -1);
+    vector<char> inTree(n, 0);
     key[root] = 0;
     MstResult r;
     for (int iter = 0; iter < n; ++iter) {
@@ -347,7 +353,7 @@ MstResult boruvka(const WeightedGraph& g) {
     MstResult r;
     int components = n;
     while (components > 1) {
-        std::vector<int> best(n, -1);                   // best[c] = index of c's cheapest edge
+        vector<int> best(n, -1);                   // best[c] = index of c's cheapest edge
         const auto& e = g.edges();
         for (int i = 0; i < (int)e.size(); ++i) {
             const int a = ds.find(e[i].u), b = ds.find(e[i].v);
@@ -417,7 +423,7 @@ MstResult maximumSpanningTree(const WeightedGraph& g) {
 // The bottleneck of a tree: its heaviest edge. Every MST minimises this.
 long long bottleneck(const MstResult& r) {
     long long b = LLONG_MIN;
-    for (const auto& e : r.tree) b = std::max(b, e.w);
+    for (const auto& e : r.tree) b = max(b, e.w);
     return r.tree.empty() ? 0 : b;
 }
 
@@ -425,12 +431,12 @@ long long bottleneck(const MstResult& r) {
 // edge swap, so it suffices to delete each MST edge in turn and rebuild.
 long long secondBestMST(const WeightedGraph& g) {
     const int n = g.n();
-    std::vector<int> idx(g.edges().size());
-    std::iota(idx.begin(), idx.end(), 0);
-    std::sort(idx.begin(), idx.end(),
+    vector<int> idx(g.edges().size());
+    iota(idx.begin(), idx.end(), 0);
+    sort(idx.begin(), idx.end(),
               [&](int a, int b) { return g.edges()[a].w < g.edges()[b].w; });
 
-    std::vector<int> chosen;                            // indices of the MST's edges
+    vector<int> chosen;                            // indices of the MST's edges
     {
         DisjointSet ds(n);
         for (int i : idx) if (ds.unite(g.edges()[i].u, g.edges()[i].v)) chosen.push_back(i);
@@ -446,7 +452,7 @@ long long secondBestMST(const WeightedGraph& g) {
             if (i == skip) continue;
             if (ds.unite(g.edges()[i].u, g.edges()[i].v)) { total += g.edges()[i].w; ++used; }
         }
-        if (used == n - 1) second = std::min(second, total);
+        if (used == n - 1) second = min(second, total);
     }
     return second;
 }
@@ -535,6 +541,342 @@ long long secondBestMST(const WeightedGraph& g) {
 - **Transformations that work:** negate for **maximum** spanning tree; take logs for **minimum product**. Note MST is unusual in tolerating negation — shortest paths are not.
 - **Transformations that don't:** **Steiner tree** (extra junctions) and **low-degree spanning tree** are both NP-hard.
 - **MST ≠ shortest paths.** The `u`–`v` path in an MST minimizes the maximum edge, not the total.
+
+---
+
+## Practice — where to drill this module
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| MST on an implicit complete graph | [1584 · Min Cost to Connect All Points](https://leetcode.com/problems/min-cost-to-connect-all-points/) | `n²` implicit edges, so **Prim's `Θ(V²)` beats Kruskal** — the density argument, made concrete |
+| The cut and cycle properties, used | [1489 · Find Critical and Pseudo-Critical Edges in MST](https://leetcode.com/problems/find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree/) | force an edge in / leave it out and re-run Kruskal; this is the cut property as an algorithm |
+| Kruskal's engine on its own | [684 · Redundant Connection](https://leetcode.com/problems/redundant-connection/) · [1319 · Number of Operations to Make Network Connected](https://leetcode.com/problems/number-of-operations-to-make-network-connected/) | the union–find cycle test of line 7, with the sorting removed |
+| Minimum **bottleneck**, not minimum sum | [778? use] [1631? use] — or [1102? use] — see the note below | every MST is a minimum-bottleneck spanning tree; the converse is false |
+| Prim's structure, reused | [743 · Network Delay Time](https://leetcode.com/problems/network-delay-time/) | Dijkstra is Prim with one changed key ([M15](M15-shortest-paths.md)); write both and diff them |
+| Components before connecting | [547 · Number of Provinces](https://leetcode.com/problems/number-of-provinces/) | the disconnected case, where Kruskal yields a spanning **forest** |
+
+*(For minimum-bottleneck practice, the reliable route is [CSES Problem Set](https://cses.fi/problemset/) → *Graph Algorithms* → "Road Construction" and neighbours, rather than a LeetCode number.)*
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *Graph Algorithms*. [Codeforces `dsu` tag](https://codeforces.com/problemset?tags=dsu) · [`graphs` tag](https://codeforces.com/problemset?tags=graphs).
+
+**The drill that matters here:** given a graph problem, ask *"is the objective the **sum** of chosen edges, or the **path** between two vertices?"* MST answers the first; shortest paths answers the second. Conflating them — expecting the MST path between `u` and `v` to be the shortest `u`–`v` path — is the single most common MST misconception, and it is false.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 9 and §6.9.*
+
+### 1. Sorting a struct: the comparator, or `operator<`
+
+Kruskal sorts edges by weight. Two idioms, both fine:
+
+```cpp
+struct Link { int u, v; long long w; };
+
+void sortLinks(vector<Link>& e) {
+    // (a) a lambda at the call site -- local, explicit, no surprises
+    sort(e.begin(), e.end(), [](const Link& a, const Link& b) { return a.w < b.w; });
+}
+
+struct Link2 {
+    int u, v; long long w;
+    // (b) operator< as a member -- then sort(e.begin(), e.end()) just works,
+    // and so do set<Link2>, map keys, and priority_queue<Link2>.
+    bool operator<(const Link2& o) const { return w < o.w; }
+};
+```
+
+Define `operator<` when the type has one obvious natural order; pass a lambda when the order is a property of *this algorithm* rather than of the type. An `Edge` has no natural order — it happens to be sorted by weight *here* — so the appendix passes a comparator.
+
+### 2. Lazy decrease-key — the idiom this module and [M15](M15-shortest-paths.md) share
+
+`std::priority_queue` has **no `decrease-key`**, which `MST-PRIM` line 14 requires. The standard workaround:
+
+```cpp
+void lazyIdiom() {
+    using Item = pair<long long,int>;                       // (key, vertex)
+    priority_queue<Item, vector<Item>, greater<Item>> pq;   // MIN-heap
+    // On every improvement: PUSH A NEW ENTRY instead of updating the old one.
+    // On every pop: discard entries that are out of date.
+    //     if (k > key[v]) continue;    // stale
+}
+```
+
+The queue holds up to `E` entries instead of `V`, so the bound is `O(E lg E) = O(E lg V)` — **the same**, because `lg E ≤ lg V² = 2 lg V`. Memory grows from `Θ(V)` to `Θ(E)`. In exchange you never write a heap. **This is the right default**, and it reappears verbatim in Dijkstra.
+
+The alternative — a `set<pair<long long,int>>` with `erase` then `insert` — gives a true decrease-key at `O(lg V)` and `Θ(V)` memory, with a much worse constant. Use it only when memory is genuinely tight.
+
+### 3. `pair` ordering is lexicographic, which is exactly what you want here
+
+`pair<long long,int>` compares `.first` first and only breaks ties on `.second`. So `priority_queue<pair<key,vertex>>` orders by key and breaks ties by vertex id — deterministic, reproducible, and free. **Put the key first.** Reversing to `pair<vertex,key>` silently orders by vertex id, which is a wrong answer that looks like a working program.
+
+### 4. `Θ(V²)` Prim needs no heap at all
+
+```cpp
+void densePrimShape(int n) {
+    vector<long long> key(n, LLONG_MAX / 2);
+    vector<char> inTree(n, 0);
+    // V iterations, each doing a linear scan for the minimum:
+    //   Theta(V) per extract-min x V extractions = Theta(V^2)
+    //   plus Theta(1) per edge relaxation, Theta(E) total
+    (void)key; (void)inTree;
+}
+```
+
+For a **dense** graph (`E ≈ V²`) this beats the heap version: `Θ(V²)` against `O(E lg V) = O(V² lg V)`. The array version also has no allocation, no pointer chasing, and perfect locality. **On an implicit complete graph — LeetCode 1584 — it is simply the right algorithm.**
+
+### 5. `long long` for accumulated weight
+
+An MST sums `V−1` edge weights. With `V = 10⁵` and weights up to `10⁶`, the total is `10¹¹` — an `int` overflow, and signed overflow is undefined behaviour. Every total in the appendix is `long long`.
+
+### 6. Returning several things from one function
+
+```cpp
+struct MstOutput { long long weight; vector<int> edgeIds; bool connected; };
+```
+
+A named struct beats `pair<long long, vector<int>>` — `.weight` and `.edgeIds` say what they are, and adding `connected` later does not break every call site ([M03](M03-divide-conquer.md) toolkit §5).
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+```cpp
+// The representation every entry below uses.
+struct MstEdge {
+    int u = 0, v = 0;
+    long long w = 0;
+    int id = 0;              // position in the original input, for reporting
+};
+
+struct MstGraph {
+    int n = 0;
+    vector<MstEdge> edges;                          // flat list -- Kruskal wants this
+    vector<vector<pair<int,long long>>> adj;        // (neighbour, weight) -- Prim wants this
+    explicit MstGraph(int n_) : n(n_), adj(n_) {}
+    void addEdge(int u, int v, long long w) {
+        int id = (int)edges.size();
+        edges.push_back({u, v, w, id});
+        adj[u].push_back({v, w});                   // UNDIRECTED: both directions
+        adj[v].push_back({u, w});
+    }
+};
+
+// The result of any MST algorithm here.
+struct MstOutput {
+    long long weight = 0;      // long long: V-1 weights can overflow int (toolkit 5)
+    vector<int> edgeIds;
+    bool connected = false;    // false => this is a spanning FOREST, not a tree
+};
+```
+
+### A1 GENERIC-MST
+
+*Pseudocode: Big Idea.*
+
+```cpp
+// GENERIC-MST is not runnable as written -- "find an edge that is safe for A"
+// is the entire problem. What it IS is the loop invariant that both real
+// algorithms maintain:
+//
+//     A is a subset of SOME minimum spanning tree.
+//
+// Every spanning tree of a connected graph has exactly |V| - 1 edges
+// (Theorem B.2), so the loop runs exactly |V| - 1 times -- there is no point
+// minimising the NUMBER of edges, only their total weight.
+//
+// This version makes the invariant executable by taking the safe-edge rule as
+// a parameter. Kruskal and Prim are then just two arguments to it.
+MstOutput genericMst(const MstGraph& g,
+                     const function<int(const MstGraph&, const vector<int>&)>& findSafeEdge) {
+    MstOutput out;                                    // 1  A = empty
+    while ((int)out.edgeIds.size() < g.n - 1) {       // 2  while A is not spanning
+        int e = findSafeEdge(g, out.edgeIds);         // 3  find a SAFE edge
+        if (e < 0) break;                             //    disconnected: stop early
+        out.edgeIds.push_back(e);                     // 4  A = A union {(u,v)}
+        out.weight += g.edges[e].w;
+    }
+    out.connected = ((int)out.edgeIds.size() == g.n - 1);
+    return out;                                       // 5  return A
+}
+```
+
+**The cut property (Theorem 21.1) is what makes any of this work.**
+
+> Let `A` be a subset of some MST, let `(S, V−S)` be a cut that **respects** `A` (no edge of `A` crosses it), and let `(u,v)` be a **light** edge crossing that cut. Then `(u,v)` is **safe** for `A`.
+
+*Proof (cut-and-paste / exchange).* Let `T` be an MST containing `A`. If `(u,v) ∈ T`, done. Otherwise `T ∪ {(u,v)}` contains a unique cycle, and that cycle must cross the cut a second time at some edge `(x,y)`. Since `(u,v)` is light, `w(u,v) ≤ w(x,y)`. Form `T′ = T − {(x,y)} ∪ {(u,v)}`: it is a spanning tree, `w(T′) = w(T) − w(x,y) + w(u,v) ≤ w(T)`, so `T′` is also an MST — and it contains `A ∪ {(u,v)}`. ∎
+
+**Corollary 21.2** is the form both algorithms actually use: *if `C` is a connected component of the forest `G_A`, then the light edge joining `C` to another component is safe.* Kruskal applies it to whichever two components the next-cheapest edge joins; Prim applies it to the one component containing the root.
+
+**The cycle property is the mirror image:** the **heaviest** edge on any cycle is never needed. The cut property tells you what to **include**; the cycle property tells you what to **exclude**.
+
+### A2 MST-KRUSKAL
+
+*Pseudocode: Part 2.*
+
+```cpp
+// Union-find, exactly as in M10 -- Kruskal is why that module comes first.
+class MstDisjointSet {
+public:
+    explicit MstDisjointSet(int n) : parent_(n), rank_(n, 0) {
+        iota(parent_.begin(), parent_.end(), 0);      // 2-3  MAKE-SET for every vertex
+    }
+    int find(int x) {
+        while (x != parent_[x]) { parent_[x] = parent_[parent_[x]]; x = parent_[x]; }
+        return x;                                     // path halving
+    }
+    bool unite(int a, int b) {
+        int ra = find(a), rb = find(b);
+        if (ra == rb) return false;                   // already connected: a CYCLE
+        if (rank_[ra] < rank_[rb]) swap(ra, rb);
+        parent_[rb] = ra;
+        if (rank_[ra] == rank_[rb]) ++rank_[ra];
+        return true;
+    }
+private:
+    vector<int> parent_, rank_;
+};
+
+MstOutput mstKruskal(const MstGraph& g) {
+    MstOutput out;                                    // 1  A = empty
+    MstDisjointSet ds(g.n);                           // 2-3 MAKE-SET(v) for all v
+
+    // 4-5  sort the edges by increasing weight.
+    // Sort a vector of INDICES, not of edges: an int is 4 bytes and an MstEdge
+    // is 24, so this moves 6x less memory, and it keeps g.edges untouched so
+    // `const MstGraph&` remains honest.
+    vector<int> order(g.edges.size());
+    iota(order.begin(), order.end(), 0);
+    sort(order.begin(), order.end(),
+         [&g](int a, int b) { return g.edges[a].w < g.edges[b].w; });
+
+    for (int e : order) {                             // 6  in sorted order
+        const MstEdge& ed = g.edges[e];
+        // 7  if FIND-SET(u) != FIND-SET(v)   -- unite() performs the test AND the
+        //    union, returning whether it merged. `false` means this edge closes
+        //    a cycle, which is exactly the cycle property in one bit.
+        if (ds.unite(ed.u, ed.v)) {                   // 8-9  A = A + edge; UNION(u,v)
+            out.edgeIds.push_back(e);
+            out.weight += ed.w;
+            if ((int)out.edgeIds.size() == g.n - 1) break;   // early exit: spanning
+        }
+    }
+    out.connected = ((int)out.edgeIds.size() == g.n - 1);
+    return out;                                       // 10 return A
+}
+```
+
+**Complexity. `O(E lg E) = O(E lg V)`** — the **sort dominates**. The union–find work is `O(E α(V))`, which is effectively linear ([M10](M10-union-find.md)); the `lg` comes entirely from sorting. `E ≤ V²` gives `lg E ≤ 2 lg V`, which is why the two forms are the same. **Space `Θ(V + E)`.**
+
+**If the weights are small integers, radix-sort them and Kruskal becomes `O(E α(V))`** — effectively linear. If the edges arrive already sorted, likewise.
+
+**`A` is a forest throughout**, growing from `V` singleton trees to one. That is why Kruskal handles a **disconnected** input gracefully: it produces the minimum spanning **forest**, and `out.connected` reports which you got.
+
+### A3 MST-PRIM
+
+*Pseudocode: Part 3.*
+
+```cpp
+// PRIM with a binary heap and the LAZY decrease-key idiom (toolkit 2).
+// `key[v]` is the weight of the cheapest known edge from the tree to v -- CLRS's
+// v.key -- and `parent[v]` is the other end of that edge, CLRS's v.pi.
+MstOutput mstPrim(const MstGraph& g, int r = 0) {
+    MstOutput out;
+    if (g.n == 0) return out;
+
+    const long long INF = LLONG_MAX / 4;
+    vector<long long> key(g.n, INF);                  // 1-2  u.key = infinity
+    vector<int> parent(g.n, -1);                      //      u.pi = NIL
+    vector<char> inTree(g.n, 0);                      //      "is u still in Q?"
+    key[r] = 0;                                       // 4  r.key = 0
+
+    // 5  Q = all vertices. With the lazy idiom the queue holds (key, vertex)
+    //    pairs rather than vertices, and stale pairs are skipped on pop.
+    using Item = pair<long long,int>;
+    priority_queue<Item, vector<Item>, greater<Item>> Q;   // MIN-heap (toolkit 3)
+    Q.push({0, r});
+
+    while (!Q.empty()) {                              // 8  while Q != empty
+        auto [k, u] = Q.top(); Q.pop();               // 9  u = EXTRACT-MIN(Q)
+        if (inTree[u]) continue;                      //    a STALE entry: skip it
+        inTree[u] = 1;                                //    add u to the tree
+        if (parent[u] != -1) { out.weight += k; out.edgeIds.push_back(parent[u]); }
+
+        for (const auto& [v, w] : g.adj[u]) {         // 10 for each v in Adj[u]
+            // 11 if v in Q and w(u,v) < v.key
+            // `!inTree[v]` IS the "v in Q" test -- the queue itself cannot
+            // answer membership questions, so a separate array does it.
+            if (!inTree[v] && w < key[v]) {
+                key[v] = w;                           // 13 v.key = w(u,v)
+                parent[v] = -1;                       //    (edge id filled below)
+                Q.push({w, v});                       // 14 DECREASE-KEY, lazily:
+                //                                    //    push a NEW entry, do not
+                //                                    //    update the old one
+                // Remember which edge achieved this key, for reporting.
+                for (const MstEdge& e : g.edges)
+                    if ((e.u == u && e.v == v) || (e.u == v && e.v == u)) {
+                        if (e.w == w) { parent[v] = e.id; break; }
+                    }
+            }
+        }
+    }
+    out.connected = ((int)out.edgeIds.size() == g.n - 1);
+    return out;
+}
+
+// PRIM WITH A LINEAR SCAN -- Theta(V^2), no heap, and the RIGHT choice on a
+// dense or implicit-complete graph (toolkit 4).
+MstOutput mstPrimDense(const vector<vector<long long>>& w, int r = 0) {
+    const int n = (int)w.size();
+    const long long INF = LLONG_MAX / 4;
+    MstOutput out;
+    if (n == 0) return out;
+
+    vector<long long> key(n, INF);
+    vector<int> parent(n, -1);
+    vector<char> inTree(n, 0);
+    key[r] = 0;
+
+    for (int iter = 0; iter < n; ++iter) {
+        // EXTRACT-MIN by linear scan: Theta(V) here, Theta(V^2) overall.
+        int u = -1;
+        long long best = INF;
+        for (int i = 0; i < n; ++i)
+            if (!inTree[i] && key[i] < best) { best = key[i]; u = i; }
+        if (u == -1) break;                            // remainder is unreachable
+
+        inTree[u] = 1;
+        if (parent[u] != -1) out.weight += key[u];
+
+        for (int v = 0; v < n; ++v)                    // relax every neighbour:
+            if (!inTree[v] && w[u][v] < key[v]) {      // Theta(V) per vertex,
+                key[v] = w[u][v];                      // Theta(V^2) = Theta(E) overall
+                parent[v] = u;
+            }
+    }
+    int count = 0;
+    for (int v = 0; v < n; ++v) if (parent[v] != -1) ++count;
+    out.connected = (count == n - 1);
+    return out;
+}
+```
+
+**Complexity — three implementations, and the choice is about density:**
+
+| priority queue | EXTRACT-MIN | DECREASE-KEY | **total** | best when |
+|---|---|---|---|---|
+| **array / linear scan** | `O(V)` | `O(1)` | **`Θ(V²)`** | **dense**, or the graph is implicit |
+| **binary heap** (lazy) | `O(lg V)` | `O(lg V)` | **`O(E lg V)`** | **sparse** — the practical default |
+| **Fibonacci heap** | `O(lg V)` am. | `O(1)` am. | **`O(E + V lg V)`** | theory; large constants |
+
+Read the table as the formula `V · T_extract + E · T_decrease`. `V` extract-mins because each vertex joins the tree exactly once; `≤ E` decrease-keys because each edge can improve a key at most once from each end.
+
+**Prim and Kruskal are the same algorithm.** Both instantiate `GENERIC-MST`; both are justified by Corollary 21.2. The only difference is the shape of `A`: **Kruskal keeps a forest** and joins whichever two components the cheapest remaining edge connects; **Prim keeps a single tree** and takes the cheapest edge leaving it.
+
+**And Prim is Dijkstra with one changed line.** Prim ranks a candidate vertex by `w(u,v)` — the weight of the connecting edge. Dijkstra ranks it by `d[u] + w(u,v)` — the distance from the source. That is the entire difference, and it is also why Prim tolerates negative weights and Dijkstra does not: Prim's keys do not accumulate. See [M15](M15-shortest-paths.md).
+
 
 ---
 

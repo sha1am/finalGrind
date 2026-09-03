@@ -846,8 +846,8 @@ mt19937& rng() {
     return gen;
 }
 
-int randomInt(int a, int b) {                 // uniform on the CLOSED range [a, b]
-    return uniform_int_distribution<int>(a, b)(rng());
+int randomInt(int lo, int hi) {                 // uniform on the CLOSED range [a, b]
+    return uniform_int_distribution<int>(lo, hi)(rng());
 }
 ```
 
@@ -860,8 +860,8 @@ int randomInt(int a, int b) {                 // uniform on the CLOSED range [a,
 ### 3. `std::shuffle`, and the function that was removed
 
 ```cpp
-void shuffleDemo(vector<int>& v) {
-    shuffle(v.begin(), v.end(), rng());   // C++11 and later: correct
+void shuffleDemo(vector<int>& items) {
+    shuffle(items.begin(), items.end(), rng());   // C++11 and later: correct
     // random_shuffle(v.begin(), v.end()); // REMOVED in C++17 -- used rand() internally
 }
 ```
@@ -883,7 +883,7 @@ The appendix uses `set` because the *sorted* output makes the uniformity test re
 ### 5. Returning a container by value is free
 
 ```cpp
-set<int> randomSample(int m, int n);   // returns by value -- and that is correct
+set<int> randomSample(int sampleSize, int universe);   // returns by value -- and that is correct
 ```
 
 Weiss [§1.5.4, p.29]: in C++11 the returned container is **moved**, not copied — *"little more than a pointer change."* Do not contort this into an out-parameter. The one place it still matters is a **recursive** function that returns a container: `randomSample(m-1, n-1)` builds a fresh `set` at every level, so the recursion allocates `Θ(m)` sets. The iterative version below allocates one. That is a real difference, and it is about allocation, not about copying.
@@ -912,8 +912,8 @@ mt19937& rng() {
 }
 
 // CLRS's RANDOM(a, b): a uniform integer in the CLOSED range [a, b].
-int randomInt(int a, int b) {
-    return uniform_int_distribution<int>(a, b)(rng());
+int randomInt(int lo, int hi) {
+    return uniform_int_distribution<int>(lo, hi)(rng());
 }
 ```
 
@@ -926,17 +926,17 @@ int randomInt(int a, int b) {
 // less qualified than everyone, and rank[1..n] are the real candidates.
 // Returns the NUMBER OF HIRES -- the quantity the analysis is about. The cost
 // model is c_i * n interviews + c_h * hires, and only `hires` varies.
-int hireAssistant(const vector<int>& rank) {
-    const int n = (int)rank.size() - 1;      // -1 for the dummy at index 0
-    int best = 0;                            // 1  best = 0
-    int hires = 0;
-    for (int i = 1; i <= n; ++i) {           // 2  for i = 1 to n
-        if (rank[i] > rank[best]) {          // 4  if candidate i is better than best
-            best = i;                        // 5      best = i
-            ++hires;                         // 6      hire candidate i
+int hireAssistant(const vector<int>& quality) {
+    const int n = (int)quality.size() - 1;      // -1 for the dummy at index 0
+    int bestSoFar = 0;                            // 1  best = 0
+    int hireCount = 0;
+    for (int candidate = 1; candidate <= n; ++candidate) {           // 2  for i = 1 to n
+        if (quality[candidate] > quality[bestSoFar]) {          // 4  if candidate i is better than best
+            bestSoFar = candidate;                        // 5      best = i
+            ++hireCount;                         // 6      hire candidate i
         }
     }
-    return hires;
+    return hireCount;
 }
 ```
 
@@ -950,9 +950,9 @@ int hireAssistant(const vector<int>& rank) {
 
 ```cpp
 // Fisher-Yates. The ONE thing to get right is the range of the random draw.
-void randomlyPermute(vector<int>& A) {
-    const int n = (int)A.size() - 1;         // 1-indexed, A[0] unused
-    for (int i = 1; i <= n; ++i)
+void randomlyPermute(vector<int>& arr) {
+    const int n = (int)arr.size() - 1;         // 1-indexed, A[0] unused
+    for (int slot = 1; slot <= n; ++slot)
         // RANDOM(i, n)  -- from i to n, NOT from 1 to n.
         //
         // WHY: the loop invariant is "after iteration i, A[1..i] is a uniformly
@@ -967,15 +967,15 @@ void randomlyPermute(vector<int>& A) {
         //
         // swap(A[i], A[i]) when the draw returns i is intentional and required:
         // "leave it where it is" must be one of the possible outcomes.
-        swap(A[i], A[randomInt(i, n)]);
+        swap(arr[slot], arr[randomInt(slot, n)]);
 }
 
 // The whole randomized algorithm: shuffle, then run the deterministic one.
 // Takes `rank` BY VALUE because it must permute it -- the caller's order is
 // preserved, and a caller passing a temporary gets a move, not a copy.
-int randomizedHireAssistant(vector<int> rank) {
-    randomlyPermute(rank);                   // 1  randomly permute the candidates
-    return hireAssistant(rank);              // 2  HIRE-ASSISTANT(n)
+int randomizedHireAssistant(vector<int> quality) {
+    randomlyPermute(quality);                   // 1  randomly permute the candidates
+    return hireAssistant(quality);              // 2  HIRE-ASSISTANT(n)
 }
 ```
 
@@ -1012,25 +1012,25 @@ int randomizedHireAssistant(vector<int> rank) {
 // in order to avoid them. If the draw collides with something already in S, it
 // adds `n` instead -- and `n` is guaranteed not to be in S, because S was built
 // from RANDOM-SAMPLE(m-1, n-1), whose values are all <= n-1.
-set<int> randomSample(int m, int n) {
-    if (m == 0) return {};                   // 1  S = empty
-    set<int> S = randomSample(m - 1, n - 1);  //    recurse on the smaller problem
-    int i = randomInt(1, n);                  // 3  i = RANDOM(1, k)
-    if (S.count(i)) S.insert(n);              // 4  if i in S: S = S + {k}
-    else            S.insert(i);              // 5  else:      S = S + {i}
-    return S;                                 // returned BY VALUE -- moved, not copied
+set<int> randomSample(int sampleSize, int universe) {
+    if (sampleSize == 0) return {};                   // 1  S = empty
+    set<int> sample = randomSample(sampleSize - 1, universe - 1);  //    recurse on the smaller problem
+    int draw = randomInt(1, universe);                  // 3  i = RANDOM(1, k)
+    if (sample.count(draw)) sample.insert(universe);              // 4  if i in S: S = S + {k}
+    else            sample.insert(draw);              // 5  else:      S = S + {i}
+    return sample;                                 // returned BY VALUE -- moved, not copied
 }
 
 // The same thing as a loop, which is what you should actually write: one `set`
 // instead of m of them, and no Theta(m) stack depth.
-set<int> randomSampleIterative(int m, int n) {
-    set<int> S;
-    for (int k = n - m + 1; k <= n; ++k) {    // 2  for k = n-m+1 to n  (m iterations)
-        int i = randomInt(1, k);
-        if (S.count(i)) S.insert(k);
-        else            S.insert(i);
+set<int> randomSampleIterative(int sampleSize, int universe) {
+    set<int> sample;
+    for (int upperBound = universe - sampleSize + 1; upperBound <= universe; ++upperBound) {    // 2  for k = n-m+1 to n  (m iterations)
+        int draw = randomInt(1, upperBound);
+        if (sample.count(draw)) sample.insert(upperBound);
+        else            sample.insert(draw);
     }
-    return S;
+    return sample;
 }
 ```
 
@@ -1048,15 +1048,15 @@ set<int> randomSampleIterative(int m, int n) {
 // Observe the first k candidates without hiring; then hire the first one that
 // beats everything seen so far. Return n if nobody does (you are stuck with the
 // last candidate).
-int onlineMaximum(const vector<int>& score, int k) {
-    const int n = (int)score.size() - 1;
+int onlineMaximum(const vector<int>& scores, int observeCount) {
+    const int n = (int)scores.size() - 1;
     // numeric_limits, not INT_MIN (toolkit 6). Careful: for a double-valued
     // score you would need lowest(), not min().
-    int bestScore = numeric_limits<int>::min();
-    for (int i = 1; i <= k; ++i)                       // 2  observation phase
-        if (score[i] > bestScore) bestScore = score[i];
-    for (int i = k + 1; i <= n; ++i)                   // 4  selection phase
-        if (score[i] > bestScore) return i;            // 5      commit, irrevocably
+    int bestObserved = numeric_limits<int>::min();
+    for (int candidate = 1; candidate <= observeCount; ++candidate)                       // 2  observation phase
+        if (scores[candidate] > bestObserved) bestObserved = scores[candidate];
+    for (int candidate = observeCount + 1; candidate <= n; ++candidate)                   // 4  selection phase
+        if (scores[candidate] > bestObserved) return candidate;            // 5      commit, irrevocably
     return n;                                          // 6  no one qualified
 }
 
@@ -1067,13 +1067,13 @@ int onlineMaximum(const vector<int>& score, int k) {
 // Why it is uniform: element t is kept with probability 1/t, and then survives
 // every later step with probability (t/(t+1)) * ((t+1)/(t+2)) * ... * ((n-1)/n),
 // which telescopes to t/n. Multiply: (1/t) * (t/n) = 1/n. Every element, same.
-int reservoirPick(const vector<int>& stream) {
-    int chosen = -1, seen = 0;
-    for (int x : stream) {
-        ++seen;
-        if (randomInt(1, seen) == 1) chosen = x;
+int reservoirPick(const vector<int>& items) {
+    int kept = -1, seenCount = 0;
+    for (int item : items) {
+        ++seenCount;
+        if (randomInt(1, seenCount) == 1) kept = item;
     }
-    return chosen;
+    return kept;
 }
 ```
 

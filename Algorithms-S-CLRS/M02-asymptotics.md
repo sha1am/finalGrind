@@ -195,13 +195,13 @@ Combined with the `O(n²)` upper bound (`n−1` outer iterations × at most `n�
 ### Selection sort — the algorithm with no bad case
 
 ```cpp
-void selectionSort(vector<int>& s) {
-    const int n = static_cast<int>(s.size());
+void selectionSort(vector<int>& arr) {
+    const int n = static_cast<int>(arr.size());
     for (int i = 0; i < n; ++i) {
-        int mn = i;
+        int minIdx = i;
         for (int j = i + 1; j < n; ++j)
-            if (s[j] < s[mn]) mn = j;
-        swap(s[i], s[mn]);
+            if (arr[j] < arr[minIdx]) minIdx = j;
+        swap(arr[i], arr[minIdx]);
     }
 }
 ```
@@ -224,13 +224,13 @@ But selection sort is special: **it takes exactly the same time on all `n!` inpu
 
 ```cpp
 // Returns index of first occurrence of p in t, or -1.
-int findMatch(const string& p, const string& t) {
-    const int m = static_cast<int>(p.size());
-    const int n = static_cast<int>(t.size());
-    for (int i = 0; i + m <= n; ++i) {
-        int j = 0;
-        while (j < m && t[i + j] == p[j]) ++j;
-        if (j == m) return i;
+int findMatch(const string& pattern, const string& text) {
+    const int patLen = static_cast<int>(pattern.size());
+    const int textLen = static_cast<int>(text.size());
+    for (int i = 0; i + patLen <= textLen; ++i) {
+        int matched = 0;
+        while (matched < patLen && text[i + matched] == pattern[matched]) ++matched;
+        if (matched == patLen) return i;
     }
     return -1;
 }
@@ -530,15 +530,15 @@ Matrix multiplication [Skiena §2.5.4, p.45]:
 void matrixMultiply(const vector<vector<double>>& A,
                     const vector<vector<double>>& B,
                     vector<vector<double>>& C) {
-    const int x = (int)A.size();                 // rows of A
-    const int y = (int)B.size();                 // rows of B == columns of A
-    const int z = y ? (int)B[0].size() : 0;      // columns of B
-    C.assign(x, vector<double>(z, 0.0));         // x rows, each z zeros
+    const int rowsA = (int)A.size();                 // rows of A
+    const int shared = (int)B.size();                 // rows of B == columns of A
+    const int colsB = shared ? (int)B[0].size() : 0;      // columns of B
+    C.assign(rowsA, vector<double>(colsB, 0.0));         // x rows, each z zeros
 
-    for (int i = 0; i < x; ++i)
-        for (int j = 0; j < z; ++j) {
+    for (int i = 0; i < rowsA; ++i)
+        for (int j = 0; j < colsB; ++j) {
             C[i][j] = 0;
-            for (int k = 0; k < y; ++k)
+            for (int k = 0; k < shared; ++k)
                 C[i][j] += A[i][k] * B[k][j];
         }
 }
@@ -648,16 +648,16 @@ power(a, n)
 
 // Computes (base^exp) mod m in O(log exp) multiplications.
 // Requires m > 0. Uses __int128 to avoid overflow on the multiply.
-uint64_t powMod(uint64_t base, uint64_t exp, uint64_t m) {
+uint64_t powMod(uint64_t base, uint64_t exponent, uint64_t m) {
     uint64_t result = 1 % m;
     base %= m;
-    while (exp > 0) {
-        if (exp & 1ULL)                                    // bit set -> fold base in
+    while (exponent > 0) {
+        if (exponent & 1ULL)                                    // bit set -> fold base in
             result = static_cast<uint64_t>(
                          (static_cast<__uint128_t>(result) * base) % m);
         base = static_cast<uint64_t>(
                    (static_cast<__uint128_t>(base) * base) % m);
-        exp >>= 1;
+        exponent >>= 1;
     }
     return result;
 }
@@ -847,12 +847,12 @@ The rule of thumb this module gives you: **if your loop count is `Θ(n²)` and `
 `vector::size()` returns `size_t`, an **unsigned** type. Mixing it with `int` triggers the usual-arithmetic-conversions rule: the `int` is converted to unsigned.
 
 ```cpp
-void unsignedTrap(const vector<int>& v) {
+void unsignedTrap(const vector<int>& values) {
     // BROKEN when v is empty: v.size() - 1 is 0u - 1 == SIZE_MAX
-    for (size_t i = 0; i + 1 < v.size(); ++i) { /* correct rewrite */ }
+    for (size_t i = 0; i + 1 < values.size(); ++i) { /* correct rewrite */ }
     // and this comparison warns under -Wall -Wextra for a good reason:
-    const int n = (int)v.size();      // cast ONCE, at the top, then use int
-    for (int i = 0; i < n; ++i) { (void)v[i]; }
+    const int n = (int)values.size();      // cast ONCE, at the top, then use int
+    for (int i = 0; i < n; ++i) { (void)values[i]; }
 }
 ```
 
@@ -877,7 +877,7 @@ bool nearly(double a, double b, double tol) {
 `A6` stores growth-rate functions in a table, so it needs a type that can hold *any* callable:
 
 ```cpp
-double crossoverDemo(const function<double(double)>& f, double n) { return f(n); }
+double crossoverDemo(const function<double(double)>& logSlower, double at) { return logSlower(at); }
 ```
 
 `function<double(double)>` accepts a lambda, a function pointer, or a functor — but it does so through a **virtual call and possibly a heap allocation**. A template parameter (`template <typename F>`) is the zero-overhead alternative when the type is known at compile time. Use `std::function` when you must store heterogeneous callables in one container, as here; use a template when you are just passing a comparator to `sort`.
@@ -927,24 +927,24 @@ M02 has one procedure in pseudocode (`power`) and several *analysis claims* stat
 //
 // `long long` throughout: a^n overflows 32-bit almost immediately, and signed
 // overflow is UNDEFINED behaviour, not wraparound.
-long long powerRecursive(long long a, long long n) {
-    if (n == 0) return 1;                     // if n = 0: return 1
-    long long x = powerRecursive(a, n / 2);   // x = power(a, floor(n/2))
+long long powerRecursive(long long base, long long exp) {
+    if (exp == 0) return 1;                     // if n = 0: return 1
+    long long half = powerRecursive(base, exp / 2);   // x = power(a, floor(n/2))
     // CRITICAL: `x` is computed ONCE and squared. Writing
     //     return powerRecursive(a,n/2) * powerRecursive(a,n/2);
     // is the same mathematics and a catastrophically different algorithm --
     // it turns T(n) = T(n/2) + O(1)  =  Theta(lg n)
     //     into T(n) = 2T(n/2) + O(1) =  Theta(n).
     // This is the single most instructive bug in the module.
-    if (n % 2 == 0) return x * x;             // n even
-    return a * x * x;                         // n odd
+    if (exp % 2 == 0) return half * half;             // n even
+    return base * half * half;                         // n odd
 }
 
 // Counts the multiplications powerRecursive performs, without doing them.
 // Even step: one multiply (x*x). Odd step: two (x*x, then a*(x*x)).
-int powerMultiplyCount(long long n) {
-    if (n == 0) return 0;
-    return powerMultiplyCount(n / 2) + (n % 2 == 0 ? 1 : 2);
+int powerMultiplyCount(long long exp) {
+    if (exp == 0) return 0;
+    return powerMultiplyCount(exp / 2) + (exp % 2 == 0 ? 1 : 2);
 }
 ```
 
@@ -972,22 +972,22 @@ int powerMultiplyCount(long long n) {
 // Return type is `long long`, not `int`: for n = 100000 the count is
 // n(n-1)/2 ~ 5e9, which overflows a 32-bit int. This is the module's own
 // lesson applied to the module's own code.
-long long selectionSortCompares(vector<int>& s) {
-    const int n = (int)s.size();       // one cast, at the top (see toolkit §2)
-    long long compares = 0;
+long long selectionSortCompares(vector<int>& arr) {
+    const int n = (int)arr.size();       // one cast, at the top (see toolkit §2)
+    long long comparisons = 0;
     for (int i = 0; i < n; ++i) {                 // outer: i = 0 .. n-1
-        int mn = i;
+        int minIdx = i;
         for (int j = i + 1; j < n; ++j) {         // inner: j = i+1 .. n-1, i.e. n-i-1 times
-            ++compares;
-            if (s[j] < s[mn]) mn = j;
+            ++comparisons;
+            if (arr[j] < arr[minIdx]) minIdx = j;
         }
         // std::swap: for `int` this is three moves; for a big type it is three
         // MOVES rather than three copies in C++11 [Weiss 1.5.5, p.29].
         // swap(s[i], s[i]) when mn == i is harmless but not free -- guarding it
         // with `if (mn != i)` is a real micro-optimisation for expensive types.
-        swap(s[i], s[mn]);
+        swap(arr[i], arr[minIdx]);
     }
-    return compares;
+    return comparisons;
 }
 ```
 
@@ -1005,25 +1005,25 @@ long long selectionSortCompares(vector<int>& s) {
 //
 // The pointer form `int* whereFound` is chosen deliberately: it forces the
 // caller to write `&where`, which makes the mutation visible at the call site.
-long long findMatchCompares(const string& p, const string& t, int* whereFound) {
-    const int m = (int)p.size();
-    const int n = (int)t.size();
-    long long compares = 0;
-    *whereFound = -1;                       // "not found" -- set BEFORE any early return
+long long findMatchCompares(const string& pattern, const string& text, int* matchIndex) {
+    const int patLen = (int)pattern.size();
+    const int textLen = (int)text.size();
+    long long comparisons = 0;
+    *matchIndex = -1;                       // "not found" -- set BEFORE any early return
 
     // `i + m <= n` not `i < n - m`: with n and m as ints this is equivalent,
     // but if they were size_t, `n - m` on n < m would wrap to a huge number and
     // the loop would run off the end of the string. Write the addition form.
-    for (int i = 0; i + m <= n; ++i) {
-        int j = 0;
-        while (j < m) {
-            ++compares;                     // count the character comparison itself
-            if (t[i + j] != p[j]) break;
-            ++j;
+    for (int alignment = 0; alignment + patLen <= textLen; ++alignment) {
+        int matched = 0;
+        while (matched < patLen) {
+            ++comparisons;                     // count the character comparison itself
+            if (text[alignment + matched] != pattern[matched]) break;
+            ++matched;
         }
-        if (j == m) { *whereFound = i; return compares; }
+        if (matched == patLen) { *matchIndex = alignment; return comparisons; }
     }
-    return compares;
+    return comparisons;
 }
 ```
 
@@ -1047,23 +1047,23 @@ long long findMatchCompares(const string& p, const string& t, int* whereFound) {
 ```cpp
 // Counts executions of the innermost statement of the triple loop, to check
 // that the triple summation really evaluates to x*y*z.
-long long matrixMultiplyOps(int x, int y, int z) {
-    long long ops = 0;
+long long matrixMultiplyOps(int rowsA, int shared, int colsB) {
+    long long innerSteps = 0;
     // vector<vector<double>> is a vector OF vectors: rows are separate
     // allocations, so it is not contiguous and each A[i][k] is two
     // dereferences. A single vector<double> of size x*y with manual indexing
     // (A[i*y + k]) is measurably faster -- but this shape matches the
     // pseudocode, and clarity wins in notes.
-    vector<vector<double>> A(x, vector<double>(y, 1.0));
-    vector<vector<double>> B(y, vector<double>(z, 1.0));
-    vector<vector<double>> C(x, vector<double>(z, 0.0));
+    vector<vector<double>> A(rowsA, vector<double>(shared, 1.0));
+    vector<vector<double>> B(shared, vector<double>(colsB, 1.0));
+    vector<vector<double>> C(rowsA, vector<double>(colsB, 0.0));
 
-    for (int i = 0; i < x; ++i)
-        for (int j = 0; j < z; ++j) {
+    for (int i = 0; i < rowsA; ++i)
+        for (int j = 0; j < colsB; ++j) {
             C[i][j] = 0;
-            for (int k = 0; k < y; ++k) { ++ops; C[i][j] += A[i][k] * B[k][j]; }
+            for (int k = 0; k < shared; ++k) { ++innerSteps; C[i][j] += A[i][k] * B[k][j]; }
         }
-    return ops;
+    return innerSteps;
 }
 ```
 
@@ -1084,45 +1084,45 @@ struct SumCheck { double direct, closed; };
 
 // Arithmetic: sum_{k=1}^{n} k = n(n+1)/2  -->  Theta(n^2)
 SumCheck arithmeticSum(int n) {
-    double s = 0;
-    for (int k = 1; k <= n; ++k) s += k;
+    double total = 0;
+    for (int term = 1; term <= n; ++term) total += term;
     // `n * (n + 1.0) / 2.0`: the 1.0 forces DOUBLE arithmetic. Written as
     // `n * (n + 1) / 2` with int n = 100000, the product 1e10 overflows int.
-    return {s, n * (n + 1.0) / 2.0};
+    return {total, n * (n + 1.0) / 2.0};
 }
 
 // Geometric: sum_{k=0}^{n} x^k = (x^{n+1} - 1)/(x - 1)
 // For x > 1 the sum is Theta(largest term); for x < 1 it converges to a
 // CONSTANT, which is why such a sum is "free" in an analysis.
-SumCheck geometricSum(double x, int n) {
-    double s = 0;
-    for (int k = 0; k <= n; ++k) s += pow(x, k);
-    return {s, (pow(x, n + 1) - 1) / (x - 1)};
+SumCheck geometricSum(double ratio, int n) {
+    double total = 0;
+    for (int term = 0; term <= n; ++term) total += pow(ratio, term);
+    return {total, (pow(ratio, n + 1) - 1) / (ratio - 1)};
 }
 
 // Harmonic: H_n = sum_{k=1}^{n} 1/k = ln n + gamma + O(1/n) = Theta(lg n)
 SumCheck harmonicSum(int n) {
-    double s = 0;
-    for (int k = 1; k <= n; ++k) s += 1.0 / k;
+    double total = 0;
+    for (int term = 1; term <= n; ++term) total += 1.0 / term;
     const double gamma = 0.5772156649015329;   // Euler-Mascheroni
-    return {s, log((double)n) + gamma};
+    return {total, log((double)n) + gamma};
 }
 
 // Telescoping: sum_{k=1}^{n-1} 1/(k(k+1)) = sum (1/k - 1/(k+1)) = 1 - 1/n
 SumCheck telescopingSum(int n) {
-    double s = 0;
+    double total = 0;
     // `k * (k + 1.0)`: again the 1.0. With int k near 46341, k*(k+1) overflows.
-    for (int k = 1; k <= n - 1; ++k) s += 1.0 / (k * (k + 1.0));
-    return {s, 1.0 - 1.0 / n};
+    for (int term = 1; term <= n - 1; ++term) total += 1.0 / (term * (term + 1.0));
+    return {total, 1.0 - 1.0 / n};
 }
 
 // sum_{i=1}^{n} i*i! = (n+1)! - 1   -- the CLRS Appendix A worked example
 SumCheck factorialWeightedSum(int n) {
-    double s = 0, fact = 1;
-    for (int i = 1; i <= n; ++i) { fact *= i; s += i * fact; }
-    double f = 1;
-    for (int i = 1; i <= n + 1; ++i) f *= i;
-    return {s, f - 1};
+    double total = 0, iFactorial = 1;
+    for (int i = 1; i <= n; ++i) { iFactorial *= i; total += i * iFactorial; }
+    double nPlus1Factorial = 1;
+    for (int i = 1; i <= n + 1; ++i) nPlus1Factorial *= i;
+    return {total, nPlus1Factorial - 1};
 }
 ```
 
@@ -1153,11 +1153,11 @@ SumCheck factorialWeightedSum(int n) {
 //
 // std::function<double(double)> can hold any callable (toolkit 4). Passed by
 // const& to avoid copying the type-erased object on every call.
-double crossover(const function<double(double)>& f, const function<double(double)>& g,
+double crossover(const function<double(double)>& logSlower, const function<double(double)>& logFaster,
                  double lo, double hi) {
-    for (int it = 0; it < 200; ++it) {          // fixed iteration count: no epsilon to tune,
+    for (int step = 0; step < 200; ++step) {          // fixed iteration count: no epsilon to tune,
         double mid = lo + (hi - lo) / 2;        // and doubles run out of precision long before 200
-        if (f(mid) < g(mid)) hi = mid;          // g has already overtaken -> crossover is <= mid
+        if (logSlower(mid) < logFaster(mid)) hi = mid;          // g has already overtaken -> crossover is <= mid
         else                 lo = mid;
     }
     return lo;

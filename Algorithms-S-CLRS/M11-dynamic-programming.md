@@ -83,7 +83,7 @@ long long fibNaive(int n) {                       // exponential: only for tiny 
 }
 
 long long fibMemo(int n) {                        // top-down with memoization
-    static std::vector<long long> memo;
+    static vector<long long> memo;
     if ((int)memo.size() <= n) memo.resize(n + 1, -1);
     if (n < 2) return n;
     if (memo[n] >= 0) return memo[n];
@@ -92,7 +92,7 @@ long long fibMemo(int n) {                        // top-down with memoization
 
 long long fibBottomUp(int n) {                    // bottom-up, O(n) space
     if (n < 2) return n;
-    std::vector<long long> f(n + 1);
+    vector<long long> f(n + 1);
     f[0] = 0; f[1] = 1;
     for (int i = 2; i <= n; ++i) f[i] = f[i - 1] + f[i - 2];
     return f[n];
@@ -258,6 +258,8 @@ and the simpler one — **view a decomposition as a first piece of length `i` pl
 ```
 rₙ = max{ pᵢ + r_{n−i} : 1 ≤ i ≤ n }                                (14.2)
 ```
+
+→ **C++ implementation:** [A1 Rod cutting](#a1-rod-cutting)
 (14.2) is strictly better to work with: **one subproblem instead of two.** That reframing — "commit to the first piece, recurse only on the rest" — is a reusable move.
 
 **Complexity:** `Θ(n)` subproblems × `≤ n` choices = **`Θ(n²)`**.
@@ -270,25 +272,25 @@ rₙ = max{ pᵢ + r_{n−i} : 1 ≤ i ≤ n }                                (1
 
 struct RodResult {
     long long revenue;
-    std::vector<int> pieces;
+    vector<int> pieces;
 };
 
-RodResult rodCutting(const std::vector<long long>& price, int n) {
-    std::vector<long long> r(n + 1, 0);
-    std::vector<int> s(n + 1, 0);                 // best first-piece length
+RodResult rodCutting(const vector<long long>& price, int n) {
+    vector<long long> bestRevenue(n + 1, 0);
+    vector<int> firstPiece(n + 1, 0);                 // best first-piece length
     for (int j = 1; j <= n; ++j) {
         long long best = LLONG_MIN;
         for (int i = 1; i <= j && i < (int)price.size(); ++i) {
-            if (best < price[i] + r[j - i]) {
-                best = price[i] + r[j - i];
-                s[j] = i;
+            if (best < price[i] + bestRevenue[j - i]) {
+                best = price[i] + bestRevenue[j - i];
+                firstPiece[j] = i;
             }
         }
-        r[j] = best;
+        bestRevenue[j] = best;
     }
-    RodResult out{r[n], {}};
-    for (int len = n; len > 0; len -= s[len]) out.pieces.push_back(s[len]);
-    return out;
+    RodResult result{bestRevenue[n], {}};
+    for (int len = n; len > 0; len -= firstPiece[len]) result.pieces.push_back(firstPiece[len]);
+    return result;
 }
 ```
 
@@ -313,6 +315,8 @@ m[i,j]  =    ⎨                                                              (1
              ⎩ min{ m[i,k] + m[k+1,j] + p_{i−1}·p_k·p_j  :  i ≤ k < j }     if i < j
 ```
 
+→ **C++ implementation:** [A2 Matrix-chain multiplication](#a2-matrix-chain-multiplication)
+
 **The evaluation order is the interesting part.** `m[i,j]` needs `m[i,k]` and `m[k+1,j]`, both of which cover **shorter chains**. So **iterate over chain length**, not over `i` or `j`. This "interval DP" loop shape — `for len; for i; j = i+len−1; for k in [i, j)` — recurs in optimal BST, CYK, polygon triangulation, burst balloons, and every other problem whose subproblems are contiguous ranges. **Memorize the loop skeleton.**
 
 **Complexity:** `Θ(n²)` subproblems × `≤ n−1` choices = **`Θ(n³)`** (tight, by Exercise 14.2-5, which shows the total number of table references is exactly `(n³ − n)/3`).
@@ -324,35 +328,35 @@ m[i,j]  =    ⎨                                                              (1
 
 struct ChainResult {
     long long cost;
-    std::string parens;
+    string parens;
 };
 
-static void printParens(const std::vector<std::vector<int>>& s, int i, int j, std::string& out) {
-    if (i == j) { out += "A" + std::to_string(i + 1); return; }
-    out += '(';
-    printParens(s, i, s[i][j], out);
-    printParens(s, s[i][j] + 1, j, out);
-    out += ')';
+static void printParens(const vector<vector<int>>& splitAt, int i, int j, string& parens) {
+    if (i == j) { parens += "A" + to_string(i + 1); return; }
+    parens += '(';
+    printParens(splitAt, i, splitAt[i][j], parens);
+    printParens(splitAt, splitAt[i][j] + 1, j, parens);
+    parens += ')';
 }
 
 // p has n+1 entries: matrix i (0-based) is p[i] x p[i+1]
-ChainResult matrixChainOrder(const std::vector<long long>& p) {
-    const int n = (int)p.size() - 1;
-    std::vector<std::vector<long long>> m(n, std::vector<long long>(n, 0));
-    std::vector<std::vector<int>> s(n, std::vector<int>(n, 0));
+ChainResult matrixChainOrder(const vector<long long>& dims) {
+    const int n = (int)dims.size() - 1;
+    vector<vector<long long>> minCost(n, vector<long long>(n, 0));
+    vector<vector<int>> splitAt(n, vector<int>(n, 0));
     for (int len = 2; len <= n; ++len) {               // len = chain length
         for (int i = 0; i + len - 1 < n; ++i) {
             const int j = i + len - 1;
-            m[i][j] = LLONG_MAX;
+            minCost[i][j] = LLONG_MAX;
             for (int k = i; k < j; ++k) {              // split between A_k and A_{k+1}
-                const long long q = m[i][k] + m[k + 1][j] + p[i] * p[k + 1] * p[j + 1];
-                if (q < m[i][j]) { m[i][j] = q; s[i][j] = k; }
+                const long long candidate = minCost[i][k] + minCost[k + 1][j] + dims[i] * dims[k + 1] * dims[j + 1];
+                if (candidate < minCost[i][j]) { minCost[i][j] = candidate; splitAt[i][j] = k; }
             }
         }
     }
-    std::string out;
-    printParens(s, 0, n - 1, out);
-    return {m[0][n - 1], out};
+    string parens;
+    printParens(splitAt, 0, n - 1, parens);
+    return {minCost[0][n - 1], parens};
 }
 ```
 
@@ -378,6 +382,8 @@ c[i,j]  =  ⎨ c[i−1,j−1] + 1                   if i,j > 0 and xᵢ = yⱼ  
            ⎩ max{ c[i,j−1], c[i−1,j] }        if i,j > 0 and xᵢ ≠ yⱼ
 ```
 
+→ **C++ implementation:** [A3 Longest common subsequence](#a3-longest-common-subsequence)
+
 **Note what's new here:** *"a condition in the problem restricts which subproblems to consider."* When `xᵢ = yⱼ` you consider **only** the diagonal subproblem — you don't take a max over three. (Edit distance has the same character.) Rod cutting and matrix chain never ruled out subproblems this way.
 
 **Complexity:** `Θ(mn)` subproblems, `O(1)` work each ⟹ **`Θ(mn)` time and space.** (A `2D/0D` algorithm in Galil–Park terms.)
@@ -394,42 +400,42 @@ c[i,j]  =  ⎨ c[i−1,j−1] + 1                   if i,j > 0 and xᵢ = yⱼ  
 #include <string>
 #include <vector>
 
-std::vector<std::vector<int>> lcsTable(const std::string& x, const std::string& y) {
+vector<vector<int>> lcsTable(const string& x, const string& y) {
     const int m = (int)x.size(), n = (int)y.size();
-    std::vector<std::vector<int>> c(m + 1, std::vector<int>(n + 1, 0));
+    vector<vector<int>> lcsLen(m + 1, vector<int>(n + 1, 0));
     for (int i = 1; i <= m; ++i)
         for (int j = 1; j <= n; ++j)
-            c[i][j] = (x[i - 1] == y[j - 1]) ? c[i - 1][j - 1] + 1
-                                             : std::max(c[i - 1][j], c[i][j - 1]);
-    return c;
+            lcsLen[i][j] = (x[i - 1] == y[j - 1]) ? lcsLen[i - 1][j - 1] + 1
+                                             : max(lcsLen[i - 1][j], lcsLen[i][j - 1]);
+    return lcsLen;
 }
 
 // Reconstruct straight from the cost table (no separate b table needed).
-std::string lcsString(const std::string& x, const std::string& y) {
-    const auto c = lcsTable(x, y);
+string lcsString(const string& x, const string& y) {
+    const auto lcsLen = lcsTable(x, y);
     int i = (int)x.size(), j = (int)y.size();
-    std::string out;
+    string result;
     while (i > 0 && j > 0) {
-        if (x[i - 1] == y[j - 1]) { out += x[i - 1]; --i; --j; }
-        else if (c[i - 1][j] >= c[i][j - 1]) --i;
+        if (x[i - 1] == y[j - 1]) { result += x[i - 1]; --i; --j; }
+        else if (lcsLen[i - 1][j] >= lcsLen[i][j - 1]) --i;
         else --j;
     }
-    std::reverse(out.begin(), out.end());
-    return out;
+    reverse(result.begin(), result.end());
+    return result;
 }
 
 // Length only, in O(min(m,n)) space: two rolling rows.
-int lcsLengthSmallSpace(const std::string& x, const std::string& y) {
-    const std::string& a = x.size() >= y.size() ? x : y;   // iterate over the longer
-    const std::string& b = x.size() >= y.size() ? y : x;   // rows indexed by the shorter
-    std::vector<int> prev(b.size() + 1, 0), cur(b.size() + 1, 0);
-    for (std::size_t i = 1; i <= a.size(); ++i) {
-        for (std::size_t j = 1; j <= b.size(); ++j)
-            cur[j] = (a[i - 1] == b[j - 1]) ? prev[j - 1] + 1
-                                            : std::max(prev[j], cur[j - 1]);
+int lcsLengthSmallSpace(const string& x, const string& y) {
+    const string& longer = x.size() >= y.size() ? x : y;   // iterate over the longer
+    const string& shorter = x.size() >= y.size() ? y : x;   // rows indexed by the shorter
+    vector<int> prev(shorter.size() + 1, 0), cur(shorter.size() + 1, 0);
+    for (size_t i = 1; i <= longer.size(); ++i) {
+        for (size_t j = 1; j <= shorter.size(); ++j)
+            cur[j] = (longer[i - 1] == shorter[j - 1]) ? prev[j - 1] + 1
+                                            : max(prev[j], cur[j - 1]);
         prev.swap(cur);
     }
-    return prev[b.size()];
+    return prev[shorter.size()];
 }
 ```
 
@@ -452,6 +458,8 @@ There are exactly **three** possibilities for the last character, and no others:
 ```
 D[i, j] = min{ D[i−1,j−1] + match(Pᵢ,Tⱼ),  D[i,j−1] + indel(Tⱼ),  D[i−1,j] + indel(Pᵢ) }
 ```
+
+→ **C++ implementation:** [A4 Edit distance](#a4-edit-distance)
 
 **The naive recursion is worse than exponential** — *"it grows at a rate of at least `3ⁿ`—indeed, even faster since most of the calls reduce only one of the two indices, not both."* Skiena reports it taking **several seconds to compare two 11-character strings**. But there can only be `|P|·|T|` distinct `(i, j)` pairs, so the table has `Θ(mn)` cells.
 
@@ -490,16 +498,16 @@ enum EditOp { OP_MATCH = 0, OP_INSERT = 1, OP_DELETE = 2, OP_NONE = -1 };
 
 struct EditResult {
     int cost;
-    std::string trace;         // M / S / I / D, in forward order
+    string trace;         // M / S / I / D, in forward order
 };
 
 // rowInitZero = true makes the cost of starting a match anywhere in t free,
 // which turns edit distance into approximate substring matching.
-EditResult editDistance(const std::string& s, const std::string& t,
+EditResult editDistance(const string& pattern, const string& text,
                         bool rowInitZero = false, int substCost = 1) {
-    const int m = (int)s.size(), n = (int)t.size();
-    std::vector<std::vector<int>> cost(m + 1, std::vector<int>(n + 1, 0));
-    std::vector<std::vector<int>> parent(m + 1, std::vector<int>(n + 1, OP_NONE));
+    const int m = (int)pattern.size(), n = (int)text.size();
+    vector<vector<int>> cost(m + 1, vector<int>(n + 1, 0));
+    vector<vector<int>> parent(m + 1, vector<int>(n + 1, OP_NONE));
 
     for (int j = 0; j <= n; ++j) {                      // row 0: t consumed by insertions
         cost[0][j] = rowInitZero ? 0 : j;
@@ -511,28 +519,28 @@ EditResult editDistance(const std::string& s, const std::string& t,
     }
     for (int i = 1; i <= m; ++i) {
         for (int j = 1; j <= n; ++j) {
-            const int match = (s[i - 1] == t[j - 1]) ? 0 : substCost;
-            int opt[3];
-            opt[OP_MATCH]  = cost[i - 1][j - 1] + match;
-            opt[OP_INSERT] = cost[i][j - 1] + 1;
-            opt[OP_DELETE] = cost[i - 1][j] + 1;
-            cost[i][j] = opt[OP_MATCH];
+            const int match = (pattern[i - 1] == text[j - 1]) ? 0 : substCost;
+            int candidate[3];
+            candidate[OP_MATCH]  = cost[i - 1][j - 1] + match;
+            candidate[OP_INSERT] = cost[i][j - 1] + 1;
+            candidate[OP_DELETE] = cost[i - 1][j] + 1;
+            cost[i][j] = candidate[OP_MATCH];
             parent[i][j] = OP_MATCH;
             for (int k = OP_INSERT; k <= OP_DELETE; ++k)
-                if (opt[k] < cost[i][j]) { cost[i][j] = opt[k]; parent[i][j] = k; }
+                if (candidate[k] < cost[i][j]) { cost[i][j] = candidate[k]; parent[i][j] = k; }
         }
     }
     // goal cell: the end of both strings, or the cheapest column of the last row
-    int gi = m, gj = n;
+    int goalRow = m, goalCol = n;
     if (rowInitZero)
-        for (int j = 0; j <= n; ++j) if (cost[m][j] < cost[gi][gj]) gj = j;
+        for (int j = 0; j <= n; ++j) if (cost[m][j] < cost[goalRow][goalCol]) goalCol = j;
 
-    std::string trace;
-    std::function<void(int, int)> walk = [&](int i, int j) {
+    string trace;
+    function<void(int, int)> walk = [&](int i, int j) {
         if (parent[i][j] == OP_NONE) return;
         if (parent[i][j] == OP_MATCH) {
             walk(i - 1, j - 1);
-            trace += (s[i - 1] == t[j - 1]) ? 'M' : 'S';
+            trace += (pattern[i - 1] == text[j - 1]) ? 'M' : 'S';
         } else if (parent[i][j] == OP_INSERT) {
             walk(i, j - 1);
             trace += 'I';
@@ -541,8 +549,8 @@ EditResult editDistance(const std::string& s, const std::string& t,
             trace += 'D';
         }
     };
-    walk(gi, gj);
-    return {cost[gi][gj], trace};
+    walk(goalRow, goalCol);
+    return {cost[goalRow][goalCol], trace};
 }
 ```
 
@@ -569,6 +577,8 @@ Lᵢ = 1 + max{ Lⱼ : 0 ≤ j < i and sⱼ < sᵢ },     L₀ = 0
 answer = max_{1≤i≤n} Lᵢ                       (the winning sequence must end somewhere)
 ```
 
+→ **C++ implementation:** [A5 Longest increasing subsequence](#a5-longest-increasing-subsequence)
+
 Skiena's worked table:
 
 | Index `i` | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
@@ -586,37 +596,37 @@ Skiena's worked table:
 #include <vector>
 
 // O(n^2): L[i] = length of the LIS ending at i, p[i] = predecessor index.
-std::vector<int> lisQuadratic(const std::vector<int>& a) {
-    const int n = (int)a.size();
+vector<int> lisQuadratic(const vector<int>& values) {
+    const int n = (int)values.size();
     if (n == 0) return {};
-    std::vector<int> L(n, 1), p(n, -1);
+    vector<int> lisLenEndingAt(n, 1), prevIndex(n, -1);
     for (int i = 0; i < n; ++i)
         for (int j = 0; j < i; ++j)
-            if (a[j] < a[i] && L[j] + 1 > L[i]) { L[i] = L[j] + 1; p[i] = j; }
-    const int best = (int)(std::max_element(L.begin(), L.end()) - L.begin());
-    std::vector<int> out;
-    for (int i = best; i >= 0; i = p[i]) out.push_back(a[i]);
-    std::reverse(out.begin(), out.end());
-    return out;
+            if (values[j] < values[i] && lisLenEndingAt[j] + 1 > lisLenEndingAt[i]) { lisLenEndingAt[i] = lisLenEndingAt[j] + 1; prevIndex[i] = j; }
+    const int bestEnd = (int)(max_element(lisLenEndingAt.begin(), lisLenEndingAt.end()) - lisLenEndingAt.begin());
+    vector<int> result;
+    for (int i = bestEnd; i >= 0; i = prevIndex[i]) result.push_back(values[i]);
+    reverse(result.begin(), result.end());
+    return result;
 }
 
 // O(n lg n): tails[k] = smallest possible tail of an increasing subsequence of length k+1.
-std::vector<int> lisNLogN(const std::vector<int>& a) {
-    const int n = (int)a.size();
+vector<int> lisNLogN(const vector<int>& values) {
+    const int n = (int)values.size();
     if (n == 0) return {};
-    std::vector<int> tails;                     // values, strictly increasing
-    std::vector<int> tailIdx;                   // index in a of each tail
-    std::vector<int> prev(n, -1);
+    vector<int> tails;                     // values, strictly increasing
+    vector<int> tailIdx;                   // index in a of each tail
+    vector<int> prev(n, -1);
     for (int i = 0; i < n; ++i) {
-        const int k = (int)(std::lower_bound(tails.begin(), tails.end(), a[i]) - tails.begin());
-        if (k > 0) prev[i] = tailIdx[k - 1];
-        if (k == (int)tails.size()) { tails.push_back(a[i]); tailIdx.push_back(i); }
-        else                        { tails[k] = a[i];       tailIdx[k] = i; }
+        const int slot = (int)(lower_bound(tails.begin(), tails.end(), values[i]) - tails.begin());
+        if (slot > 0) prev[i] = tailIdx[slot - 1];
+        if (slot == (int)tails.size()) { tails.push_back(values[i]); tailIdx.push_back(i); }
+        else                        { tails[slot] = values[i];       tailIdx[slot] = i; }
     }
-    std::vector<int> out;
-    for (int i = tailIdx.back(); i >= 0; i = prev[i]) out.push_back(a[i]);
-    std::reverse(out.begin(), out.end());
-    return out;
+    vector<int> result;
+    for (int i = tailIdx.back(); i >= 0; i = prev[i]) result.push_back(values[i]);
+    reverse(result.begin(), result.end());
+    return result;
 }
 ```
 
@@ -632,6 +642,8 @@ std::vector<int> lisNLogN(const std::vector<int>& a) {
 ```
 T[n, k] = T[n−1, k]  ∨  T[n−1, k − sₙ]
 ```
+
+→ **C++ implementation:** [A6 Subset sum and 0-1 knapsack](#a6-subset-sum-and-0-1-knapsack)
 If it is, the first `n−1` must make `k − sₙ`. If not, the first `n−1` must make `k` alone. **No overlap between the cases, and all possibilities covered.**
 
 **Complexity:** `Θ(nk)` cells, `O(1)` each. **Reconstruction:** a `parent` table recording `j − s[i−1]` when item `i` was used, `NIL` otherwise; walk up rows until you find a non-`NIL`.
@@ -648,33 +660,33 @@ If it is, the first `n−1` must make `k − sₙ`. If not, the first `n−1` mu
 
 struct SubsetSumResult {
     bool feasible;
-    std::vector<int> chosen;                    // the actual values used
+    vector<int> chosen;                    // the actual values used
 };
 
-SubsetSumResult subsetSum(const std::vector<int>& s, int k) {
-    const int n = (int)s.size();
-    std::vector<std::vector<char>> can(n + 1, std::vector<char>(k + 1, 0));
-    can[0][0] = 1;
+SubsetSumResult subsetSum(const vector<int>& values, int target) {
+    const int n = (int)values.size();
+    vector<vector<char>> reachable(n + 1, vector<char>(target + 1, 0));
+    reachable[0][0] = 1;
     for (int i = 1; i <= n; ++i)
-        for (int j = 0; j <= k; ++j)
-            can[i][j] = can[i - 1][j] || (j >= s[i - 1] && can[i - 1][j - s[i - 1]]);
+        for (int j = 0; j <= target; ++j)
+            reachable[i][j] = reachable[i - 1][j] || (j >= values[i - 1] && reachable[i - 1][j - values[i - 1]]);
 
-    SubsetSumResult out{can[n][k] != 0, {}};
-    if (!out.feasible) return out;
-    int j = k;
+    SubsetSumResult result{reachable[n][target] != 0, {}};
+    if (!result.feasible) return result;
+    int j = target;
     for (int i = n; i > 0; --i)
-        if (!can[i - 1][j]) { out.chosen.push_back(s[i - 1]); j -= s[i - 1]; }
-    std::reverse(out.chosen.begin(), out.chosen.end());
-    return out;
+        if (!reachable[i - 1][j]) { result.chosen.push_back(values[i - 1]); j -= values[i - 1]; }
+    reverse(result.chosen.begin(), result.chosen.end());
+    return result;
 }
 
 // 0-1 knapsack, rolling 1-D array (iterate capacity downward so each item is used once)
-long long knapsack01(const std::vector<int>& weight, const std::vector<long long>& value, int cap) {
-    std::vector<long long> best(cap + 1, 0);
-    for (std::size_t i = 0; i < weight.size(); ++i)
-        for (int c = cap; c >= weight[i]; --c)
-            best[c] = std::max(best[c], best[c - weight[i]] + value[i]);
-    return best[cap];
+long long knapsack01(const vector<int>& weight, const vector<long long>& value, int capacity) {
+    vector<long long> best(capacity + 1, 0);
+    for (size_t i = 0; i < weight.size(); ++i)
+        for (int capacityLeft = capacity; capacityLeft >= weight[i]; --capacityLeft)
+            best[capacityLeft] = max(best[capacityLeft], best[capacityLeft - weight[i]] + value[i]);
+    return best[capacity];
 }
 ```
 
@@ -699,6 +711,8 @@ The motivating story: three workers scanning a shelf of books. Equal-count parti
 ```
 M[n,k] = min_{i=1..n} max( M[i, k−1],  Σ_{j=i+1..n} sⱼ )
 ```
+
+→ **C++ implementation:** [A7 The ordered partition problem](#a7-the-ordered-partition-problem)
 The cost is the larger of (a) the last partition's sum, and (b) the best you can do on the prefix with `k−1` dividers.
 
 **Boundary conditions** — Skiena is explicit that a recurrence isn't complete without them, and that they come from the *smallest reasonable value of each argument*:
@@ -719,32 +733,32 @@ M[n,1] = Σᵢ sᵢ                    (no dividers at all)
 
 struct PartitionResult {
     long long cost;                              // largest range sum
-    std::vector<std::vector<int>> parts;
+    vector<vector<int>> parts;
 };
 
-PartitionResult orderedPartition(const std::vector<int>& s, int k) {
-    const int n = (int)s.size();
-    std::vector<long long> pre(n + 1, 0);        // prefix sums make each cell O(1)
-    for (int i = 1; i <= n; ++i) pre[i] = pre[i - 1] + s[i - 1];
+PartitionResult orderedPartition(const vector<int>& values, int k) {
+    const int n = (int)values.size();
+    vector<long long> prefix(n + 1, 0);        // prefix sums make each cell O(1)
+    for (int i = 1; i <= n; ++i) prefix[i] = prefix[i - 1] + values[i - 1];
 
-    std::vector<std::vector<long long>> m(n + 1, std::vector<long long>(k + 1, 0));
-    std::vector<std::vector<int>> d(n + 1, std::vector<int>(k + 1, 0));
-    for (int i = 1; i <= n; ++i) m[i][1] = pre[i];
-    for (int j = 1; j <= k; ++j) m[1][j] = s[0];
+    vector<vector<long long>> minMaxSum(n + 1, vector<long long>(k + 1, 0));
+    vector<vector<int>> dividerAt(n + 1, vector<int>(k + 1, 0));
+    for (int i = 1; i <= n; ++i) minMaxSum[i][1] = prefix[i];
+    for (int j = 1; j <= k; ++j) minMaxSum[1][j] = values[0];
     for (int i = 2; i <= n; ++i) {
         for (int j = 2; j <= k; ++j) {
-            m[i][j] = LLONG_MAX;
+            minMaxSum[i][j] = LLONG_MAX;
             for (int x = 1; x <= i - 1; ++x) {
-                const long long c = std::max(m[x][j - 1], pre[i] - pre[x]);
-                if (c < m[i][j]) { m[i][j] = c; d[i][j] = x; }
+                const long long c = max(minMaxSum[x][j - 1], prefix[i] - prefix[x]);
+                if (c < minMaxSum[i][j]) { minMaxSum[i][j] = c; dividerAt[i][j] = x; }
             }
         }
     }
-    PartitionResult out{m[n][k], {}};
-    std::function<void(int, int)> rebuild = [&](int i, int j) {
-        if (j == 1) { out.parts.push_back(std::vector<int>(s.begin(), s.begin() + i)); return; }
-        rebuild(d[i][j], j - 1);
-        out.parts.push_back(std::vector<int>(s.begin() + d[i][j], s.begin() + i));
+    PartitionResult out{minMaxSum[n][k], {}};
+    function<void(int, int)> rebuild = [&](int i, int j) {
+        if (j == 1) { out.parts.push_back(vector<int>(values.begin(), values.begin() + i)); return; }
+        rebuild(dividerAt[i][j], j - 1);
+        out.parts.push_back(vector<int>(values.begin() + dividerAt[i][j], values.begin() + i));
     };
     rebuild(n, k);
     return out;
@@ -769,6 +783,8 @@ M[i, j, X] = ⋁_{(X→YZ) ∈ G}  ⋁_{k=i}^{j−1}  ( M[i,k,Y] ∧ M[k+1,j,Z] 
 M[i, i, X] = true  iff  ∃ production X → α with Sᵢ = α
 ```
 
+→ **C++ implementation:** [A8 CYK parsing](#a8-cyk-parsing)
+
 **Complexity.** `O(n²)` intervals × constant grammar size × `O(n)` split points = **`O(n³)`**. *(The grammar's size is constant because the grammar for C or Java is fixed regardless of program length.)*
 
 **Skiena's aside is a good one:** *"Parsing seemed like a horribly complicated subject when I took a compilers course as a graduate student. But, more recently a friend easily explained it to me over lunch. The difference is that I understand dynamic programming much better now than when I was a student."*
@@ -789,49 +805,49 @@ M′[i,i,X] = 0 if some X → Sᵢ exists;  1 if some X → α exists with α �
 
 struct Grammar {
     int nonterminals = 0;
-    std::vector<std::array<int, 3>> binary;      // X -> Y Z
-    std::vector<std::pair<int, char>> unary;     // X -> a
+    vector<array<int, 3>> binary;      // X -> Y Z
+    vector<pair<int, char>> unary;     // X -> a
 };
 
 // M[i][j][X] = can nonterminal X derive s[i..j]?
-bool cykParse(const Grammar& g, const std::string& s, int start) {
-    const int n = (int)s.size();
+bool cykParse(const Grammar& grammar, const string& input, int start) {
+    const int n = (int)input.size();
     if (n == 0) return false;
-    std::vector<std::vector<std::vector<char>>> M(
-        n, std::vector<std::vector<char>>(n, std::vector<char>(g.nonterminals, 0)));
+    vector<vector<vector<char>>> chart(
+        n, vector<vector<char>>(n, vector<char>(grammar.nonterminals, 0)));
     for (int i = 0; i < n; ++i)
-        for (const auto& u : g.unary)
-            if (u.second == s[i]) M[i][i][u.first] = 1;
+        for (const auto& unaryRule : grammar.unary)
+            if (unaryRule.second == input[i]) chart[i][i][unaryRule.first] = 1;
     for (int len = 2; len <= n; ++len)
         for (int i = 0; i + len - 1 < n; ++i) {
             const int j = i + len - 1;
-            for (const auto& b : g.binary)
-                for (int k = i; k < j && !M[i][j][b[0]]; ++k)
-                    if (M[i][k][b[1]] && M[k + 1][j][b[2]]) M[i][j][b[0]] = 1;
+            for (const auto& binaryRule : grammar.binary)
+                for (int k = i; k < j && !chart[i][j][binaryRule[0]]; ++k)
+                    if (chart[i][k][binaryRule[1]] && chart[k + 1][j][binaryRule[2]]) chart[i][j][binaryRule[0]] = 1;
         }
-    return M[0][n - 1][start] != 0;
+    return chart[0][n - 1][start] != 0;
 }
 
 // Minimum single-character substitutions so that s is generated by `start`.
-int cykMinEdits(const Grammar& g, const std::string& s, int start) {
-    const int n = (int)s.size();
+int cykMinEdits(const Grammar& grammar, const string& input, int start) {
+    const int n = (int)input.size();
     const int INF = 1000000;
     if (n == 0) return INF;
-    std::vector<std::vector<std::vector<int>>> M(
-        n, std::vector<std::vector<int>>(n, std::vector<int>(g.nonterminals, INF)));
+    vector<vector<vector<int>>> chart(
+        n, vector<vector<int>>(n, vector<int>(grammar.nonterminals, INF)));
     for (int i = 0; i < n; ++i)
-        for (const auto& u : g.unary)
-            M[i][i][u.first] = std::min(M[i][i][u.first], u.second == s[i] ? 0 : 1);
+        for (const auto& unaryRule : grammar.unary)
+            chart[i][i][unaryRule.first] = min(chart[i][i][unaryRule.first], unaryRule.second == input[i] ? 0 : 1);
     for (int len = 2; len <= n; ++len)
         for (int i = 0; i + len - 1 < n; ++i) {
             const int j = i + len - 1;
-            for (const auto& b : g.binary)
+            for (const auto& binaryRule : grammar.binary)
                 for (int k = i; k < j; ++k) {
-                    const long long v = (long long)M[i][k][b[1]] + M[k + 1][j][b[2]];
-                    if (v < M[i][j][b[0]]) M[i][j][b[0]] = (int)v;
+                    const long long combined = (long long)chart[i][k][binaryRule[1]] + chart[k + 1][j][binaryRule[2]];
+                    if (combined < chart[i][j][binaryRule[0]]) chart[i][j][binaryRule[0]] = (int)combined;
                 }
         }
-    return M[0][n - 1][start];
+    return chart[0][n - 1][start];
 }
 ```
 
@@ -864,6 +880,8 @@ and since `w(i,j) = w(i,r−1) + p_r + w(r+1,j)`, this collapses to the clean fo
 ```
 e[i,j] = e[i,r−1] + e[r+1,j] + w(i,j)                                   (14.13)
 ```
+
+→ **C++ implementation:** [A9 Optimal binary search trees](#a9-optimal-binary-search-trees)
 giving
 ```
            ⎧ q_{i−1}                                             if j = i − 1
@@ -883,19 +901,19 @@ e[i,j]  =  ⎨                                                                  
 
 struct OptimalBSTResult {
     double cost;
-    std::vector<std::vector<int>> root;          // root[i][j], 1-based keys
+    vector<vector<int>> root;          // root[i][j], 1-based keys
 };
 
-OptimalBSTResult optimalBST(const std::vector<double>& p, const std::vector<double>& q) {
+OptimalBSTResult optimalBST(const vector<double>& p, const vector<double>& q) {
     const int n = (int)p.size() - 1;              // p[1..n], q[0..n]
-    std::vector<std::vector<double>> e(n + 2, std::vector<double>(n + 1, 0));
-    std::vector<std::vector<double>> w(n + 2, std::vector<double>(n + 1, 0));
-    std::vector<std::vector<int>> root(n + 1, std::vector<int>(n + 1, 0));
+    vector<vector<double>> e(n + 2, vector<double>(n + 1, 0));
+    vector<vector<double>> w(n + 2, vector<double>(n + 1, 0));
+    vector<vector<int>> root(n + 1, vector<int>(n + 1, 0));
     for (int i = 1; i <= n + 1; ++i) { e[i][i - 1] = q[i - 1]; w[i][i - 1] = q[i - 1]; }
     for (int len = 1; len <= n; ++len)
         for (int i = 1; i + len - 1 <= n; ++i) {
             const int j = i + len - 1;
-            e[i][j] = std::numeric_limits<double>::infinity();
+            e[i][j] = numeric_limits<double>::infinity();
             w[i][j] = w[i][j - 1] + p[j] + q[j];
             for (int r = i; r <= j; ++r) {
                 const double t = e[i][r - 1] + e[r + 1][j] + w[i][j];
@@ -927,27 +945,27 @@ Held-Karp is the canonical demonstration of both **how to repair a broken DP** a
 #include <vector>
 
 // dp[S][j] = cheapest path starting at 0, visiting exactly the set S, ending at j.
-long long heldKarpTour(const std::vector<std::vector<long long>>& d) {
-    const int n = (int)d.size();
+long long heldKarpTour(const vector<vector<long long>>& dist) {
+    const int n = (int)dist.size();
     if (n <= 1) return 0;
     const long long INF = LLONG_MAX / 4;
     const int full = 1 << n;
-    std::vector<std::vector<long long>> dp(full, std::vector<long long>(n, INF));
+    vector<vector<long long>> dp(full, vector<long long>(n, INF));
     dp[1][0] = 0;                                  // start at city 0
-    for (int S = 1; S < full; ++S) {
-        if (!(S & 1)) continue;                    // every state contains city 0
+    for (int visited = 1; visited < full; ++visited) {
+        if (!(visited & 1)) continue;                    // every state contains city 0
         for (int j = 0; j < n; ++j) {
-            if (dp[S][j] >= INF || !(S >> j & 1)) continue;
+            if (dp[visited][j] >= INF || !(visited >> j & 1)) continue;
             for (int k = 1; k < n; ++k) {
-                if (S >> k & 1) continue;
-                const int T = S | (1 << k);
-                dp[T][k] = std::min(dp[T][k], dp[S][j] + d[j][k]);
+                if (visited >> k & 1) continue;
+                const int extended = visited | (1 << k);
+                dp[extended][k] = min(dp[extended][k], dp[visited][j] + dist[j][k]);
             }
         }
     }
     long long best = INF;
     for (int j = 1; j < n; ++j)
-        if (dp[full - 1][j] < INF) best = std::min(best, dp[full - 1][j] + d[j][0]);
+        if (dp[full - 1][j] < INF) best = min(best, dp[full - 1][j] + dist[j][0]);
     return best;
 }
 ```
@@ -969,42 +987,42 @@ long long heldKarpTour(const std::vector<std::vector<long long>>& d) {
 #include <vector>
 
 // Longest weighted path in a DAG: the topological order IS the evaluation order.
-long long dagLongestPath(int n, const std::vector<std::vector<std::pair<int, long long>>>& adj,
-                         int s, int t) {
-    std::vector<int> indeg(n, 0);
-    for (int u = 0; u < n; ++u) for (const auto& e : adj[u]) ++indeg[e.first];
-    std::vector<int> order;
-    std::vector<int> stack;
-    for (int u = 0; u < n; ++u) if (indeg[u] == 0) stack.push_back(u);
-    while (!stack.empty()) {
-        const int u = stack.back(); stack.pop_back();
+long long dagLongestPath(int n, const vector<vector<pair<int, long long>>>& adj,
+                         int source, int sink) {
+    vector<int> indeg(n, 0);
+    for (int u = 0; u < n; ++u) for (const auto& edge : adj[u]) ++indeg[edge.first];
+    vector<int> order;
+    vector<int> ready;
+    for (int u = 0; u < n; ++u) if (indeg[u] == 0) ready.push_back(u);
+    while (!ready.empty()) {
+        const int u = ready.back(); ready.pop_back();
         order.push_back(u);
-        for (const auto& e : adj[u]) if (--indeg[e.first] == 0) stack.push_back(e.first);
+        for (const auto& edge : adj[u]) if (--indeg[edge.first] == 0) ready.push_back(edge.first);
     }
     const long long NEG = LLONG_MIN / 4;
-    std::vector<long long> best(n, NEG);
-    best[s] = 0;
+    vector<long long> best(n, NEG);
+    best[source] = 0;
     for (int u : order)
         if (best[u] > NEG)
-            for (const auto& e : adj[u])
-                best[e.first] = std::max(best[e.first], best[u] + e.second);
-    return best[t];
+            for (const auto& edge : adj[u])
+                best[edge.first] = max(best[edge.first], best[u] + edge.second);
+    return best[sink];
 }
 
 // Seam carving: minimum-disruption top-to-bottom seam, O(mn) time, O(n) space.
-long long minSeamCost(const std::vector<std::vector<long long>>& d) {
-    const int m = (int)d.size(), n = (int)d[0].size();
-    std::vector<long long> prev(d[0]), cur(n);
+long long minSeamCost(const vector<vector<long long>>& disruption) {
+    const int m = (int)disruption.size(), n = (int)disruption[0].size();
+    vector<long long> prev(disruption[0]), cur(n);
     for (int i = 1; i < m; ++i) {
         for (int j = 0; j < n; ++j) {
             long long best = prev[j];
-            if (j > 0)     best = std::min(best, prev[j - 1]);
-            if (j + 1 < n) best = std::min(best, prev[j + 1]);
-            cur[j] = d[i][j] + best;
+            if (j > 0)     best = min(best, prev[j - 1]);
+            if (j + 1 < n) best = min(best, prev[j + 1]);
+            cur[j] = disruption[i][j] + best;
         }
         prev.swap(cur);
     }
-    return *std::min_element(prev.begin(), prev.end());
+    return *min_element(prev.begin(), prev.end());
 }
 ```
 
@@ -1024,6 +1042,8 @@ Skiena's question — *"How do you know it works fairly well? There might be sig
 ```
 M[i, j] = min_{1 ≤ m ≤ 4} ( M[i−1, m] + c(Sᵢ, m, j) )
 ```
+
+→ **C++ implementation:** [A10 War story — text compression for Bumstead](#a10-war-story--text-compression-for-bumstead)
 where `c(Sᵢ, m, j)` is the cost of encoding character `Sᵢ` and switching from mode `m` to mode `j`. Only `4n` cells, `O(1)` each ⟹ **linear time**.
 
 **The measured result** — and this is the number to quote when someone asks whether optimality is worth the trouble: on **13 000 real labels**, the DP encoder gave an **8% tighter encoding on average**, never worse than the greedy encoder, sometimes much better. In a medium where total capacity is a few hundred bytes, 8% is enormous. The DP was slightly slower to run, but *"this was not significant, because the bottleneck would be the time needed to print the label."*
@@ -1040,6 +1060,8 @@ Three-phase AC power works best when loads on phases A, B, C are balanced. Given
 ```
 C[n, w_A, w_B] = C[n−1, w_A − sₙ, w_B] ∨ C[n−1, w_A, w_B − sₙ] ∨ C[n−1, w_A, w_B]
 ```
+
+→ **C++ implementation:** [A11 War story — the balance of power](#a11-war-story--the-balance-of-power)
 `nk²` cells, `O(1)` each ⟹ **`O(nk²)`**.
 
 **Step 3 — the part that shows DP's real value: the objective kept changing, and the recurrence didn't.**
@@ -1170,6 +1192,665 @@ When you suspect DP, work these in order:
 - **Pseudo-polynomial ≠ polynomial.** `O(nk)` for subset sum is exponential in the `O(log k)` bits describing `k`. Multiplying every input by `10⁶` slows it down `10⁶×`.
 - **`O(2ⁿ)` beats `O(n!)` by enough to matter** — Held-Karp handles `n ≈ 25`.
 - **Skiena's closing pitch:** *"Once you can reduce your state space to a small enough size, you can optimize just about anything. Just walk through each possible state and score it appropriately."*
+
+---
+
+## Practice — where to drill this module
+
+| Recurrence shape in this module | Problem | Why it's the right drill |
+|---|---|---|
+| 1-D over a prefix (rod cutting) | [198 · House Robber](https://leetcode.com/problems/house-robber/) · [322 · Coin Change](https://leetcode.com/problems/coin-change/) | the smallest possible `r[n] = max/min over one choice` — write both memo and table |
+| Longest increasing subsequence | [300 · Longest Increasing Subsequence](https://leetcode.com/problems/longest-increasing-subsequence/) | submit the `O(n²)` version, then the `O(n lg n)` patience version — `A5` has both |
+| Two-string grid | [1143 · Longest Common Subsequence](https://leetcode.com/problems/longest-common-subsequence/) · [72 · Edit Distance](https://leetcode.com/problems/edit-distance/) | `A3` and `A4` verbatim; and 72 is the single most-asked DP question there is |
+| Subset sum / knapsack | [416 · Partition Equal Subset Sum](https://leetcode.com/problems/partition-equal-subset-sum/) | pseudo-polynomial `Θ(n·S)`; explaining why that is *not* polynomial is half the interview |
+| **Interval DP** (matrix chain) | [312 · Burst Balloons](https://leetcode.com/problems/burst-balloons/) · [241 · Different Ways to Add Parentheses](https://leetcode.com/problems/different-ways-to-add-parentheses/) | the `for len / for i / for k` skeleton of `A2`; 312 is matrix chain with the story changed |
+| Counting BST shapes | [96 · Unique Binary Search Trees](https://leetcode.com/problems/unique-binary-search-trees/) | the Catalan recurrence — the *counting* twin of `A9` |
+| Partition into `k` pieces | [410 · Split Array Largest Sum](https://leetcode.com/problems/split-array-largest-sum/) | `A7` exactly — and the binary-search-on-the-answer alternative is a great contrast |
+| DP over a DAG | [1770? try instead] [329 · Longest Increasing Path in a Matrix](https://leetcode.com/problems/longest-increasing-path-in-a-matrix/) | memoized DFS where the subproblem graph is implicit — see the "subproblem graph" note below |
+| Bitmask DP | [847 · Shortest Path Visiting All Nodes](https://leetcode.com/problems/shortest-path-visiting-all-nodes/) | `Θ(2ⁿ·n)`; the shape of Held–Karp from [M15](M15-shortest-paths.md) |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — the *Dynamic Programming* section is the best structured DP ladder anywhere; work it top to bottom. [Codeforces `dp` tag](https://codeforces.com/problemset?tags=dp).
+
+**The drill that matters here** is not writing the code — it is **stating the recurrence in one line before writing anything**, including exactly what the indices mean. Every entry in the appendix below leads with that line, because if you cannot write it, the code cannot be right.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., §1.5–1.7 (including the matrix class of §1.7).*
+
+### 1. 2-D tables: `vector<vector<T>>` vs a flat `vector<T>`
+
+```cpp
+void tableShapes(int n, int m) {
+    vector<vector<int>> grid(n + 1, vector<int>(m + 1, 0));   // n+1 allocations
+    vector<int> flat((n + 1) * (m + 1), 0);                    // ONE allocation
+    // grid[i][j]        -- two dereferences, rows scattered across the heap
+    // flat[i * (m+1) + j] -- one dereference, row-major and cache-friendly
+    (void)grid; (void)flat;
+}
+```
+
+DP fills tables in a strict scan order, so **locality matters more here than almost anywhere else**. `vector<vector<T>>` is clearer and matches the recurrence's `[i][j]`, so the appendix uses it; for a table with tens of millions of cells, switch to the flat form and index by hand. Weiss's `matrix` class [§1.7] is the same idea wrapped in `operator[]`.
+
+**Always size tables `n+1` by `m+1` when the recurrence has a `0` base row/column.** Trying to save that row by shifting indices is the most reliable way to introduce an off-by-one.
+
+### 2. Memoization needs a sentinel that cannot be a real answer
+
+```cpp
+const int UNSET = -1;        // fine when every real answer is >= 0
+long long UNSET_LL = LLONG_MIN;
+```
+
+`0` is almost never a safe "not computed yet" marker, because `0` is usually a legal answer. Either pick a value outside the answer range, or keep a parallel `vector<char> computed`. The appendix uses explicit sentinels and says so at each use.
+
+### 3. `function<...>` for a recursive lambda — and what it costs
+
+A lambda cannot call itself by name, so a memoized recursion needs either a named helper or:
+
+```cpp
+long long memoDemo(int n) {
+    vector<long long> memo(n + 1, -1);
+    function<long long(int)> f = [&](int i) -> long long {
+        if (i <= 1) return i;
+        if (memo[i] != -1) return memo[i];
+        return memo[i] = f(i - 1) + f(i - 2);
+    };
+    return f(n);
+}
+```
+
+`function<long long(int)>` is **type-erased**: every call is an indirect call and the object may heap-allocate ([M02](M02-asymptotics.md) toolkit §4). For a DP with millions of calls that overhead is real — 2–3× is typical. Use it for clarity in notes and prototypes; write a plain recursive function, or a bottom-up loop, when it is hot.
+
+### 4. Rolling arrays — when the recurrence only looks back one row
+
+`LCS`, `edit distance` and `subset sum` all read only row `i−1` while filling row `i`. So two rows suffice:
+
+```cpp
+void rolling(int m) {
+    vector<int> prev(m + 1, 0), cur(m + 1, 0);
+    // ... fill cur from prev ...
+    swap(prev, cur);      // O(1): swaps the internal pointers, no copying
+}
+```
+
+**`Θ(nm)` space becomes `Θ(m)`.** The cost: you can no longer walk the table backwards to *reconstruct* the optimal solution — you only get its value. That trade is the single most common DP design decision, and `A3` shows both sides of it.
+
+For **0-1 knapsack** specifically, one array suffices if you iterate the capacity **downward**, so that each item is used at most once. Iterating upward silently solves the *unbounded* knapsack instead — a bug that produces a plausible number and no error.
+
+### 5. Watch the overflow in counting DPs
+
+A DP that *counts* solutions overflows fast: the number of BST shapes on 35 nodes already exceeds `2⁶³`. Use `long long`, and take a modulus when the problem gives one. A DP that *optimizes* rarely overflows; a DP that *counts* almost always does.
+
+### 6. `min`/`max` with mixed types will not compile
+
+`max(0, someLongLong)` fails template deduction — both arguments must be the same type. Write `max(0LL, x)` or `max<long long>(0, x)`. This bites constantly in DP code where a `0` base case meets a `long long` table.
+
+### 7. `numeric_limits` for "infinity" in a minimising DP
+
+Use `LLONG_MAX / 2`, not `LLONG_MAX`: the recurrence adds to the table value before comparing, and `LLONG_MAX + anything` is signed overflow, which is **undefined behaviour**. Halving leaves headroom for one addition — the same reasoning as `INF = LLONG_MAX / 4` in [M15](M15-shortest-paths.md).
+
+---
+
+## Appendix — C++ for Every Recurrence
+
+M11 has no procedure pseudocode — its algorithms are stated as **recurrences**, which is the right level of abstraction for DP. Each entry below quotes the recurrence and then gives the table-filling code that is its direct transcription, so you can read the two side by side.
+
+The body of this module contains the *tuned* versions (rolling arrays, `O(n lg n)` LIS, Knuth optimisation). These are the *literal* ones.
+
+### A1 Rod cutting
+
+> `rₙ = max{ pᵢ + r_{n−i} : 1 ≤ i ≤ n }`, with `r₀ = 0`.
+
+```cpp
+// price[i] = value of a rod of length i, for i = 1..n. price[0] is unused.
+// Returns r[0..n], where r[k] is the best revenue obtainable from length k.
+//
+// This is the ENTIRE DP pattern in six lines: one loop over subproblem sizes,
+// one loop over the choices available at that size, take the best.
+vector<long long> rodCutting(const vector<long long>& price, int n) {
+    vector<long long> bestRevenue(n + 1, 0);          // r[0] = 0: a rod of length 0 is worth 0
+    for (int k = 1; k <= n; ++k) {
+        long long best = LLONG_MIN / 2;     // "minus infinity" with headroom (toolkit 7)
+        for (int i = 1; i <= k; ++i)        // the FIRST piece has length i...
+            best = max(best, price[i] + bestRevenue[k - i]);   // ...and r[k-i] is already known
+        bestRevenue[k] = best;
+    }
+    return bestRevenue;
+}
+
+// The same thing with the CUTS recovered. `firstCut[k]` remembers the choice
+// that achieved r[k]; walking those choices reconstructs the solution.
+// This "store the argmax alongside the max" trick is how EVERY DP in this
+// module reconstructs an answer rather than merely scoring one.
+pair<vector<long long>, vector<int>> rodCuttingWithCuts(const vector<long long>& price, int n) {
+    vector<long long> bestRevenue(n + 1, 0);
+    vector<int> firstCut(n + 1, 0);
+    for (int k = 1; k <= n; ++k) {
+        long long best = LLONG_MIN / 2;
+        for (int i = 1; i <= k; ++i)
+            if (price[i] + bestRevenue[k - i] > best) { best = price[i] + bestRevenue[k - i]; firstCut[k] = i; }
+        bestRevenue[k] = best;
+    }
+    return {bestRevenue, firstCut};
+}
+
+vector<int> rodCuttingSolution(const vector<int>& firstCut, int n) {
+    vector<int> pieces;
+    while (n > 0) { pieces.push_back(firstCut[n]); n -= firstCut[n]; }
+    return pieces;
+}
+```
+
+**Complexity. `Θ(n²)` time, `Θ(n)` space.** The naive recursion without memoisation is `Θ(2ⁿ)` — it recomputes `r[k]` once for every way of reaching it.
+
+**Why the first form of the recurrence (`max{pₙ, r₁+r_{n−1}, …}`) is worse:** it considers cutting into two arbitrary pieces, so every solution is counted many times and both halves recurse. Fixing the **first** piece and recursing only on the remainder makes the subproblems `r₀ … r_{n−1}` — a single dimension, each used once.
+
+### A2 Matrix-chain multiplication
+
+> `m[i,j] = 0` if `i = j`, else `min_{i ≤ k < j} ( m[i,k] + m[k+1,j] + p_{i−1}·p_k·p_j )`.
+
+```cpp
+// p has n+1 entries: matrix A_i is p[i-1] by p[i], for i = 1..n.
+// Returns (m, s): m[i][j] is the minimum scalar multiplications for A_i..A_j,
+// and s[i][j] is the k that achieved it -- the split point, for printing parens.
+pair<vector<vector<long long>>, vector<vector<int>>>
+matrixChainOrder(const vector<long long>& dims) {
+    const int n = (int)dims.size() - 1;
+    vector<vector<long long>> minCost(n + 2, vector<long long>(n + 2, 0));
+    vector<vector<int>> splitAt(n + 2, vector<int>(n + 2, 0));
+
+    // THE INTERVAL-DP SKELETON. Memorise this loop nest -- it is the same for
+    // Burst Balloons, optimal BST, CYK parsing and every other interval DP:
+    //
+    //     for len = 2..n            <- solve SHORT intervals first
+    //       for i = 1..n-len+1      <- every start position
+    //         j = i + len - 1       <- the matching end
+    //           for k = i..j-1      <- every split point inside
+    //
+    // The outer loop MUST be over length, not over i or j: m[i][j] depends on
+    // strictly shorter intervals, and only "increasing length" guarantees those
+    // are already filled.
+    for (int len = 2; len <= n; ++len) {
+        for (int i = 1; i <= n - len + 1; ++i) {
+            int j = i + len - 1;
+            minCost[i][j] = LLONG_MAX / 2;                 // toolkit 7
+            for (int k = i; k <= j - 1; ++k) {
+                long long candidate = minCost[i][k] + minCost[k + 1][j] + dims[i - 1] * dims[k] * dims[j];
+                if (candidate < minCost[i][j]) { minCost[i][j] = candidate; splitAt[i][j] = k; }
+            }
+        }
+    }
+    return {minCost, splitAt};
+}
+
+// Reconstruct the parenthesisation from the split points.
+string printParens(const vector<vector<int>>& splitAt, int i, int j) {
+    if (i == j) return "A" + to_string(i);
+    return "(" + printParens(splitAt, i, splitAt[i][j]) + printParens(splitAt, splitAt[i][j] + 1, j) + ")";
+}
+```
+
+**Complexity. `Θ(n³)` time, `Θ(n²)` space** — `Θ(n²)` subproblems, `Θ(n)` choices each.
+
+**Recognition pattern:** *an optimal solution splits the interval `[i..j]` at some `k`, and the two halves are independent subproblems of the same shape.* When you see that, write the three-loop skeleton above and fill in the cost term.
+
+### A3 Longest common subsequence
+
+> `c[i,j] = 0` if `i = 0` or `j = 0`; `c[i−1,j−1] + 1` if `xᵢ = y_j`; else `max(c[i,j−1], c[i−1,j])`.
+
+```cpp
+// Full table -- Theta(mn) space, and the price of that space is that the actual
+// SUBSEQUENCE can be recovered.
+vector<vector<int>> lcsTable(const string& x, const string& y) {
+    const int m = (int)x.size(), n = (int)y.size();
+    // (m+1) x (n+1): row 0 and column 0 are the empty-prefix base cases, and
+    // allocating them is what removes every boundary test (toolkit 1).
+    vector<vector<int>> lcsLen(m + 1, vector<int>(n + 1, 0));
+    for (int i = 1; i <= m; ++i)
+        for (int j = 1; j <= n; ++j)
+            if (x[i - 1] == y[j - 1])            // x[i-1] is "x_i": the string is
+                lcsLen[i][j] = lcsLen[i - 1][j - 1] + 1;   // 0-indexed, the recurrence 1-indexed
+            else
+                lcsLen[i][j] = max(lcsLen[i - 1][j], lcsLen[i][j - 1]);
+    return lcsLen;
+}
+
+// Walk the table BACKWARDS from (m,n) to recover one LCS. Any tie-break gives a
+// valid answer; different tie-breaks give different (equally long) subsequences.
+string lcsString(const string& x, const string& y) {
+    vector<vector<int>> lcsLen = lcsTable(x, y);
+    int i = (int)x.size(), j = (int)y.size();
+    string result;
+    while (i > 0 && j > 0) {
+        if (x[i - 1] == y[j - 1]) { result += x[i - 1]; --i; --j; }   // came diagonally
+        else if (lcsLen[i - 1][j] >= lcsLen[i][j - 1]) --i;                  // came from above
+        else --j;                                                  // came from the left
+    }
+    reverse(result.begin(), result.end());
+    return result;
+}
+
+// LENGTH ONLY, in Theta(min(m,n)) space (toolkit 4). Row i needs only row i-1,
+// so two rows suffice -- and then swapping them is O(1) pointer work.
+// You CANNOT reconstruct the subsequence from this: the history is gone.
+int lcsLengthSmallSpace(const string& x, const string& y) {
+    if (x.size() < y.size()) return lcsLengthSmallSpace(y, x);   // keep the short one inner
+    const int m = (int)x.size(), n = (int)y.size();
+    vector<int> prev(n + 1, 0), cur(n + 1, 0);
+    for (int i = 1; i <= m; ++i) {
+        for (int j = 1; j <= n; ++j)
+            cur[j] = (x[i - 1] == y[j - 1]) ? prev[j - 1] + 1 : max(prev[j], cur[j - 1]);
+        swap(prev, cur);        // O(1)
+    }
+    return prev[n];
+}
+```
+
+**Complexity. `Θ(mn)` time; `Θ(mn)` space for the reconstructable version, `Θ(min(m,n))` for the length.**
+
+**Theorem 14.1** is the optimal-substructure proof, and it is the cut-and-paste argument again: if `xᵢ = y_j` then `zₖ = xᵢ` for some LCS `z` and `z_{1..k−1}` is an LCS of the two shorter prefixes; if not, an LCS avoids at least one of `xᵢ`, `y_j`.
+
+### A4 Edit distance
+
+> `D[i,j] = min{ D[i−1,j−1] + match(Pᵢ,Tⱼ), D[i,j−1] + indel(Tⱼ), D[i−1,j] + indel(Pᵢ) }`
+
+```cpp
+// Skiena's framing: the three cases are MATCH/SUBSTITUTE (diagonal),
+// INSERT (from the left), DELETE (from above). Every string-comparison DP is
+// this table with different costs -- which is the point of the two knobs below.
+//
+// rowInitZero  : if true, D[0][j] = 0 -- starting anywhere in T is free, which
+//                turns edit distance into SUBSTRING MATCHING.
+// substCost    : the cost of aligning two DIFFERENT characters. Set it huge
+//                (>= 2) and substitution never pays, which turns the answer
+//                into the LCS-based distance.
+//
+// This is Skiena's "stub function" design: one table, four algorithms.
+vector<vector<int>> editDistanceTable(const string& pattern, const string& text,
+                                      bool rowInitZero = false, int substCost = 1) {
+    const int m = (int)pattern.size(), n = (int)text.size();
+    vector<vector<int>> dist(m + 1, vector<int>(n + 1, 0));
+    for (int i = 0; i <= m; ++i) dist[i][0] = i;                    // delete all of P
+    for (int j = 0; j <= n; ++j) dist[0][j] = rowInitZero ? 0 : j;  // insert all of T
+
+    for (int i = 1; i <= m; ++i)
+        for (int j = 1; j <= n; ++j) {
+            int match = (pattern[i - 1] == text[j - 1]) ? 0 : substCost;
+            dist[i][j] = min({ dist[i - 1][j - 1] + match,     // substitute or match
+                            dist[i][j - 1] + 1,             // insert T[j-1]
+                            dist[i - 1][j] + 1 });          // delete P[i-1]
+            // min({...}) -- braces, so this is the initializer_list overload.
+            // min(a, b, c) without braces does NOT compile (M03 toolkit 4).
+        }
+    return dist;
+}
+
+int editDistance(const string& pattern, const string& text) {
+    return editDistanceTable(pattern, text)[pattern.size()][text.size()];
+}
+
+// Recover the operation string: M(atch) S(ubstitute) I(nsert) D(elete).
+string editTranscript(const string& pattern, const string& text) {
+    vector<vector<int>> dist = editDistanceTable(pattern, text);
+    int i = (int)pattern.size(), j = (int)text.size();
+    string ops;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 &&
+            dist[i][j] == dist[i-1][j-1] + (pattern[i-1] == text[j-1] ? 0 : 1)) {
+            ops += (pattern[i-1] == text[j-1]) ? 'M' : 'S'; --i; --j;
+        } else if (j > 0 && dist[i][j] == dist[i][j-1] + 1) { ops += 'I'; --j; }
+        else                                          { ops += 'D'; --i; }
+    }
+    reverse(ops.begin(), ops.end());
+    return ops;
+}
+```
+
+**Complexity. `Θ(mn)` time and space; `Θ(min(m,n))` space for the distance alone.**
+
+**Skiena's real lesson here** is that edit distance is not one algorithm but a *template*. Change the initialisation of row 0 and you get substring matching; change the substitution cost and you get LCS; change `indel` to depend on the character and you get weighted alignment; make the costs biological and you get Smith–Waterman. **Learn the table, not the special case.**
+
+### A5 Longest increasing subsequence
+
+> `Lᵢ = 1 + max{ Lⱼ : 0 ≤ j < i and sⱼ < sᵢ }`, with `L₀ = 0`.
+
+```cpp
+// The literal Theta(n^2) transcription. L[i] = length of the longest increasing
+// subsequence ENDING AT i -- and "ending at i" is the definition that makes the
+// recurrence work. Defining L[i] as "the best in the first i elements" does NOT
+// give a usable recurrence, because it loses the information about what the last
+// element was. Choosing the right subproblem definition IS the DP.
+vector<int> lisQuadratic(const vector<int>& values) {
+    const int n = (int)values.size();
+    vector<int> lisLenEndingAt(n, 1), prev(n, -1);
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < i; ++j)
+            if (values[j] < values[i] && lisLenEndingAt[j] + 1 > lisLenEndingAt[i]) { lisLenEndingAt[i] = lisLenEndingAt[j] + 1; prev[i] = j; }
+    return lisLenEndingAt;
+}
+
+// The Theta(n lg n) "patience sorting" version. `tails[k]` holds the SMALLEST
+// possible tail of an increasing subsequence of length k+1.
+//
+// Why that array is sorted, and therefore binary-searchable: a longer
+// subsequence cannot have a smaller tail than a shorter one. lower_bound finds
+// the first tail >= s[i]; overwriting it either extends the sequence (when the
+// position is past the end) or improves an existing length's tail.
+//
+// NOTE: `tails` is NOT itself an increasing subsequence of s -- it is only a
+// length counter. Reconstructing the actual subsequence needs the predecessor
+// array as well.
+int lisNLogN(const vector<int>& values) {
+    vector<int> tails;
+    for (int value : values) {
+        auto pos = lower_bound(tails.begin(), tails.end(), value);
+        if (pos == tails.end()) tails.push_back(value);   // strictly longer than anything so far
+        else *pos = value;                                // a better (smaller) tail for this length
+    }
+    return (int)tails.size();
+}
+```
+
+**Complexity. `Θ(n²)` for the literal form, `Θ(n lg n)` with the tails array.**
+
+**Use `lower_bound` for strictly increasing and `upper_bound` for non-decreasing** — that one-word change is the difference between "increasing" and "non-decreasing", and it is the most common LIS bug.
+
+### A6 Subset sum and 0-1 knapsack
+
+> `T[n,k] = T[n−1,k] ∨ T[n−1, k−sₙ]`
+
+```cpp
+// Can any subset of s sum to exactly `target`?
+// T[i][k] = "using only the first i items, can we make k?"
+// The recurrence is one OR: either we make k without item i, or we make
+// k - s[i] without it and then add item i.
+vector<vector<char>> subsetSumTable(const vector<int>& values, int target) {
+    const int n = (int)values.size();
+    vector<vector<char>> reachable(n + 1, vector<char>(target + 1, 0));
+    for (int i = 0; i <= n; ++i) reachable[i][0] = 1;      // the EMPTY subset makes 0
+    for (int i = 1; i <= n; ++i)
+        for (int k = 0; k <= target; ++k) {
+            reachable[i][k] = reachable[i - 1][k];                                  // skip item i
+            if (!reachable[i][k] && k >= values[i - 1]) reachable[i][k] = reachable[i - 1][k - values[i - 1]];  // take it
+        }
+    return reachable;
+}
+
+// ONE-ROW version. The capacity loop runs DOWNWARD, and that direction is the
+// entire correctness argument: going down, T[k - s[i]] still holds the value
+// from row i-1 (item i not yet used). Going UP would read a cell already
+// updated in THIS row, letting item i be used twice -- which silently solves
+// the UNBOUNDED knapsack instead. Both compile; only one answers the question.
+bool subsetSum(const vector<int>& values, int target) {
+    vector<char> reachable(target + 1, 0);
+    reachable[0] = 1;
+    for (int value : values)
+        for (int k = target; k >= value; --k)     // DOWNWARD
+            if (reachable[k - value]) reachable[k] = 1;
+    return reachable[target] != 0;
+}
+
+// 0-1 knapsack: maximise value subject to a weight budget. Same table, one
+// dimension of "can we" replaced by "what is the best value".
+long long knapsack01(const vector<int>& weight, const vector<long long>& value, int capacity) {
+    vector<long long> best(capacity + 1, 0);
+    for (size_t i = 0; i < weight.size(); ++i)
+        for (int capacityLeft = capacity; capacityLeft >= weight[i]; --capacityLeft)         // DOWNWARD, same reason
+            best[capacityLeft] = max(best[capacityLeft], best[capacityLeft - weight[i]] + value[i]);
+    return best[capacity];
+}
+```
+
+**Complexity. `Θ(n·target)` time, `Θ(target)` space with one row.**
+
+**This is `Θ(n·S)`, which is *pseudo-polynomial*, not polynomial.** The input size is `Θ(n lg S)` bits, so the running time is **exponential in the number of bits of `S`**. Subset sum is NP-complete ([M19 *(planned)*](INDEX.md#module-map)), and this table is not a contradiction — it is fast only when `S` is small in absolute terms. Being able to say that sentence is the point of the exercise.
+
+### A7 The ordered partition problem
+
+> `M[n,k] = min_{i=1..n} max( M[i, k−1], Σ_{j=i+1..n} sⱼ )`, with `M[1,k] = s₁`.
+
+```cpp
+// Split a SEQUENCE (order fixed) into k contiguous parts, minimising the
+// largest part-sum. Skiena's "arrange the books on k shelves" problem, and
+// LeetCode 410 verbatim.
+//
+// Returns (M, D): M[i][j] is the answer for the first i items in j parts;
+// D[i][j] is the position of the LAST divider, for reconstructing the split.
+pair<vector<vector<long long>>, vector<vector<int>>>
+orderedPartition(const vector<long long>& values, int k) {
+    const int n = (int)values.size();
+    // Prefix sums: p[i] = s[0] + ... + s[i-1]. This is what makes the inner
+    // "sum of items i+1..n" an O(1) subtraction instead of an O(n) loop --
+    // turning Theta(n^2 k^2) into Theta(n^2 k). Prefix sums are to DP what
+    // hashing is to search: a constant-time answer to a repeated question.
+    vector<long long> prefix(n + 1, 0);
+    for (int i = 1; i <= n; ++i) prefix[i] = prefix[i - 1] + values[i - 1];
+
+    const long long INF = LLONG_MAX / 2;
+    vector<vector<long long>> minMaxSum(n + 1, vector<long long>(k + 1, INF));
+    vector<vector<int>> dividerAt(n + 1, vector<int>(k + 1, 0));
+
+    for (int i = 1; i <= n; ++i) minMaxSum[i][1] = prefix[i];    // one part: it holds everything
+    for (int j = 1; j <= k; ++j) minMaxSum[1][j] = values[0];    // one item: the base case
+
+    for (int i = 2; i <= n; ++i)
+        for (int j = 2; j <= k; ++j)
+            for (int lastDivider = 1; lastDivider < i; ++lastDivider) {           // last divider after item x
+                long long cost = max(minMaxSum[lastDivider][j - 1], prefix[i] - prefix[lastDivider]);
+                if (cost < minMaxSum[i][j]) { minMaxSum[i][j] = cost; dividerAt[i][j] = lastDivider; }
+            }
+    return {minMaxSum, dividerAt};
+}
+```
+
+**Complexity. `Θ(n²k)` time, `Θ(nk)` space.**
+
+**The `max` inside the `min` is the whole character of this problem.** You are minimising a *bottleneck*, not a sum — so the objective is `max(left part's answer, this part's weight)`. Recognising bottleneck objectives is worth as much as recognising DP itself: they also admit the binary-search-on-the-answer solution (guess a bound, greedily check feasibility in `O(n)`), which is `O(n lg ΣS)` and beats this table.
+
+### A8 CYK parsing
+
+> `M[i,j,X] = ⋁_{(X→YZ)} ⋁_{k=i}^{j−1} ( M[i,k,Y] ∧ M[k+1,j,Z] )`
+> and the minimum-edit variant `M′[i,j,X] = min_{(X→YZ)} min_k ( M′[i,k,Y] + M′[k+1,j,Z] )`
+
+```cpp
+// Grammar in Chomsky Normal Form: rules are either X -> Y Z or X -> terminal.
+struct Grammar {
+    int nonterminals = 0;
+    vector<array<int,3>> binary;        // {X, Y, Z} meaning X -> Y Z
+    vector<pair<int,char>> unary;       // {X, c}    meaning X -> c
+};
+
+// Can the grammar derive s[0..n-1] from the start symbol?
+// M[i][j][X] = "can X derive the substring s[i..j]?"
+bool cykParse(const Grammar& grammar, const string& input, int start) {
+    const int n = (int)input.size();
+    if (n == 0) return false;
+    // A 3-D table as a vector of vectors of vectors. Clear, and slow enough at
+    // large n that a flat vector<char> with manual indexing would be the fix.
+    vector<vector<vector<char>>> chart(
+        n, vector<vector<char>>(n, vector<char>(grammar.nonterminals, 0)));
+
+    for (int i = 0; i < n; ++i)                        // length-1 substrings
+        for (const auto& [head, terminal] : grammar.unary)
+            if (input[i] == terminal) chart[i][i][head] = 1;
+
+    // The INTERVAL-DP SKELETON again (see A2) -- shortest spans first.
+    for (int len = 2; len <= n; ++len)
+        for (int i = 0; i + len - 1 < n; ++i) {
+            int j = i + len - 1;
+            for (int k = i; k < j; ++k)                // the split point
+                for (const auto& [head, leftSym, rightSym] : grammar.binary)
+                    if (chart[i][k][leftSym] && chart[k + 1][j][rightSym]) chart[i][j][head] = 1;
+        }
+    return chart[0][n - 1][start] != 0;
+}
+
+// THE SEMIRING SWAP. Identical loop nest; (OR, AND) becomes (min, +), and
+// "can X derive this?" becomes "what is the CHEAPEST way for X to derive this,
+// allowing edits?". Changing the algebra changes the question -- the same move
+// as the tropical semiring in M15 and the (OR, AND) transitive closure in M07.
+const int CYK_INF = 1 << 29;
+
+int cykMinEdits(const Grammar& grammar, const string& input, int start) {
+    const int n = (int)input.size();
+    if (n == 0) return CYK_INF;
+    vector<vector<vector<int>>> chart(
+        n, vector<vector<int>>(n, vector<int>(grammar.nonterminals, CYK_INF)));
+
+    for (int i = 0; i < n; ++i)
+        for (const auto& [head, terminal] : grammar.unary)
+            chart[i][i][head] = min(chart[i][i][head], input[i] == terminal ? 0 : 1);   // 1 = substitute
+
+    for (int len = 2; len <= n; ++len)
+        for (int i = 0; i + len - 1 < n; ++i) {
+            int j = i + len - 1;
+            for (int k = i; k < j; ++k)
+                for (const auto& [head, leftSym, rightSym] : grammar.binary) {
+                    int a = chart[i][k][leftSym], b = chart[k + 1][j][rightSym];
+                    if (a < CYK_INF && b < CYK_INF) chart[i][j][head] = min(chart[i][j][head], a + b);
+                }
+        }
+    return chart[0][n - 1][start];
+}
+```
+
+**Complexity. `Θ(n³ · |G|)` time, `Θ(n² · |N|)` space.**
+
+### A9 Optimal binary search trees
+
+> `w(i,j) = Σ_{l=i..j} p_l + Σ_{l=i−1..j} q_l`
+> `e[i,j] = min_{i ≤ r ≤ j} ( e[i,r−1] + e[r+1,j] + w(i,j) )`, with `e[i, i−1] = q_{i−1}`.
+
+```cpp
+// p[1..n] = probabilities of searching for key i; q[0..n] = probabilities of
+// landing in the gap between keys. sum(p) + sum(q) = 1.
+//
+// Returns (e, root): e[i][j] is the expected search cost of an optimal subtree
+// over keys i..j, and root[i][j] is the key to put at that subtree's root.
+pair<vector<vector<double>>, vector<vector<int>>>
+optimalBST(const vector<double>& keyProb, const vector<double>& gapProb, int n) {
+    // (n+2) x (n+1): e is indexed [1..n+1][0..n] because of the empty subtrees
+    // e[i][i-1]. Sizing generously and never reasoning about the edges is far
+    // cheaper than a clever tight allocation (toolkit 1).
+    vector<vector<double>> expectedCost(n + 2, vector<double>(n + 1, 0.0));
+    vector<vector<double>> weight(n + 2, vector<double>(n + 1, 0.0));
+    vector<vector<int>> root(n + 1, vector<int>(n + 1, 0));
+
+    for (int i = 1; i <= n + 1; ++i) {
+        expectedCost[i][i - 1] = gapProb[i - 1];       // an empty subtree costs its dummy's weight
+        weight[i][i - 1] = gapProb[i - 1];
+    }
+    for (int len = 1; len <= n; ++len)
+        for (int i = 1; i <= n - len + 1; ++i) {
+            int j = i + len - 1;
+            expectedCost[i][j] = numeric_limits<double>::infinity();
+            weight[i][j] = weight[i][j - 1] + keyProb[j] + gapProb[j];        // w computed incrementally
+            for (int rootCandidate = i; rootCandidate <= j; ++rootCandidate) {
+                // THE KEY SIMPLIFICATION: the "+ w(i,j)" term does NOT depend on
+                // r. Every node in the subtree gains one level of depth when a
+                // root is added above it, and w(i,j) is exactly the total
+                // probability of that subtree -- so the depth increase costs
+                // w(i,j) regardless of WHICH key becomes the root. That is why
+                // the messy first form of the recurrence collapses to this one.
+                double candidate = expectedCost[i][rootCandidate - 1] + expectedCost[rootCandidate + 1][j] + weight[i][j];
+                if (candidate < expectedCost[i][j]) { expectedCost[i][j] = candidate; root[i][j] = rootCandidate; }
+            }
+        }
+    return {expectedCost, root};
+}
+```
+
+**Complexity. `Θ(n³)` time, `Θ(n²)` space** — and `Θ(n²)` with **Knuth's optimisation**, which restricts the search for `r` to `root[i][j−1] ≤ r ≤ root[i+1][j]` because the optimal root is monotone in both indices.
+
+**Contrast with a red-black tree ([M08](M08-search-trees.md)):** a balanced tree minimises the *worst-case* depth with no knowledge of the query distribution; an optimal BST minimises the *expected* depth given that distribution, and may be deliberately unbalanced to put a frequently-searched key near the root.
+
+### A10 War story — text compression for Bumstead
+
+> `M[i,j] = min_{1 ≤ m ≤ 4} ( M[i−1,m] + c(Sᵢ, m, j) )`
+
+```cpp
+// Skiena's dictionary-compression story, reduced to its recurrence:
+// M[i][j] = cheapest way to encode the first i tokens such that token i is
+// encoded in "mode" j (one of a small fixed set of encodings).
+//
+// The shape to notice: the state is (position, mode-of-the-last-item), and the
+// transition pays a cost that depends on BOTH the previous mode and this one.
+// That is the general "DP over a sequence with a small carried state" pattern,
+// and it covers a huge fraction of real DP problems.
+//
+// cost(i, prevMode, mode) is problem-specific; passed in as a callable so the
+// recurrence stands alone.
+long long sequenceModeDP(int n, int modes,
+                         const function<long long(int,int,int)>& cost) {
+    const long long INF = LLONG_MAX / 4;
+    vector<vector<long long>> best(n + 1, vector<long long>(modes, INF));
+    for (int j = 0; j < modes; ++j) best[0][j] = 0;      // nothing encoded yet
+
+    for (int i = 1; i <= n; ++i)
+        for (int j = 0; j < modes; ++j)               // mode for token i
+            for (int prevMode = 0; prevMode < modes; ++prevMode) {         // mode used for token i-1
+                if (best[i - 1][prevMode] >= INF) continue;     // unreachable state
+                long long stepCost = cost(i, prevMode, j);
+                if (stepCost >= INF) continue;
+                best[i][j] = min(best[i][j], best[i - 1][prevMode] + stepCost);
+            }
+    return *min_element(best[n].begin(), best[n].end());
+}
+```
+
+**Complexity. `Θ(n · modes²)`** — linear in the sequence, quadratic only in the (tiny, constant) state space.
+
+**The lesson of the war story** is not the compression. It is that the problem arrived as *"make this text smaller"* and became tractable only once it was restated as *"choose one encoding mode per token, minimising total cost"* — at which point the recurrence above is immediate. **Modelling is the hard step; the DP is the easy one.**
+
+### A11 War story — the balance of power
+
+> `C[n, w_A, w_B] = C[n−1, w_A − sₙ, w_B] ∨ C[n−1, w_A, w_B − sₙ] ∨ C[n−1, w_A, w_B]`
+
+```cpp
+// Partition items into two piles (plus a discard pile), tracking BOTH pile
+// weights. Reachable[wA][wB] = "can the first i items produce these two sums?"
+//
+// This is subset sum with two accumulators instead of one, and it is the
+// canonical example of the DP state space exploding: one budget gives
+// Theta(n*S), two give Theta(n*S^2). Adding a dimension to the state multiplies
+// the cost by that dimension's size -- which is why "just add another
+// dimension" stops working around three.
+vector<vector<char>> balanceOfPower(const vector<int>& values, int maxWeight) {
+    const int maxSum = maxWeight;
+    vector<vector<char>> reachable(maxSum + 1, vector<char>(maxSum + 1, 0));
+    reachable[0][0] = 1;                                   // both piles empty
+
+    for (int value : values) {
+        // Iterate DOWNWARD in both dimensions, for exactly the reason in A6:
+        // each item may be used at most once, and an upward scan would let a
+        // cell updated by item x be read again by item x.
+        for (int sumA = maxSum; sumA >= 0; --sumA)
+            for (int sumB = maxSum; sumB >= 0; --sumB) {
+                if (!reachable[sumA][sumB]) continue;
+                if (sumA + value <= maxSum) reachable[sumA + value][sumB] = 1;   // put x in pile A
+                if (sumB + value <= maxSum) reachable[sumA][sumB + value] = 1;   // put x in pile B
+                // and "discard x" is the do-nothing case: reach[a][b] already 1
+            }
+    }
+    return reachable;
+}
+
+// The most balanced achievable split.
+pair<int,int> mostBalanced(const vector<int>& values, int maxWeight) {
+    vector<vector<char>> reachable = balanceOfPower(values, maxWeight);
+    int bestA = 0, bestB = 0, bestGap = INT_MAX;
+    for (int sumA = 0; sumA <= maxWeight; ++sumA)
+        for (int sumB = 0; sumB <= maxWeight; ++sumB)
+            if (reachable[sumA][sumB] && abs(sumA - sumB) < bestGap) { bestGap = abs(sumA - sumB); bestA = sumA; bestB = sumB; }
+    return {bestA, bestB};
+}
+```
+
+**Complexity. `Θ(n · W²)` time, `Θ(W²)` space** — pseudo-polynomial in `W`, and *squared* because the state carries two budgets.
+
+**The general principle these two war stories share:** a DP's cost is `(number of states) × (choices per state)`. Getting a DP to run is almost always about **shrinking the state**, not about speeding up the transition — dropping a dimension, exploiting monotonicity ([Knuth, A9](#a9-optimal-binary-search-trees)), or noticing that only the last row matters (toolkit §4).
+
 
 ---
 

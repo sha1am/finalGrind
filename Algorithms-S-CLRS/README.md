@@ -10,43 +10,37 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 
 ---
 
-## State of the refinement pass (as of this archive)
-
-A refinement pass is underway. It has three parts; two are complete across **all** files, the third is complete for **M01–M08**.
-
-### Done everywhere (INDEX + M01–M15)
+## The refinement pass — complete for all 15 modules
 
 | | |
 |---|---|
-| **`using namespace std;` everywhere** | 647 `std::` prefixes removed from code blocks. Every block assumes the prelude `#include <bits/stdc++.h>` + `using namespace std;`. |
-| **Every code block compiles** | All 16 files verified under `g++ -std=c++17 -Wall -Wextra`. Illustrative fragments were rewritten into real compilable functions rather than left as snippets. |
-| **All links resolve** | 284 links checked, **0 broken**. Fixed a genuinely broken filename (`M13-graph-traversal.md` → `M13-graphs-traversal.md`) and repointed 17 forward-references to modules that do not exist yet at the INDEX roadmap. |
-| **INDEX rewritten** | Module map now carries a status column (✅ written / ⏳ planned), plus a new "C++ conventions" section. |
+| **`using namespace std;` everywhere** | 647 `std::` prefixes removed. Every block assumes the prelude `#include <bits/stdc++.h>` + `using namespace std;`. |
+| **Every code block compiles** | 30 translation units (a body TU and an appendix TU per module) verified under `g++ -std=c++17 -Wall -Wextra`. Illustrative fragments were rewritten into real compilable functions rather than left as snippets. |
+| **All links resolve** | 435 links checked, **0 broken**. Fixed a genuinely broken filename (`M13-graph-traversal.md`) and repointed 17 forward-references to unwritten modules at the INDEX roadmap. |
+| **Practice sections** | Every module has a *Practice — where to drill this module* table: specific problems by number and title, plus CSES and Codeforces tag pages. **Every LeetCode slug was verified against live search**, not written from memory. |
+| **C++ Toolkit per module** | A primer on the C++ features that module's code leans on, grounded in Mark Allen Weiss, *Data Structures and Algorithm Analysis in C++*, 4th ed., cited by section and page. |
+| **Appendix per module** | A heavily-commented, runnable C++ translation of **every** pseudocode block, kept line-for-line faithful to the pseudocode (1-based indexing and all). |
+| **Links under every pseudocode block** | **95** `→ C++ implementation:` links, covering all **71** procedure-pseudocode blocks plus 24 algorithmic recurrences and formulas (M11's DP recurrences, M07's hash functions, M02's summations). |
 
-### Done for M01–M08 only
+### Per-module coverage
 
-Each of these modules now ends with three new sections:
-
-1. **Practice — where to drill this module.** A table of specific problems (LeetCode number + title + link), plus CSES and Codeforces tag pages. **Every LeetCode slug was verified against live search**, not written from memory.
-2. **C++ Toolkit for This Module.** A primer on the C++ features that module's code leans on, grounded in Mark Allen Weiss, *Data Structures and Algorithm Analysis in C++*, 4th ed., ch. 1 — parameter passing, return passing, references, the Big-Five, templates, function objects, iterator invalidation, and so on, cited by section and page.
-3. **Appendix — C++ for Every Pseudocode Block.** A heavily-commented, runnable C++ translation of *every* pseudocode block in that module, kept line-for-line faithful to the pseudocode (1-based indexing and all), so you can read them side by side. **Each pseudocode block in the body carries a `→ C++ implementation:` link straight to its appendix entry.**
-
-Appendix coverage so far: **61 pseudocode blocks** implemented and linked.
-
-| Module | pseudocode blocks linked |
-|---|---|
-| M01 Foundations | 6 |
-| M02 Asymptotics | 6 |
-| M03 Divide & Conquer | 5 |
-| M04 Randomization | 5 |
-| M05 Sorting | 10 |
-| M06 Elementary Data Structures | 3 |
-| M07 Hashing | 9 |
-| M08 Search Trees | 17 |
-
-### Not yet done
-
-**M09–M15** (Amortized, Union-Find, Dynamic Programming, Greedy, Graph Traversal, MST, Shortest Paths) have the `std::` cleanup, the compile verification and the link fixes, but **not yet** the Practice / C++ Toolkit / Appendix sections. Their pseudocode blocks do not yet carry `→ C++ implementation:` links. They already contain substantial C++ implementations in the body — those are unchanged and correct.
+| Module | pseudocode blocks | C++ links | appendix code blocks |
+|---|---|---|---|
+| M01 Foundations | 6 | 6 | 6 |
+| M02 Asymptotics | 1 | 6 | 6 |
+| M03 Divide & Conquer | 3 | 5 | 5 |
+| M04 Randomization | 5 | 5 | 5 |
+| M05 Sorting | 10 | 10 | 11 |
+| M06 Elementary Data Structures | 3 | 3 | 3 |
+| M07 Hashing | 3 | 9 | 7 |
+| M08 Search Trees | 17 | 17 | 18 |
+| M09 Amortized Analysis | 3 | 3 | 3 |
+| M10 Union-Find | 5 | 5 | 7 |
+| M11 Dynamic Programming | 0 (recurrences) | 11 | 11 |
+| M12 Greedy | 2 | 2 | 2 |
+| M13 Graph Traversal | 4 | 4 | 5 |
+| M14 Minimum Spanning Trees | 3 | 3 | 4 |
+| M15 Shortest Paths | 6 | 6 | 7 |
 
 ---
 
@@ -55,7 +49,17 @@ Appendix coverage so far: **61 pseudocode blocks** implemented and linked.
 They are deliberately different, and comparing them is the point:
 
 - **Body implementations** are the *practical* version — what you would actually write, 0-indexed, using the STL where it helps.
-- **Appendix implementations** are *literal translations of the pseudocode*, line for line, keeping CLRS's 1-based indexing and variable names, with comments explaining both the algorithm and the C++.
+- **Appendix implementations** are *literal translations of the pseudocode*, line for line, keeping CLRS's 1-based indexing and variable names, with comments explaining both the algorithm and the C++ decision behind each line.
+
+---
+
+## How to use these notes
+
+1. Read a module's **Big Idea** and **What You Should Be Able To Do**.
+2. Work through the body, following each `→ C++ implementation:` link when you want to see the pseudocode become code.
+3. Read the **C++ Toolkit** once per module — it explains the language features that module's code depends on.
+4. Drill the **Practice** table.
+5. Revise from the **One-Page Recall** / **Chapter in One Page** section at the end, not from the whole module.
 
 ---
 
@@ -68,3 +72,9 @@ They are deliberately different, and comparing them is the point:
 | Mark Allen Weiss, *Data Structures and Algorithm Analysis in C++*, 4th ed. | **the C++ language teaching only** — cited as `[Weiss §1.5.3, p.25]` |
 
 Citations look like `[CLRS §2.1, p.17]` and `[Skiena §1.3, p.11]` so you can go back to the source quickly.
+
+---
+
+## Still to be written
+
+M16–M27 (network flow, backtracking, strings, NP-completeness, approximation, number theory, linear programming, FFT, parallel/online, ML, geometry, and the master cheat sheet). The INDEX carries the full roadmap with status markers.

@@ -834,45 +834,45 @@ public:
     // Size for an expected number of items and a target false-positive rate.
     // Optimal:  n = -expected*ln(p) / (ln 2)^2  bits,  k = (n/expected)*ln 2.
     BloomFilter(size_t expectedItems, double falsePositiveRate) {
-        const double bits = -double(expectedItems) * log(falsePositiveRate)
+        const double bitCount = -double(expectedItems) * log(falsePositiveRate)
                             / (log(2.0) * log(2.0));
-        nBits_ = max<size_t>(64, static_cast<size_t>(bits) + 1);
-        k_ = max<int>(1, static_cast<int>(
-                 round(bits / double(expectedItems) * log(2.0))));
+        nBits_ = max<size_t>(64, static_cast<size_t>(bitCount) + 1);
+        hashCount_ = max<int>(1, static_cast<int>(
+                 round(bitCount / double(expectedItems) * log(2.0))));
         bits_.assign((nBits_ + 63) / 64, 0);
     }
 
-    void insert(const string& s) {
-        auto [h1, h2] = baseHashes(s);
-        for (int i = 0; i < k_; ++i) setBit(nth(h1, h2, i));
+    void insert(const string& seed) {
+        auto [h1, h2] = baseHashes(seed);
+        for (int i = 0; i < hashCount_; ++i) setBit(nth(h1, h2, i));
     }
 
     // false  => DEFINITELY absent.   true => probably present.
-    bool mightContain(const string& s) const {
-        auto [h1, h2] = baseHashes(s);
-        for (int i = 0; i < k_; ++i)
+    bool mightContain(const string& seed) const {
+        auto [h1, h2] = baseHashes(seed);
+        for (int i = 0; i < hashCount_; ++i)
             if (!testBit(nth(h1, h2, i))) return false;
         return true;
     }
 
-    int numHashes() const { return k_; }
+    int numHashes() const { return hashCount_; }
     size_t numBits() const { return nBits_; }
 
 private:
     vector<uint64_t> bits_;
     size_t nBits_ = 0;
-    int k_ = 0;
+    int hashCount_ = 0;
 
     // Kirsch-Mitzenmacher: k hashes from 2 via g_i(x) = h1 + i*h2.
     // Provably as good asymptotically as k independent hashes.
     size_t nth(uint64_t h1, uint64_t h2, int i) const {
         return static_cast<size_t>((h1 + uint64_t(i) * h2) % nBits_);
     }
-    static pair<uint64_t, uint64_t> baseHashes(const string& s) {
+    static pair<uint64_t, uint64_t> baseHashes(const string& seed) {
         uint64_t a = 1469598103934665603ULL;      // FNV-1a
-        for (unsigned char c : s) { a ^= c; a *= 1099511628211ULL; }
+        for (unsigned char c : seed) { a ^= c; a *= 1099511628211ULL; }
         uint64_t b = 14695981039346656037ULL;     // a second, different seed
-        for (unsigned char c : s) { b = (b * 31) + c; }
+        for (unsigned char c : seed) { b = (b * 31) + c; }
         return {a, b | 1ULL};                          // keep h2 nonzero
     }
     void setBit(size_t i)        { bits_[i >> 6] |= (1ULL << (i & 63)); }
@@ -976,11 +976,11 @@ H(S, j+1) = α·(H(S, j) − α^{m−1}·char(s_j)) + char(s_{j+m})
 
 // Rabin-Karp substring search. Expected O(n + m); worst case O(nm) if the
 // adversary knows the modulus (hence the randomized base).
-vector<int> rabinKarp(const string& text, const string& pat) {
-    vector<int> hits;
-    const int n = static_cast<int>(text.size());
-    const int m = static_cast<int>(pat.size());
-    if (m == 0 || m > n) return hits;
+vector<int> rabinKarp(const string& text, const string& pattern) {
+    vector<int> matches;
+    const int textLen = static_cast<int>(text.size());
+    const int patLen = static_cast<int>(pattern.size());
+    if (patLen == 0 || patLen > textLen) return matches;
 
     constexpr uint64_t kMod = (1ULL << 61) - 1;          // Mersenne prime
     static mt19937_64 rng(random_device{}());
@@ -992,25 +992,25 @@ vector<int> rabinKarp(const string& text, const string& pat) {
 
     // highPow = base^(m-1) mod kMod -- the weight of the character leaving the window.
     uint64_t highPow = 1;
-    for (int i = 0; i < m - 1; ++i) highPow = mulMod(highPow, base);
+    for (int i = 0; i < patLen - 1; ++i) highPow = mulMod(highPow, base);
 
     uint64_t hPat = 0, hWin = 0;
-    for (int i = 0; i < m; ++i) {
-        hPat = (mulMod(hPat, base) + static_cast<unsigned char>(pat[i]))  % kMod;
+    for (int i = 0; i < patLen; ++i) {
+        hPat = (mulMod(hPat, base) + static_cast<unsigned char>(pattern[i]))  % kMod;
         hWin = (mulMod(hWin, base) + static_cast<unsigned char>(text[i])) % kMod;
     }
 
-    for (int j = 0; ; ++j) {
+    for (int start = 0; ; ++start) {
         // Hash match is necessary but not sufficient -- verify in O(m).
-        if (hWin == hPat && text.compare(j, m, pat) == 0) hits.push_back(j);
-        if (j + m >= n) break;
+        if (hWin == hPat && text.compare(start, patLen, pattern) == 0) matches.push_back(start);
+        if (start + patLen >= textLen) break;
         // Roll: drop text[j], shift, add text[j+m].
         const uint64_t out =
-            mulMod(highPow, static_cast<unsigned char>(text[j]));
+            mulMod(highPow, static_cast<unsigned char>(text[start]));
         hWin = (hWin + kMod - out) % kMod;                    // +kMod avoids underflow
-        hWin = (mulMod(hWin, base) + static_cast<unsigned char>(text[j + m])) % kMod;
+        hWin = (mulMod(hWin, base) + static_cast<unsigned char>(text[start + patLen])) % kMod;
     }
-    return hits;
+    return matches;
 }
 ```
 
@@ -1255,12 +1255,12 @@ struct Point { int x, y; bool operator==(const Point& o) const { return x == o.x
 // the very few places the standard permits you to add to it.
 namespace std {
 template <> struct hash<Point> {
-    size_t operator()(const Point& p) const noexcept {
+    size_t operator()(const Point& point) const noexcept {
         // Do NOT write hash<int>{}(p.x) ^ hash<int>{}(p.y): XOR is symmetric,
         // so (3,5) and (5,3) collide, and (a,a) hashes to 0 for every a.
-        size_t h = hash<int>{}(p.x);
-        h ^= hash<int>{}(p.y) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-        return h;   // boost::hash_combine's mixer: the constant is 2^64/phi
+        size_t combined = hash<int>{}(point.x);
+        combined ^= hash<int>{}(point.y) + 0x9e3779b97f4a7c15ULL + (combined << 6) + (combined >> 2);
+        return combined;   // boost::hash_combine's mixer: the constant is 2^64/phi
     }
 };
 }
@@ -1268,8 +1268,8 @@ template <> struct hash<Point> {
 // Option B: a function object passed as the third template argument -- Weiss's
 // function-object idiom [1.6.4, p.41] applied to hashing.
 struct PointHash {
-    size_t operator()(const Point& p) const noexcept {
-        return (size_t)p.x * 1000003u + (size_t)p.y;
+    size_t operator()(const Point& point) const noexcept {
+        return (size_t)point.x * 1000003u + (size_t)point.y;
     }
 };
 using PointSet = unordered_set<Point, PointHash>;
@@ -1281,9 +1281,9 @@ using PointSet = unordered_set<Point, PointHash>;
 
 ```cpp
 void reserveDemo(int n) {
-    unordered_map<int,int> m;
-    m.reserve(n);                 // pre-size the bucket array: no rehashing during fill
-    m.max_load_factor(0.5f);      // trade memory for fewer collisions (default is 1.0)
+    unordered_map<int,int> table;
+    table.reserve(n);                 // pre-size the bucket array: no rehashing during fill
+    table.max_load_factor(0.5f);      // trade memory for fewer collisions (default is 1.0)
 }
 ```
 
@@ -1301,14 +1301,14 @@ void reserveDemo(int n) {
 
 ```cpp
 struct SafeHash {
-    size_t operator()(uint64_t x) const {
+    size_t operator()(uint64_t key) const {
         // A per-process random offset the adversary cannot predict.
         static const uint64_t FIXED =
             chrono::steady_clock::now().time_since_epoch().count();
-        x += FIXED + 0x9e3779b97f4a7c15ULL;
-        x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;   // splitmix64
-        x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
-        return (size_t)(x ^ (x >> 31));
+        key += FIXED + 0x9e3779b97f4a7c15ULL;
+        key = (key ^ (key >> 30)) * 0xbf58476d1ce4e5b9ULL;   // splitmix64
+        key = (key ^ (key >> 27)) * 0x94d049bb133111ebULL;
+        return (size_t)(key ^ (key >> 31));
     }
 };
 ```
@@ -1318,8 +1318,8 @@ struct SafeHash {
 `(a * k + b) % p` with 64-bit `a` and `k` overflows before the modulo. GCC/Clang's 128-bit integer type is the practical fix:
 
 ```cpp
-uint64_t mulmod(uint64_t a, uint64_t k, uint64_t b, uint64_t p) {
-    return (uint64_t)(((unsigned __int128)a * k + b) % p);
+uint64_t mulmod(uint64_t multiplier, uint64_t key, uint64_t offset, uint64_t prime) {
+    return (uint64_t)(((unsigned __int128)multiplier * key + offset) % prime);
 }
 ```
 
@@ -1352,13 +1352,13 @@ class DirectAddressTable {
 public:
     // `explicit` prevents `DirectAddressTable<int> t = 1000;` from compiling --
     // a size is not a table [Weiss 1.4.2].
-    explicit DirectAddressTable(size_t universe) : slot_(universe, nullptr) {}
+    explicit DirectAddressTable(size_t universeSize) : slot_(universeSize, nullptr) {}
 
-    T* search(size_t k) const   { return slot_[k]; }    // DIRECT-ADDRESS-SEARCH
-    void insert(size_t k, T* x) { slot_[k] = x; }       // DIRECT-ADDRESS-INSERT
-    void erase(size_t k)        { slot_[k] = nullptr; } // DIRECT-ADDRESS-DELETE
+    T* search(size_t key) const   { return slot_[key]; }    // DIRECT-ADDRESS-SEARCH
+    void insert(size_t key, T* item) { slot_[key] = item; }       // DIRECT-ADDRESS-INSERT
+    void erase(size_t key)        { slot_[key] = nullptr; } // DIRECT-ADDRESS-DELETE
 
-    size_t universe() const { return slot_.size(); }
+    size_t universeSize() const { return slot_.size(); }
 private:
     // Pointers, not values: NIL has to be representable, and nullptr is it.
     // Storing T by value would need a separate "occupied" flag.
@@ -1379,7 +1379,7 @@ private:
 ```cpp
 class ChainedHashTable {
 public:
-    explicit ChainedHashTable(size_t m) : table_(m) {}
+    explicit ChainedHashTable(size_t slotCount) : table_(slotCount) {}
 
     // The cast to unsigned matters: in C++, (-7) % 97 is -7, and a negative
     // index into a vector is undefined behaviour. Cast FIRST, then take mod.
@@ -1416,7 +1416,7 @@ public:
 
     size_t longestChain() const {
         size_t mx = 0;
-        for (const auto& c : table_) mx = max(mx, c.size());
+        for (const auto& chain : table_) mx = max(mx, chain.size());
         return mx;
     }
 private:
@@ -1455,7 +1455,7 @@ public:
     // (Probe::Linear, not just Linear) and do not implicitly convert to int.
     enum class Probe { Linear, Quadratic, Double };
 
-    OpenAddressingTable(size_t m, Probe p) : slot_(m, EMPTY), probe_(p) {}
+    OpenAddressingTable(size_t slotCount, Probe strategy) : slot_(slotCount, EMPTY), probe_(strategy) {}
 
     // Two sentinel values, and the difference between them is the whole reason
     // deletion is hard in an open-addressed table:
@@ -1469,17 +1469,17 @@ public:
     static constexpr long long EMPTY   = LLONG_MIN;
     static constexpr long long DELETED = LLONG_MIN + 1;
 
-    size_t h1(long long k) const { return (size_t)(((unsigned long long)k) % slot_.size()); }
-    size_t h2(long long k) const { return 1 + (size_t)(((unsigned long long)k) % (slot_.size() - 1)); }
+    size_t primaryHash(long long key) const { return (size_t)(((unsigned long long)key) % slot_.size()); }
+    size_t stepHash(long long key) const { return 1 + (size_t)(((unsigned long long)key) % (slot_.size() - 1)); }
     //                             ^^^ the +1 is essential: a step of 0 would
     //                             probe the same slot forever.
 
-    size_t probeAt(long long k, size_t i) const {
-        const size_t m = slot_.size();
+    size_t probeAt(long long key, size_t probe) const {
+        const size_t slotCount = slot_.size();
         switch (probe_) {
-            case Probe::Linear:    return (h1(k) + i) % m;                  // h1 + i
-            case Probe::Quadratic: return (h1(k) + i + 3 * i * i) % m;      // h1 + c1 i + c2 i^2
-            case Probe::Double:    return (h1(k) + i * h2(k)) % m;          // h1 + i*h2
+            case Probe::Linear:    return (primaryHash(key) + probe) % slotCount;                  // h1 + i
+            case Probe::Quadratic: return (primaryHash(key) + probe + 3 * probe * probe) % slotCount;      // h1 + c1 i + c2 i^2
+            case Probe::Double:    return (primaryHash(key) + probe * stepHash(key)) % slotCount;          // h1 + i*h2
         }
         return 0;
     }
@@ -1487,38 +1487,38 @@ public:
     long long probesLastOp = 0;     // instrumentation
 
     // HASH-INSERT(T, k)
-    bool insert(long long k) {
-        const size_t m = slot_.size();
+    bool insert(long long key) {
+        const size_t slotCount = slot_.size();
         probesLastOp = 0;
-        for (size_t i = 0; i < m; ++i) {                 // 2  repeat ... 8  until i == m
+        for (size_t probe = 0; probe < slotCount; ++probe) {                 // 2  repeat ... 8  until i == m
             ++probesLastOp;
-            size_t q = probeAt(k, i);                    // 3  q = h(k, i)
-            if (slot_[q] == EMPTY || slot_[q] == DELETED) { slot_[q] = k; return true; }  // 4-5
-            if (slot_[q] == k) return true;              // already present
+            size_t slot = probeAt(key, probe);                    // 3  q = h(k, i)
+            if (slot_[slot] == EMPTY || slot_[slot] == DELETED) { slot_[slot] = key; return true; }  // 4-5
+            if (slot_[slot] == key) return true;              // already present
         }
         return false;                                    // 9  "hash table overflow"
     }
 
     // HASH-SEARCH(T, k)
-    bool search(long long k) {
-        const size_t m = slot_.size();
+    bool search(long long key) {
+        const size_t slotCount = slot_.size();
         probesLastOp = 0;
-        for (size_t i = 0; i < m; ++i) {
+        for (size_t probe = 0; probe < slotCount; ++probe) {
             ++probesLastOp;
-            size_t q = probeAt(k, i);
-            if (slot_[q] == k) return true;              // 4  if T[q] == k: return q
-            if (slot_[q] == EMPTY) return false;         // 7  until T[q] == NIL
+            size_t slot = probeAt(key, probe);
+            if (slot_[slot] == key) return true;              // 4  if T[q] == k: return q
+            if (slot_[slot] == EMPTY) return false;         // 7  until T[q] == NIL
             // NOTE: DELETED does NOT stop the scan. That is the whole point.
         }
         return false;                                    // 8  return NIL
     }
 
-    bool erase(long long k) {
-        const size_t m = slot_.size();
-        for (size_t i = 0; i < m; ++i) {
-            size_t q = probeAt(k, i);
-            if (slot_[q] == k) { slot_[q] = DELETED; return true; }   // tombstone
-            if (slot_[q] == EMPTY) return false;
+    bool erase(long long key) {
+        const size_t slotCount = slot_.size();
+        for (size_t probe = 0; probe < slotCount; ++probe) {
+            size_t slot = probeAt(key, probe);
+            if (slot_[slot] == key) { slot_[slot] = DELETED; return true; }   // tombstone
+            if (slot_[slot] == EMPTY) return false;
         }
         return false;
     }
@@ -1555,8 +1555,8 @@ Both **blow up as `α → 1`**: `α = 0.5` costs 2 probes, `α = 0.9` costs 10, 
 
 ```cpp
 // DIVISION METHOD: h(k) = k mod m.  Fast (one divide) and fragile.
-size_t divisionHash(long long k, size_t m) {
-    return (size_t)(((unsigned long long)k) % m);
+size_t divisionHash(long long key, size_t slotCount) {
+    return (size_t)(((unsigned long long)key) % slotCount);
 }
 
 // MULTIPLY-SHIFT, CLRS eq. (11.2): h_a(k) = (k*a mod 2^w) >> (w - l), m = 2^l.
@@ -1569,9 +1569,9 @@ size_t divisionHash(long long k, size_t m) {
 //
 // `a` must be ODD (so the map is a bijection mod 2^64); this constant is
 // 2^64 / phi, the golden-ratio multiplier Knuth recommends.
-size_t multiplyShiftHash(uint64_t k, unsigned ell) {
-    static const uint64_t a = 0x9E3779B97F4A7C15ULL | 1ULL;
-    return (size_t)((k * a) >> (64 - ell));
+size_t multiplyShiftHash(uint64_t key, unsigned tableBits) {
+    static const uint64_t multiplier = 0x9E3779B97F4A7C15ULL | 1ULL;
+    return (size_t)((key * multiplier) >> (64 - tableBits));
 }
 
 // THEOREM 11.4's universal family: h_{ab}(k) = ((a*k + b) mod p) mod m.
@@ -1579,27 +1579,27 @@ size_t multiplyShiftHash(uint64_t k, unsigned ell) {
 // FUNCTION, not in hashing each key. Two calls with the same k give the same
 // slot; two different UnversalHash objects generally do not.
 struct UniversalHash {
-    uint64_t a, b, p;
-    size_t m;
-    UniversalHash(size_t m_, uint64_t p_ = 2147483647ULL) : p(p_), m(m_) {   // p = 2^31 - 1, prime
-        a = uniform_int_distribution<uint64_t>(1, p - 1)(rng());   // a in Z_p^*  (never 0)
-        b = uniform_int_distribution<uint64_t>(0, p - 1)(rng());   // b in Z_p
+    uint64_t multiplier, offset, prime;
+    size_t slotCount;
+    UniversalHash(size_t slots, uint64_t primeModulus = 2147483647ULL) : prime(primeModulus), slotCount(slots) {   // p = 2^31 - 1, prime
+        multiplier = uniform_int_distribution<uint64_t>(1, prime - 1)(rng());   // a in Z_p^*  (never 0)
+        offset = uniform_int_distribution<uint64_t>(0, prime - 1)(rng());   // b in Z_p
     }
-    size_t operator()(uint64_t k) const {
+    size_t operator()(uint64_t key) const {
         // unsigned __int128 (toolkit 6): a*k overflows 64 bits before the mod.
-        return (size_t)(((unsigned __int128)a * k + b) % p % m);
+        return (size_t)(((unsigned __int128)multiplier * key + offset) % prime % slotCount);
     }
 };
 
 // Skiena's string hash: treat characters as digits in base alpha, reduce mod m.
 // Horner's rule -- one multiply-add per character, and the mod at every step
 // keeps h bounded so it never overflows.
-uint64_t stringHash(const string& s, uint64_t alpha, uint64_t mod) {
-    uint64_t h = 0;
+uint64_t stringHash(const string& text, uint64_t base, uint64_t modulus) {
+    uint64_t hash = 0;
     // `unsigned char`, not `char`: plain char is SIGNED on x86, so a byte >= 128
     // would contribute a negative value and wreck the hash for non-ASCII input.
-    for (unsigned char c : s) h = (h * alpha + c) % mod;
-    return h;
+    for (unsigned char ch : text) hash = (hash * base + ch) % modulus;
+    return hash;
 }
 ```
 
@@ -1621,38 +1621,38 @@ uint64_t stringHash(const string& s, uint64_t alpha, uint64_t mod) {
 
 ```cpp
 // Returns every index where `pat` occurs in `text`.
-vector<int> rabinKarp(const string& text, const string& pat,
-                      uint64_t alpha = 257, uint64_t mod = 1000000007ULL,
-                      long long* fullCompares = nullptr) {
-    vector<int> hits;
-    const int n = (int)text.size(), m = (int)pat.size();
-    if (m == 0 || m > n) return hits;
+vector<int> rabinKarp(const string& text, const string& pattern,
+                      uint64_t base = 257, uint64_t modulus = 1000000007ULL,
+                      long long* verifications = nullptr) {
+    vector<int> matches;
+    const int textLen = (int)text.size(), patLen = (int)pattern.size();
+    if (patLen == 0 || patLen > textLen) return matches;
 
     // alpha^(m-1) mod mod -- the weight of the character LEAVING the window.
-    uint64_t high = 1;
-    for (int i = 0; i < m - 1; ++i) high = (high * alpha) % mod;
+    uint64_t topWeight = 1;
+    for (int i = 0; i < patLen - 1; ++i) topWeight = (topWeight * base) % modulus;
 
-    uint64_t hp = stringHash(pat, alpha, mod);
-    uint64_t ht = stringHash(text.substr(0, m), alpha, mod);
+    uint64_t patternHash = stringHash(pattern, base, modulus);
+    uint64_t windowHash = stringHash(text.substr(0, patLen), base, modulus);
 
-    for (int j = 0; ; ++j) {
-        if (ht == hp) {
+    for (int start = 0; ; ++start) {
+        if (windowHash == patternHash) {
             // A hash match is only EVIDENCE, never proof: different strings can
             // share a hash. Verify with a real comparison. Skipping this makes
             // the algorithm Monte Carlo (fast, occasionally wrong) instead of
             // Las Vegas (always right, fast in expectation).
-            if (fullCompares) ++*fullCompares;
-            if (text.compare(j, m, pat) == 0) hits.push_back(j);
+            if (verifications) ++*verifications;
+            if (text.compare(start, patLen, pattern) == 0) matches.push_back(start);
         }
-        if (j + m >= n) break;
+        if (start + patLen >= textLen) break;
 
         // THE ROLL, in two steps, and note the `+ mod` before subtracting:
         //   ht - x  on unsigned types WRAPS if x > ht. Adding `mod` first keeps
         //   the value positive; this is the single most common rolling-hash bug.
-        ht = (ht + mod - (high * (unsigned char)text[j]) % mod) % mod;   // drop text[j]
-        ht = (ht * alpha + (unsigned char)text[j + m]) % mod;            // shift, add text[j+m]
+        windowHash = (windowHash + modulus - (topWeight * (unsigned char)text[start]) % modulus) % modulus;   // drop text[j]
+        windowHash = (windowHash * base + (unsigned char)text[start + patLen]) % modulus;            // shift, add text[j+m]
     }
-    return hits;
+    return matches;
 }
 ```
 
@@ -1670,18 +1670,18 @@ vector<int> rabinKarp(const string& text, const string& pat,
 class BloomFilter {
 public:
     // bits = total bit array size, k = number of hash functions.
-    BloomFilter(size_t bits, int k) : bits_(bits, false), k_(k) {
+    BloomFilter(size_t bitCount, int hashCount) : bits_(bitCount, false), hashCount_(hashCount) {
         // k independent hashes, made by k random odd multipliers. Drawing them
         // at run time is the universal-hashing idea again: an adversary cannot
         // pre-compute a set of keys that all collide.
-        for (int i = 0; i < k; ++i) seeds_.push_back(randU64() | 1ULL);
+        for (int i = 0; i < hashCount; ++i) seeds_.push_back(randU64() | 1ULL);
     }
 
-    void insert(uint64_t key) { for (size_t idx : positions(key)) bits_[idx] = true; }
+    void insert(uint64_t key) { for (size_t bit : positions(key)) bits_[bit] = true; }
 
     // The name is the specification: a `true` MIGHT be wrong, a `false` never is.
     bool mightContain(uint64_t key) const {
-        for (size_t idx : positions(key)) if (!bits_[idx]) return false;
+        for (size_t bit : positions(key)) if (!bits_[bit]) return false;
         return true;
     }
 
@@ -1691,22 +1691,22 @@ private:
     // vector<bool> is the bit-packed specialisation (toolkit 7). Everywhere else
     // it is a trap; here its 8x density is the entire reason the structure exists.
     vector<bool> bits_;
-    int k_;
+    int hashCount_;
     vector<uint64_t> seeds_;
 
     vector<size_t> positions(uint64_t key) const {
-        vector<size_t> out;
-        out.reserve(k_);
-        for (uint64_t s : seeds_) {
-            uint64_t h = key * s;              // multiply...
-            h ^= h >> 29; h *= 0xBF58476D1CE4E5B9ULL; h ^= h >> 32;   // ...then AVALANCHE:
+        vector<size_t> positionsOut;
+        positionsOut.reserve(hashCount_);
+        for (uint64_t seed : seeds_) {
+            uint64_t mixed = key * seed;              // multiply...
+            mixed ^= mixed >> 29; mixed *= 0xBF58476D1CE4E5B9ULL; mixed ^= mixed >> 32;   // ...then AVALANCHE:
             // the shift-xor-multiply chain (splitmix64's finaliser) makes every
             // input bit affect every output bit. Without it, `key * s` leaves the
             // low bits barely mixed and the filter's error rate is far worse than
             // the formula predicts.
-            out.push_back((size_t)(h % bits_.size()));
+            positionsOut.push_back((size_t)(mixed % bits_.size()));
         }
-        return out;
+        return positionsOut;
     }
 };
 ```

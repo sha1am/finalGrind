@@ -919,7 +919,7 @@ Weiss [§1.6.1, p.37]: a function template *"is not an actual function, but inst
 
 ```cpp
 template <typename Comparable>
-void insertionSort1Indexed(vector<Comparable>& A, int n);
+void insertionSort1Indexed(vector<Comparable>& arr, int n);
 ```
 
 Weiss's warning applies directly: *"it is customary to include, prior to any template, comments that explain what assumptions are made about the template argument(s)."* A template that needs `<` and is handed a type without `<` fails at **instantiation**, with an error message pointing inside your function rather than at the call — which is why the assumption goes in a comment.
@@ -967,15 +967,15 @@ struct Point {
 // `const Point&` — call-by-constant-reference [Weiss §1.5.3, p.26]. A Point is
 // only 16 bytes, so by-value would be fine here; the reference form is written
 // out because it is the habit you want for every larger type.
-double dist(const Point& a, const Point& b) {
+double euclidean(const Point& a, const Point& b) {
     return hypot(a.x - b.x, a.y - b.y);   // hypot avoids overflow that sqrt(dx*dx+dy*dy) can hit
 }
 
 // Returns the visiting ORDER as indices into P, not the points themselves:
 // indices are cheap to copy and let the caller map back to whatever it likes.
 // Return-by-value is correct and free — C++11 moves the vector out [Weiss §1.5.4].
-vector<int> nearestNeighborTour(const vector<Point>& P, int start = 0) {
-    const int n = (int)P.size();          // cast ONCE: size() is unsigned (size_t)
+vector<int> nearestNeighborTour(const vector<Point>& points, int start = 0) {
+    const int n = (int)points.size();          // cast ONCE: size() is unsigned (size_t)
     if (n == 0) return {};                // `{}` value-initialises the return type: an empty vector
 
     // vector<char>, not vector<bool>! vector<bool> is a bit-packed SPECIALISATION
@@ -986,32 +986,32 @@ vector<int> nearestNeighborTour(const vector<Point>& P, int start = 0) {
     vector<int> tour;
     tour.reserve(n);                      // one allocation instead of O(lg n) reallocations
 
-    int p = start;                        // "Pick and visit an initial point p0 from P"
-    visited[p] = 1;
-    tour.push_back(p);
+    int current = start;                        // "Pick and visit an initial point p0 from P"
+    visited[current] = 1;
+    tour.push_back(current);
 
-    for (int step = 1; step < n; ++step) {          // "While there are still unvisited points"
-        int best = -1;
-        double bestD = numeric_limits<double>::infinity();   // <limits>: the honest "infinity"
-        for (int q = 0; q < n; ++q) {               // "Select p_i closest to p_{i-1}"
-            if (visited[q]) continue;
-            double d = dist(P[p], P[q]);
-            if (d < bestD) { bestD = d; best = q; }
+    for (int visitedCount = 1; visitedCount < n; ++visitedCount) {          // "While there are still unvisited points"
+        int nearest = -1;
+        double nearestDist = numeric_limits<double>::infinity();   // <limits>: the honest "infinity"
+        for (int candidate = 0; candidate < n; ++candidate) {               // "Select p_i closest to p_{i-1}"
+            if (visited[candidate]) continue;
+            double candidateDist = euclidean(points[current], points[candidate]);
+            if (candidateDist < nearestDist) { nearestDist = candidateDist; nearest = candidate; }
         }
-        visited[best] = 1;
-        tour.push_back(best);
-        p = best;
+        visited[nearest] = 1;
+        tour.push_back(nearest);
+        current = nearest;
     }
     return tour;                          // "Return to p0" is implicit: the tour is a cycle
 }
 
 // Cost of a closed tour. The modulo is what closes the cycle: the last point's
 // successor is tour[0].
-double tourLength(const vector<Point>& P, const vector<int>& tour) {
-    double total = 0;
+double tourLength(const vector<Point>& points, const vector<int>& tour) {
+    double length = 0;
     for (size_t i = 0; i < tour.size(); ++i)
-        total += dist(P[tour[i]], P[tour[(i + 1) % tour.size()]]);
-    return total;
+        length += euclidean(points[tour[i]], points[tour[(i + 1) % tour.size()]]);
+    return length;
 }
 ```
 
@@ -1033,50 +1033,50 @@ struct ChainSet {
     // ChainSet [Weiss §1.4.2]. Single-argument constructors should almost
     // always be explicit.
     explicit ChainSet(int n) : parent(n) {        // member-initialiser list, not assignment
-        for (int i = 0; i < n; ++i) parent[i] = i;
+        for (int round = 0; round < n; ++round) parent[round] = round;
     }
-    int find(int x) {
-        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
-        return x;
+    int find(int node) {
+        while (parent[node] != node) { parent[node] = parent[parent[node]]; node = parent[node]; }
+        return node;
     }
-    void join(int a, int b) { parent[find(a)] = find(b); }
+    void join(int endpointA, int endpointB) { parent[find(endpointA)] = find(endpointB); }
 };
 
 // Returns the tour as a list of edges. pair<int,int> is the lightweight
 // two-field struct the standard library already wrote for us.
-vector<pair<int,int>> closestPairTour(const vector<Point>& P) {
-    const int n = (int)P.size();
+vector<pair<int,int>> closestPairTour(const vector<Point>& points) {
+    const int n = (int)points.size();
     if (n < 2) return {};
     vector<pair<int,int>> edges;
-    vector<int> deg(n, 0);                // a tour is a cycle: every vertex ends with degree 2
-    ChainSet chain(n);
+    vector<int> degree(n, 0);                // a tour is a cycle: every vertex ends with degree 2
+    ChainSet chains(n);
 
-    for (int i = 1; i <= n - 1; ++i) {                 // "For i = 1 to n-1"
-        double d = numeric_limits<double>::infinity(); // "d = infinity"
-        int sm = -1, tm = -1;
-        for (int s = 0; s < n; ++s) {                  // "For each pair of endpoints (s,t)"
-            if (deg[s] >= 2) continue;                 //   an endpoint has degree < 2
-            for (int t = s + 1; t < n; ++t) {
-                if (deg[t] >= 2) continue;
+    for (int round = 1; round <= n - 1; ++round) {                 // "For i = 1 to n-1"
+        double bestDist = numeric_limits<double>::infinity(); // "d = infinity"
+        int bestFrom = -1, bestTo = -1;
+        for (int from = 0; from < n; ++from) {                  // "For each pair of endpoints (s,t)"
+            if (degree[from] >= 2) continue;                 //   an endpoint has degree < 2
+            for (int to = from + 1; to < n; ++to) {
+                if (degree[to] >= 2) continue;
                 // "from distinct vertex chains" — this is the premature-cycle guard.
                 // On the very last edge we WANT to close the cycle, so we drop it.
-                if (i < n - 1 && chain.find(s) == chain.find(t)) continue;
-                double dst = dist(P[s], P[t]);
-                if (dst <= d) { d = dst; sm = s; tm = t; }   // `<=` matches the pseudocode
+                if (round < n - 1 && chains.find(from) == chains.find(to)) continue;
+                double pairDist = euclidean(points[from], points[to]);
+                if (pairDist <= bestDist) { bestDist = pairDist; bestFrom = from; bestTo = to; }   // `<=` matches the pseudocode
             }
         }
-        edges.push_back({sm, tm});                     // "Connect (s_m, t_m) by an edge"
-        ++deg[sm]; ++deg[tm];
-        chain.join(sm, tm);
+        edges.push_back({bestFrom, bestTo});                     // "Connect (s_m, t_m) by an edge"
+        ++degree[bestFrom]; ++degree[bestTo];
+        chains.join(bestFrom, bestTo);
     }
 
     // "Connect the two remaining endpoints by an edge."
-    int a = -1, b = -1;
-    for (int v = 0; v < n; ++v) if (deg[v] < 2) { (a < 0 ? a : b) = v; }
+    int endpointA = -1, endpointB = -1;
+    for (int v = 0; v < n; ++v) if (degree[v] < 2) { (endpointA < 0 ? endpointA : endpointB) = v; }
     // The conditional operator yields an LVALUE when both arms are lvalues of
     // the same type, so it can appear on the LEFT of `=`. Legal, and a compact
     // way to say "fill a first, then b".
-    if (a >= 0 && b >= 0) edges.push_back({a, b});
+    if (endpointA >= 0 && endpointB >= 0) edges.push_back({endpointA, endpointB});
     return edges;
 }
 ```
@@ -1107,29 +1107,29 @@ struct Interval {
 // caller's vector would be a surprise. Taking by value + sorting the local copy
 // is the honest signature, and if the caller passes a temporary
 // (`optimalScheduling(makeIntervals())`) the copy is elided into a move.
-vector<Interval> optimalScheduling(vector<Interval> I) {
+vector<Interval> optimalScheduling(vector<Interval> jobs) {
     // "the job with the earliest completion date" — so order by `finish`.
     // The lambda IS a function object [Weiss §1.6.4, p.42]; the compiler
     // generates a class with operator() from it.
     // Must be a STRICT weak ordering: `<`, never `<=`.
-    sort(I.begin(), I.end(),
+    sort(jobs.begin(), jobs.end(),
          [](const Interval& a, const Interval& b) { return a.finish < b.finish; });
 
-    vector<Interval> accepted;
+    vector<Interval> chosen;
     int lastFinish = numeric_limits<int>::min();       // "nothing accepted yet"
 
     // `const Interval&` in the range-for: no copy of the string member per
     // iteration [Weiss §1.5.2, p.25].
-    for (const Interval& j : I) {
+    for (const Interval& job : jobs) {
         // "Delete j, and any interval intersecting j, from I" — sorting by
         // finish time turns that deletion into a single comparison: anything
         // starting before lastFinish intersects something already accepted.
-        if (j.start >= lastFinish) {
-            accepted.push_back(j);
-            lastFinish = j.finish;
+        if (job.start >= lastFinish) {
+            chosen.push_back(job);
+            lastFinish = job.finish;
         }
     }
-    return accepted;
+    return chosen;
 }
 ```
 
@@ -1150,10 +1150,10 @@ vector<Interval> optimalScheduling(vector<Interval> I) {
 //
 // `long long` because the doubling on the odd branch makes intermediate values
 // grow if you get the recursion wrong, and because 32-bit overflow is UB.
-long long incrementSkiena(long long y) {
-    if (y == 0) return 1;                              // if (y = 0) return 1
-    if (y % 2 == 1) return 2 * incrementSkiena(y / 2); // odd: 2 * Increment(floor(y/2))
-    return y + 1;                                      // even: y + 1
+long long incrementSkiena(long long value) {
+    if (value == 0) return 1;                              // if (y = 0) return 1
+    if (value % 2 == 1) return 2 * incrementSkiena(value / 2); // odd: 2 * Increment(floor(y/2))
+    return value + 1;                                      // even: y + 1
 }
 // NOTE on integer division: for NON-NEGATIVE y, `y / 2` in C++ is exactly
 // floor(y/2), which is what the pseudocode means. For NEGATIVE operands C++
@@ -1181,21 +1181,21 @@ long long incrementSkiena(long long y) {
 // (used at the loop test), a copy constructor, and operator=. int, double and
 // string all qualify.
 template <typename Comparable>
-void insertionSort1Indexed(vector<Comparable>& A, int n) {   // `&`: we sort in place
-    for (int i = 2; i <= n; ++i) {          // 1  for i = 2 to n
-        Comparable key = A[i];              // 2      key = A[i]      (a real COPY — needed:
+void insertionSort1Indexed(vector<Comparable>& arr, int n) {   // `&`: we sort in place
+    for (int sortedEnd = 2; sortedEnd <= n; ++sortedEnd) {          // 1  for i = 2 to n
+        Comparable key = arr[sortedEnd];              // 2      key = A[i]      (a real COPY — needed:
                                             //        A[i] is about to be overwritten)
-        int j = i - 1;                      // 4      j = i - 1
+        int hole = sortedEnd - 1;                      // 4      j = i - 1
         // 5  while j > 0 and A[j] > key
         // The order of the && operands matters: C++ SHORT-CIRCUITS, so `j > 0`
         // is tested first and A[j] is never read at j == 0. Swap them and you
         // read A[0]... which here exists, so the bug would be silent. In the
         // 0-indexed version it would be out-of-bounds.
-        while (j > 0 && A[j] > key) {
-            A[j + 1] = A[j];                // 6          A[j+1] = A[j]
-            j = j - 1;                      // 7          j = j - 1
+        while (hole > 0 && arr[hole] > key) {
+            arr[hole + 1] = arr[hole];                // 6          A[j+1] = A[j]
+            hole = hole - 1;                      // 7          j = j - 1
         }
-        A[j + 1] = key;                     // 8      A[j+1] = key
+        arr[hole + 1] = key;                     // 8      A[j+1] = key
     }
 }
 ```
@@ -1213,42 +1213,42 @@ void insertionSort1Indexed(vector<Comparable>& A, int n) {   // `&`: we sort in 
 ```cpp
 // MERGE(A, p, q, r): A[p..q] and A[q+1..r] are each sorted; make A[p..r] sorted.
 template <typename Comparable>
-void merge1Indexed(vector<Comparable>& A, int p, int q, int r) {
-    const int nL = q - p + 1;               // 1  n_L = q - p + 1
-    const int nR = r - q;                   //    n_R = r - q
+void merge1Indexed(vector<Comparable>& arr, int lo, int mid, int hi) {
+    const int leftCount = mid - lo + 1;               // 1  n_L = q - p + 1
+    const int rightCount = hi - mid;                   //    n_R = r - q
 
     // 2-3  "let L and R be new arrays; copy A[p..q] into L, A[q+1..r] into R"
     // The iterator-pair constructor copies a RANGE. Note the asymmetry that
     // trips everyone up: the range is [first, last) — last is ONE PAST the end.
     // A[p..q] inclusive therefore becomes [begin+p, begin+q+1).
-    vector<Comparable> L(A.begin() + p, A.begin() + q + 1);
-    vector<Comparable> R(A.begin() + q + 1, A.begin() + r + 1);
+    vector<Comparable> leftHalf(arr.begin() + lo, arr.begin() + mid + 1);
+    vector<Comparable> rightHalf(arr.begin() + mid + 1, arr.begin() + hi + 1);
 
-    int i = 0, j = 0, k = p;                // 4  i = 0; j = 0; k = p
-    while (i < nL && j < nR) {              // 5  while i < n_L and j < n_R
+    int leftIdx = 0, rightIdx = 0, writeIdx = lo;                // 4  i = 0; j = 0; k = p
+    while (leftIdx < leftCount && rightIdx < rightCount) {              // 5  while i < n_L and j < n_R
         // CLRS writes `if L[i] <= R[j]`. Comparable is only promised operator<
         // [Weiss §1.6.3, p.39], so express "L[i] <= R[j]" as "not (R[j] < L[i])".
         // This is the standard library's own convention and it is what keeps
         // the merge STABLE: on a tie we take from L, the earlier half.
-        if (!(R[j] < L[i])) { A[k] = L[i]; ++i; }   // 6-7
-        else                { A[k] = R[j]; ++j; }   // 8-9
-        ++k;                                         // 10
+        if (!(rightHalf[rightIdx] < leftHalf[leftIdx])) { arr[writeIdx] = leftHalf[leftIdx]; ++leftIdx; }   // 6-7
+        else                { arr[writeIdx] = rightHalf[rightIdx]; ++rightIdx; }   // 8-9
+        ++writeIdx;                                         // 10
     }
-    while (i < nL) { A[k] = L[i]; ++i; ++k; }        // 11  drain L
-    while (j < nR) { A[k] = R[j]; ++j; ++k; }        // 12  drain R
+    while (leftIdx < leftCount) { arr[writeIdx] = leftHalf[leftIdx]; ++leftIdx; ++writeIdx; }        // 11  drain L
+    while (rightIdx < rightCount) { arr[writeIdx] = rightHalf[rightIdx]; ++rightIdx; ++writeIdx; }        // 12  drain R
 }
 
 template <typename Comparable>
-void mergeSort1Indexed(vector<Comparable>& A, int p, int r) {
-    if (p >= r) return;                     // 1-2  zero or one element: already sorted
+void mergeSort1Indexed(vector<Comparable>& arr, int lo, int hi) {
+    if (lo >= hi) return;                     // 1-2  zero or one element: already sorted
     // 3  q = floor((p+r)/2), written to avoid overflow.
     // `(p + r) / 2` can overflow int when p and r are both large; `p + (r-p)/2`
     // cannot, and equals the same floor for p <= r. This is the famous bug that
     // sat in java.util.Arrays.binarySearch for nine years.
-    int q = p + (r - p) / 2;
-    mergeSort1Indexed(A, p, q);             // 4
-    mergeSort1Indexed(A, q + 1, r);         // 5
-    merge1Indexed(A, p, q, r);              // 6
+    int mid = lo + (hi - lo) / 2;
+    mergeSort1Indexed(arr, lo, mid);             // 4
+    mergeSort1Indexed(arr, mid + 1, hi);         // 5
+    merge1Indexed(arr, lo, mid, hi);              // 6
 }
 ```
 

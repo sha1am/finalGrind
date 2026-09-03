@@ -141,7 +141,7 @@ public:
     int n() const { return (int)adj_.size(); }
     int m() const { return edges_; }
     bool directed() const { return directed_; }
-    const std::vector<int>& adj(int u) const { return adj_[u]; }
+    const vector<int>& adj(int u) const { return adj_[u]; }
 
     Graph transpose() const {                       // G^T: all edges reversed
         Graph t(n(), true);
@@ -150,14 +150,14 @@ public:
         return t;
     }
 
-    std::vector<std::vector<char>> toMatrix() const {
-        std::vector<std::vector<char>> a(n(), std::vector<char>(n(), 0));
+    vector<vector<char>> toMatrix() const {
+        vector<vector<char>> a(n(), vector<char>(n(), 0));
         for (int u = 0; u < n(); ++u) for (int v : adj_[u]) a[u][v] = 1;
         return a;
     }
 
 private:
-    std::vector<std::vector<int>> adj_;
+    vector<vector<int>> adj_;
     bool directed_;
     int edges_ = 0;
 };
@@ -215,6 +215,8 @@ BFS(G, s)
 18      u.color = BLACK
 ```
 
+→ **C++ implementation:** [A1 BFS](#a1-bfs)
+
 **Loop invariant:** *at the test in line 10, the queue `Q` consists of exactly the set of gray vertices.* Every vertex painted gray is enqueued; every vertex dequeued is painted black.
 
 *"You can think of it as discovering vertices in waves emanating from the source vertex"* — first all vertices at distance 1, then 2, and so on. The queue *"contains portions of two consecutive waves at any time."*
@@ -263,13 +265,13 @@ Now look at the moment `u` is dequeued. `v` is white, gray, or black. **White** 
 #include <vector>
 
 struct BfsResult {
-    std::vector<int> dist;                          // -1 == unreachable (infinity)
-    std::vector<int> parent;                        // -1 == none
+    vector<int> dist;                          // -1 == unreachable (infinity)
+    vector<int> parent;                        // -1 == none
 };
 
 BfsResult bfs(const Graph& g, int s) {
-    BfsResult r{std::vector<int>(g.n(), -1), std::vector<int>(g.n(), -1)};
-    std::queue<int> q;
+    BfsResult r{vector<int>(g.n(), -1), vector<int>(g.n(), -1)};
+    queue<int> q;
     r.dist[s] = 0;
     q.push(s);
     while (!q.empty()) {
@@ -285,21 +287,21 @@ BfsResult bfs(const Graph& g, int s) {
 }
 
 // PRINT-PATH: the tree path from s to v is a shortest path in G.
-std::vector<int> bfsPath(const BfsResult& r, int s, int v) {
+vector<int> bfsPath(const BfsResult& r, int s, int v) {
     if (r.dist[v] < 0) return {};
-    std::vector<int> path;
+    vector<int> path;
     for (int x = v; x != -1; x = r.parent[x]) path.push_back(x);
-    std::reverse(path.begin(), path.end());
-    return path.front() == s ? path : std::vector<int>{};
+    reverse(path.begin(), path.end());
+    return path.front() == s ? path : vector<int>{};
 }
 
 // Connected components of an undirected graph, one BFS per component.
-std::vector<int> connectedComponents(const Graph& g, int& count) {
-    std::vector<int> comp(g.n(), -1);
+vector<int> connectedComponents(const Graph& g, int& count) {
+    vector<int> comp(g.n(), -1);
     count = 0;
     for (int s = 0; s < g.n(); ++s) {
         if (comp[s] >= 0) continue;
-        std::queue<int> q;
+        queue<int> q;
         comp[s] = count;
         q.push(s);
         while (!q.empty()) {
@@ -312,12 +314,12 @@ std::vector<int> connectedComponents(const Graph& g, int& count) {
 }
 
 // Two-colouring: colour each discovered vertex the opposite of its parent.
-bool twoColor(const Graph& g, std::vector<int>& color) {
+bool twoColor(const Graph& g, vector<int>& color) {
     color.assign(g.n(), -1);
     for (int s = 0; s < g.n(); ++s) {
         if (color[s] >= 0) continue;
         color[s] = 0;
-        std::queue<int> q;
+        queue<int> q;
         q.push(s);
         while (!q.empty()) {
             const int u = q.front(); q.pop();
@@ -354,6 +356,8 @@ DFS(G)                             DFS-VISIT(G, u)
                                    9  u.f = time            // finish time
                                   10  u.color = BLACK
 ```
+
+→ **C++ implementation:** [A2 DFS and DFS-VISIT](#a2-dfs-and-dfs-visit)
 
 **Note the asymmetry with BFS:** DFS loops over *all* vertices as potential sources, producing a **depth-first forest** rather than a single tree. CLRS explains why: *"breadth-first search usually serves to find shortest-path distances… from a given source. Depth-first search is often a subroutine in another algorithm."*
 
@@ -424,19 +428,19 @@ Skiena's version of the same argument, which is more memorable: *"Might we encou
 enum EdgeType { TREE, BACK, FORWARD, CROSS };
 
 struct DfsResult {
-    std::vector<int> disc, fin, parent;             // discovery time, finish time, predecessor
-    std::vector<int> order;                         // vertices by increasing finish time
-    std::vector<std::pair<std::pair<int, int>, EdgeType>> edges;
+    vector<int> disc, fin, parent;             // discovery time, finish time, predecessor
+    vector<int> order;                         // vertices by increasing finish time
+    vector<pair<pair<int, int>, EdgeType>> edges;
     bool hasBackEdge = false;
 };
 
 DfsResult dfs(const Graph& g) {
     const int n = g.n();
-    DfsResult r{std::vector<int>(n, 0), std::vector<int>(n, 0), std::vector<int>(n, -1), {}, {}, false};
-    std::vector<int> color(n, 0);                   // 0 = white, 1 = gray, 2 = black
+    DfsResult r{vector<int>(n, 0), vector<int>(n, 0), vector<int>(n, -1), {}, {}, false};
+    vector<int> color(n, 0);                   // 0 = white, 1 = gray, 2 = black
     int time = 0;
 
-    std::function<void(int)> visit = [&](int u) {
+    function<void(int)> visit = [&](int u) {
         r.disc[u] = ++time;
         color[u] = 1;
         for (int v : g.adj(u)) {
@@ -464,10 +468,10 @@ DfsResult dfs(const Graph& g) {
 }
 
 // Exercise 20.3-6: DFS with an explicit stack instead of recursion.
-std::vector<int> dfsIterativeOrder(const Graph& g) {
+vector<int> dfsIterativeOrder(const Graph& g) {
     const int n = g.n();
-    std::vector<int> color(n, 0), it(n, 0), finishOrder;
-    std::vector<int> stk;
+    vector<int> color(n, 0), it(n, 0), finishOrder;
+    vector<int> stk;
     for (int s = 0; s < n; ++s) {
         if (color[s] != 0) continue;
         color[s] = 1;
@@ -532,18 +536,18 @@ In the standard `low`-value formulation these collapse into two tests: **`v` non
 
 // low[v] = earliest discovery time reachable from v's subtree via one back edge.
 struct CutResult {
-    std::vector<int> articulation;
-    std::vector<std::pair<int, int>> bridges;
+    vector<int> articulation;
+    vector<pair<int, int>> bridges;
 };
 
 CutResult articulationAndBridges(const Graph& g) {
     const int n = g.n();
-    std::vector<int> disc(n, 0), low(n, 0), parent(n, -1);
-    std::vector<char> isArt(n, 0);
+    vector<int> disc(n, 0), low(n, 0), parent(n, -1);
+    vector<char> isArt(n, 0);
     CutResult out;
     int time = 0;
 
-    std::function<void(int)> visit = [&](int u) {
+    function<void(int)> visit = [&](int u) {
         disc[u] = low[u] = ++time;
         int children = 0;
         for (int v : g.adj(u)) {
@@ -551,18 +555,18 @@ CutResult articulationAndBridges(const Graph& g) {
                 ++children;
                 parent[v] = u;
                 visit(v);
-                low[u] = std::min(low[u], low[v]);
+                low[u] = min(low[u], low[v]);
                 if (parent[u] != -1 && low[v] >= disc[u]) isArt[u] = 1;
-                if (low[v] > disc[u]) out.bridges.push_back({std::min(u, v), std::max(u, v)});
+                if (low[v] > disc[u]) out.bridges.push_back({min(u, v), max(u, v)});
             } else if (v != parent[u]) {            // back edge (not to the immediate parent)
-                low[u] = std::min(low[u], disc[v]);
+                low[u] = min(low[u], disc[v]);
             }
         }
         if (parent[u] == -1 && children > 1) isArt[u] = 1;    // root with 2+ children
     };
     for (int u = 0; u < n; ++u) if (disc[u] == 0) visit(u);
     for (int u = 0; u < n; ++u) if (isArt[u]) out.articulation.push_back(u);
-    std::sort(out.bridges.begin(), out.bridges.end());
+    sort(out.bridges.begin(), out.bridges.end());
     return out;
 }
 ```
@@ -590,6 +594,8 @@ TOPOLOGICAL-SORT(G)
 3  return the linked list of vertices
 ```
 
+→ **C++ implementation:** [A3 TOPOLOGICAL-SORT](#a3-topological-sort)
+
 **Three lines, `Θ(V + E)`.**
 
 **Lemma 20.11.** A directed graph is acyclic **iff** a DFS yields **no back edges**.
@@ -611,6 +617,8 @@ STRONGLY-CONNECTED-COMPONENTS(G)
 3  call DFS(Gᵀ), but in the main loop consider vertices in order of decreasing u.f
 4  output the vertices of each tree in the resulting depth-first forest as a separate SCC
 ```
+
+→ **C++ implementation:** [A4 STRONGLY-CONNECTED-COMPONENTS](#a4-strongly-connected-components)
 
 **`Θ(V + E)`. Two DFS passes and a transpose. That's it.**
 
@@ -639,33 +647,33 @@ Skiena adds a useful connection: *"DAGs are directed graphs where each vertex fo
 #include <vector>
 
 // DFS version: reverse of the finish order. Returns {} if a cycle exists.
-std::vector<int> topoSortDFS(const Graph& g) {
+vector<int> topoSortDFS(const Graph& g) {
     const auto r = dfs(g);
     if (r.hasBackEdge) return {};
-    std::vector<int> out(r.order.rbegin(), r.order.rend());
+    vector<int> out(r.order.rbegin(), r.order.rend());
     return out;
 }
 
 // Exercise 20.4-5, Kahn's algorithm: repeatedly remove a vertex of in-degree 0.
-std::vector<int> topoSortKahn(const Graph& g) {
+vector<int> topoSortKahn(const Graph& g) {
     const int n = g.n();
-    std::vector<int> indeg(n, 0);
+    vector<int> indeg(n, 0);
     for (int u = 0; u < n; ++u) for (int v : g.adj(u)) ++indeg[v];
-    std::vector<int> ready, out;
+    vector<int> ready, out;
     for (int u = 0; u < n; ++u) if (indeg[u] == 0) ready.push_back(u);
     while (!ready.empty()) {
         const int u = ready.back(); ready.pop_back();
         out.push_back(u);
         for (int v : g.adj(u)) if (--indeg[v] == 0) ready.push_back(v);
     }
-    return (int)out.size() == n ? out : std::vector<int>{};
+    return (int)out.size() == n ? out : vector<int>{};
 }
 
 // Exercise 20.4-2: count simple paths a -> b in a DAG, in topological order.
 long long countPathsDAG(const Graph& g, int a, int b) {
     const auto order = topoSortDFS(g);
     if (order.empty() && g.n() > 0) return -1;                 // not a DAG
-    std::vector<long long> ways(g.n(), 0);
+    vector<long long> ways(g.n(), 0);
     ways[a] = 1;
     for (int u : order)
         if (ways[u] > 0)
@@ -674,14 +682,14 @@ long long countPathsDAG(const Graph& g, int a, int b) {
 }
 
 // Kosaraju / CLRS: DFS on G for finish times, then DFS on G^T in decreasing order.
-std::vector<int> sccKosaraju(const Graph& g, int& count) {
+vector<int> sccKosaraju(const Graph& g, int& count) {
     const auto first = dfs(g);                                  // first.order is by finish time
     const Graph gt = g.transpose();
-    std::vector<int> comp(g.n(), -1);
+    vector<int> comp(g.n(), -1);
     count = 0;
     for (auto it = first.order.rbegin(); it != first.order.rend(); ++it) {
         if (comp[*it] >= 0) continue;
-        std::vector<int> stk{*it};
+        vector<int> stk{*it};
         comp[*it] = count;
         while (!stk.empty()) {
             const int u = stk.back(); stk.pop_back();
@@ -693,20 +701,20 @@ std::vector<int> sccKosaraju(const Graph& g, int& count) {
 }
 
 // Tarjan: one pass, using low-link values and a stack of "open" vertices.
-std::vector<int> sccTarjan(const Graph& g, int& count) {
+vector<int> sccTarjan(const Graph& g, int& count) {
     const int n = g.n();
-    std::vector<int> disc(n, 0), low(n, 0), comp(n, -1), stk;
-    std::vector<char> onStack(n, 0);
+    vector<int> disc(n, 0), low(n, 0), comp(n, -1), stk;
+    vector<char> onStack(n, 0);
     int time = 0;
     count = 0;
 
-    std::function<void(int)> visit = [&](int u) {
+    function<void(int)> visit = [&](int u) {
         disc[u] = low[u] = ++time;
         stk.push_back(u);
         onStack[u] = 1;
         for (int v : g.adj(u)) {
-            if (disc[v] == 0) { visit(v); low[u] = std::min(low[u], low[v]); }
-            else if (onStack[v])  low[u] = std::min(low[u], disc[v]);
+            if (disc[v] == 0) { visit(v); low[u] = min(low[u], low[v]); }
+            else if (onStack[v])  low[u] = min(low[u], disc[v]);
         }
         if (low[u] == disc[u]) {                                // u roots an SCC
             for (;;) {
@@ -723,9 +731,9 @@ std::vector<int> sccTarjan(const Graph& g, int& count) {
 }
 
 // Exercise 20.5-5: the component (condensation) graph, with no duplicate edges.
-Graph condensation(const Graph& g, const std::vector<int>& comp, int count) {
+Graph condensation(const Graph& g, const vector<int>& comp, int count) {
     Graph c(count, true);
-    std::set<std::pair<int, int>> seen;
+    set<pair<int, int>> seen;
     for (int u = 0; u < g.n(); ++u)
         for (int v : g.adj(u))
             if (comp[u] != comp[v] && seen.insert({comp[u], comp[v]}).second)
@@ -831,6 +839,450 @@ Graph condensation(const Graph& g, const std::vector<int>& comp, int count) {
 - **SCC (Kosaraju):** DFS `G` for finish times → build `Gᵀ` → DFS `Gᵀ` in **decreasing finish order** → each tree is one SCC. Works because `f(C) > f(C′)` whenever `C → C′`, so in `Gᵀ` each root's component is a sink you can't escape.
 - **The condensation `G^SCC` is always a DAG.** Kosaraju numbers components in topological order; Tarjan in reverse.
 - **`Θ(V+E)` is optimal** — *"this is as fast as one can ever hope to just read an `n`-vertex, `m`-edge graph."*
+
+---
+
+## Practice — where to drill this module
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| BFS on an implicit grid graph | [200 · Number of Islands](https://leetcode.com/problems/number-of-islands/) | the graph is never built — the grid *is* the adjacency list |
+| BFS = shortest path when unweighted | [1091? use] [847 · Shortest Path Visiting All Nodes](https://leetcode.com/problems/shortest-path-visiting-all-nodes/) | BFS over a **state** graph `(node, visitedMask)`; the layering argument still holds |
+| Two-colouring | [785 · Is Graph Bipartite?](https://leetcode.com/problems/is-graph-bipartite/) | BFS or DFS with a colour array; an odd cycle is the only obstruction |
+| Copy a graph by traversal | [133 · Clone Graph](https://leetcode.com/problems/clone-graph/) | forces you to be explicit about the visited map |
+| Cycle detection in a digraph | [207 · Course Schedule](https://leetcode.com/problems/course-schedule/) | a **back edge** ⟺ a cycle; that is `A2`'s edge classification, used once |
+| Topological sort | [210 · Course Schedule II](https://leetcode.com/problems/course-schedule-ii/) | `A3` verbatim — do it once with DFS finish times and once with Kahn |
+| Bridges (Tarjan's `low[]`) | [1192 · Critical Connections in a Network](https://leetcode.com/problems/critical-connections-in-a-network/) | the articulation/bridge machinery of §5, and the only place it appears on LeetCode |
+| DP over a DAG | [329 · Longest Increasing Path in a Matrix](https://leetcode.com/problems/longest-increasing-path-in-a-matrix/) | memoised DFS; the subproblem graph *is* a DAG ([M11](M11-dynamic-programming.md)) |
+| Components under a query stream | [547 · Number of Provinces](https://leetcode.com/problems/number-of-provinces/) | DFS answer vs the union-find answer of [M10](M10-union-find.md) — write both, then argue |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — the *Graph Algorithms* section is the best structured graph ladder available. [Codeforces `graphs` tag](https://codeforces.com/problemset?tags=graphs) · [`dfs and similar` tag](https://codeforces.com/problemset?tags=dfs+and+similar).
+
+**The drill that matters here:** for every graph problem, say out loud *"directed or undirected? weighted or not? is it a DAG?"* before choosing anything. Those three questions eliminate most of the algorithm catalogue, and getting them wrong is how people end up running Dijkstra on an unweighted graph or a topological sort on something with a cycle.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 9 and §3.6–3.7.*
+
+### 1. `queue` for BFS, explicit stack (or recursion) for DFS
+
+```cpp
+void traversalContainers() {
+    queue<int> q;      // FIFO -- push()/front()/pop(). BFS.
+    stack<int> s;      // LIFO -- push()/top()/pop().   DFS.
+    // Note the asymmetry that trips everyone up: queue has front(), stack has
+    // top(). And NEITHER pop() returns the element -- you must read it first.
+    (void)q; (void)s;
+}
+```
+
+`std::queue` and `std::stack` are **container adaptors**: they wrap a `deque` by default and expose only the operations the abstraction allows. That restriction is the point — you cannot accidentally index into a queue.
+
+**Swap the queue for a stack in BFS and you do *not* get DFS.** You get a traversal that visits the same vertices in a different order but computes wrong `d` values, because the "mark on enqueue" discipline that makes BFS's layering work is specific to FIFO order. Real DFS marks on *discovery* and uses the recursion (or an explicit stack with an iterator per frame, as in `A2`).
+
+### 2. Recursion depth, again — and it is worse here
+
+DFS recurses to the depth of the DFS tree, which on a path-shaped graph is `V`. At `V ≈ 10⁵`–`10⁶` that overflows the default 8 MB stack and **segfaults with no message**. This is not exotic: "a linked list of `n` nodes" and "a grid where every cell connects to the next" are both path graphs. `A2` gives the explicit-stack version for exactly this reason.
+
+### 3. `vector<char>` for colours, not `vector<bool>`
+
+```cpp
+enum Color { White, Gray, Black };
+void colourArrays(int n) {
+    vector<char> color(n, White);   // one byte each, ordinary references
+    // vector<bool> would be bit-packed with a proxy operator[] (M07 toolkit 7)
+    (void)color;
+}
+```
+
+Three states genuinely need three values. **A single `visited` boolean is enough for BFS and for connectivity, but not for cycle detection**: distinguishing "in progress" (grey) from "finished" (black) is exactly what makes a back edge detectable. Collapsing the three colours into one bool is the standard reason a cycle detector reports false positives on a DAG with diamonds.
+
+### 4. Building the reverse graph
+
+SCC needs `Gᵀ`. Build it in one pass, and note that this is `Θ(V+E)` — it does not change the asymptotic cost of Kosaraju:
+
+```cpp
+vector<vector<int>> reverseGraph(const vector<vector<int>>& adj) {
+    vector<vector<int>> rev(adj.size());
+    for (size_t u = 0; u < adj.size(); ++u)
+        for (int v : adj[u]) rev[v].push_back((int)u);
+    return rev;      // return-by-value: moved, not copied [Weiss 1.5.4]
+}
+```
+
+With an **adjacency matrix** the reverse is the transpose and you can often skip building it entirely by reading `A[j][i]` instead of `A[i][j]` — one of the few places the matrix representation wins.
+
+### 5. `reserve` on adjacency lists
+
+`vector<vector<int>> adj(n)` then `adj[u].push_back(v)` reallocates each list `O(lg deg)` times. If you know the degrees (a two-pass count), `adj[u].reserve(deg[u])` removes all of it. For `E = 10⁶` this is a measurable win, and it is the graph-shaped instance of [M09](M09-amortized.md)'s advice.
+
+### 6. Structured bindings over edges
+
+```cpp
+void edgeLoop(const vector<pair<int,int>>& edges) {
+    for (const auto& [u, v] : edges) (void)(u + v);   // named, not .first/.second
+}
+```
+
+`const auto&` avoids copying each pair; `[u, v]` names them. In a module full of `(u,v)` pairs this is the difference between readable and not.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+```cpp
+// The representation every entry below uses: adjacency lists in a vector of
+// vectors. Vertices are 0..n-1.
+//
+// WHY LISTS, NOT A MATRIX: memory is Theta(V+E) rather than Theta(V^2), and
+// "for each neighbour of u" is Theta(deg u) rather than Theta(V). Every
+// algorithm here is Theta(V+E) with lists and Theta(V^2) with a matrix. Use a
+// matrix only when the graph is dense, or when you need O(1) "is (u,v) an
+// edge?" (see Floyd-Warshall in M15).
+struct AdjGraph {
+    int n = 0;
+    vector<vector<int>> adj;
+    explicit AdjGraph(int n_) : n(n_), adj(n_) {}
+    void addDirected(int u, int v)   { adj[u].push_back(v); }
+    void addUndirected(int u, int v) { adj[u].push_back(v); adj[v].push_back(u); }
+};
+
+// Three colours, not one boolean (toolkit 3).
+enum class VColor { White, Gray, Black };
+```
+
+### A1 BFS
+
+*Pseudocode: §3, "The algorithm".*
+
+```cpp
+struct BfsOutput {
+    vector<int> d;      // d[v] = number of edges on a shortest path s -> v, -1 if unreachable
+    vector<int> pi;     // pi[v] = predecessor in the BFS tree, -1 = NIL
+};
+
+BfsOutput bfs(const AdjGraph& g, int s) {
+    BfsOutput r;
+    r.d.assign(g.n, -1);                             // 1-2  u.d = infinity (encoded as -1)
+    r.pi.assign(g.n, -1);                            //      u.pi = NIL
+    vector<VColor> color(g.n, VColor::White);        //      u.color = WHITE
+
+    color[s] = VColor::Gray;                         // 5  s.color = GRAY
+    r.d[s] = 0;                                      //    s.d = 0
+    queue<int> Q;                                    // 8  Q = empty
+    Q.push(s);                                       //    ENQUEUE(Q, s)
+
+    while (!Q.empty()) {                             // 10
+        int u = Q.front(); Q.pop();                  // 11 u = DEQUEUE(Q)
+        for (int v : g.adj[u]) {                     // 12 for each v in Adj[u]
+            if (color[v] == VColor::White) {         // 13
+                color[v] = VColor::Gray;             // 14
+                r.d[v] = r.d[u] + 1;
+                r.pi[v] = u;
+                Q.push(v);                           // 17 ENQUEUE(Q, v)
+                // MARK ON ENQUEUE, not on dequeue. If you mark when you dequeue,
+                // a vertex reachable from two frontier vertices is enqueued
+                // twice, and the queue can grow to Theta(E). Correctness
+                // survives; the complexity does not.
+            }
+        }
+        color[u] = VColor::Black;                    // 18 u.color = BLACK
+    }
+    return r;
+}
+
+// Recover a shortest path by walking pi backwards, then reversing.
+vector<int> bfsPath(const BfsOutput& r, int s, int v) {
+    if (r.d[v] < 0) return {};                       // unreachable
+    vector<int> path;
+    for (int x = v; x != -1; x = r.pi[x]) path.push_back(x);
+    reverse(path.begin(), path.end());
+    return path.front() == s ? path : vector<int>{};
+}
+```
+
+**Complexity. `Θ(V + E)`.** Each vertex is enqueued and dequeued exactly once (`Θ(V)`), and each adjacency list is scanned exactly once when its vertex is dequeued (`Θ(E)` total). **Space `Θ(V)`** — the queue holds at most one BFS "layer", which can be `Θ(V)`.
+
+**The theory, compressed.** Let `δ(s,v)` be the true minimum edge count.
+
+- **Lemma 20.1:** `δ(s,v) ≤ δ(s,u) + 1` for every edge `(u,v)`.
+- **Lemma 20.2:** `v.d ≥ δ(s,v)` always — `d` is an upper bound.
+- **Lemma 20.3:** the queue's `d` values are non-decreasing and differ by at most 1 — **the queue holds at most two adjacent layers at any moment.** That is the structural fact that makes everything else work.
+- **Theorem 20.5:** BFS discovers exactly the reachable vertices, and `v.d = δ(s,v)` for all of them.
+
+**BFS solves unweighted shortest paths and nothing more.** The moment edges have differing weights, the layer argument collapses and you need Dijkstra ([M15](M15-shortest-paths.md)) — except for weights in `{0,1}`, where a deque restores it (0-1 BFS).
+
+### A2 DFS and DFS-VISIT
+
+*Pseudocode: §4, "The algorithm and its timestamps".*
+
+```cpp
+struct DfsOutput {
+    vector<int> d, f;       // discovery and finish times, 1..2V
+    vector<int> pi;
+    vector<int> finishOrder;   // vertices in increasing finish time
+};
+
+// The recursive form -- CLRS's, line for line. Depth is O(V) (toolkit 2).
+class DfsRunner {
+public:
+    explicit DfsRunner(const AdjGraph& g) : g_(g) {}
+
+    DfsOutput run() {
+        out_.d.assign(g_.n, 0);
+        out_.f.assign(g_.n, 0);
+        out_.pi.assign(g_.n, -1);                    // 1-3  u.color = WHITE, u.pi = NIL
+        color_.assign(g_.n, VColor::White);
+        time_ = 0;                                   // 4  time = 0
+        for (int u = 0; u < g_.n; ++u)               // 5  for each u in G.V
+            if (color_[u] == VColor::White)          // 6      if u.color == WHITE
+                visit(u);                            // 7          DFS-VISIT(G, u)
+        return out_;
+    }
+private:
+    void visit(int u) {
+        out_.d[u] = ++time_;                         // 1-2  time = time+1; u.d = time
+        color_[u] = VColor::Gray;                    // 3  u.color = GRAY
+        for (int v : g_.adj[u]) {                    // 4  for each v in Adj[u]
+            if (color_[v] == VColor::White) {        // 5
+                out_.pi[v] = u;                      // 6
+                visit(v);                            // 7
+            }
+        }
+        out_.f[u] = ++time_;                         // 8-9  time = time+1; u.f = time
+        color_[u] = VColor::Black;                   // 10
+        out_.finishOrder.push_back(u);               // the order topological sort wants
+    }
+    const AdjGraph& g_;
+    DfsOutput out_;
+    vector<VColor> color_;
+    int time_ = 0;
+};
+
+// ITERATIVE DFS with an explicit stack. Necessary above ~10^5 vertices.
+//
+// The subtlety: a recursive DFS finishes a vertex when its loop over neighbours
+// ENDS, so an explicit stack must remember HOW FAR THROUGH that loop each frame
+// is. `iter[u]` is that per-frame iterator; without it you cannot compute
+// correct finish times, and finish times are the whole point of DFS.
+DfsOutput dfsIterative(const AdjGraph& g) {
+    DfsOutput out;
+    out.d.assign(g.n, 0);
+    out.f.assign(g.n, 0);
+    out.pi.assign(g.n, -1);
+    vector<VColor> color(g.n, VColor::White);
+    vector<size_t> iter(g.n, 0);                     // next neighbour index per vertex
+    int time = 0;
+
+    for (int s = 0; s < g.n; ++s) {
+        if (color[s] != VColor::White) continue;
+        vector<int> stk{s};
+        color[s] = VColor::Gray;
+        out.d[s] = ++time;
+        while (!stk.empty()) {
+            int u = stk.back();
+            if (iter[u] < g.adj[u].size()) {
+                int v = g.adj[u][iter[u]++];         // advance THIS frame's iterator
+                if (color[v] == VColor::White) {
+                    color[v] = VColor::Gray;
+                    out.d[v] = ++time;
+                    out.pi[v] = u;
+                    stk.push_back(v);
+                }
+            } else {                                  // neighbours exhausted: finish u
+                out.f[u] = ++time;
+                color[u] = VColor::Black;
+                out.finishOrder.push_back(u);
+                stk.pop_back();
+            }
+        }
+    }
+    return out;
+}
+```
+
+**Complexity. `Θ(V + E)`.** Space `Θ(V)` for the arrays plus `O(V)` stack.
+
+**The two theorems that make DFS more than a traversal.**
+
+- **Theorem 20.7 (parenthesis theorem).** For any `u, v`, exactly one of: the intervals `[u.d, u.f]` and `[v.d, v.f]` are **disjoint** and neither is a descendant of the other; `[u.d, u.f]` is **contained in** `[v.d, v.f]` and `u` is a descendant of `v`; or the reverse. **They never partially overlap.** So the discovery/finish times are a correctly nested parenthesisation, and ancestry is an interval-containment test.
+- **Theorem 20.9 (white-path theorem).** `v` is a descendant of `u` in the DFS forest **iff** at the moment `u` is discovered, there is a path from `u` to `v` consisting entirely of white vertices.
+
+**Edge classification (Theorem 20.10)** falls straight out of the colours, and is the whole reason to bother with three of them:
+
+| when you look at `(u,v)` and `v` is… | edge type |
+|---|---|
+| **white** | **tree edge** |
+| **grey** | **back edge** — `v` is an ancestor, so **this is a cycle** |
+| **black**, `u.d < v.d` | forward edge |
+| **black**, `u.d > v.d` | cross edge |
+
+**A directed graph is acyclic iff DFS finds no back edge.** That is the cycle test in "Course Schedule", and it is the entire content of Lemma 20.11. In an **undirected** graph, DFS produces only tree and back edges — no forward or cross edges ever.
+
+### A3 TOPOLOGICAL-SORT
+
+*Pseudocode: §6, "Topological sort".*
+
+```cpp
+// DFS-based: run DFS, then reverse the finish order.
+// Returns {} if the graph has a cycle (no topological order exists).
+vector<int> topologicalSortDFS(const AdjGraph& g) {
+    DfsOutput r = dfsIterative(g);
+    // 2  "as each vertex is finished, insert it onto the FRONT of a list"
+    //    -- which is the same as collecting finishes and reversing.
+    vector<int> order(r.finishOrder.rbegin(), r.finishOrder.rend());
+
+    // The pseudocode assumes a DAG. Verify it, because a "topological order" of
+    // a cyclic graph is silently meaningless: check that every edge goes
+    // forwards in the order produced.
+    vector<int> pos(g.n);
+    for (int i = 0; i < g.n; ++i) pos[order[i]] = i;
+    for (int u = 0; u < g.n; ++u)
+        for (int v : g.adj[u])
+            if (pos[u] > pos[v]) return {};          // a back edge: cycle
+    return order;
+}
+
+// KAHN'S ALGORITHM: repeatedly emit a vertex of in-degree 0.
+// Same Theta(V+E), no recursion, and it DETECTS the cycle for free -- if fewer
+// than n vertices are emitted, the rest are stuck in a cycle. This is the one
+// to write in an interview.
+vector<int> topologicalSortKahn(const AdjGraph& g) {
+    vector<int> indeg(g.n, 0);
+    for (int u = 0; u < g.n; ++u)
+        for (int v : g.adj[u]) ++indeg[v];
+
+    queue<int> q;
+    for (int v = 0; v < g.n; ++v) if (indeg[v] == 0) q.push(v);
+
+    vector<int> order;
+    order.reserve(g.n);
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        order.push_back(u);
+        for (int v : g.adj[u])
+            if (--indeg[v] == 0) q.push(v);          // u was v's last prerequisite
+    }
+    return (int)order.size() == g.n ? order : vector<int>{};   // short = cycle
+}
+```
+
+**Complexity. `Θ(V + E)` for both.** Space `Θ(V)`.
+
+**Theorem 20.12:** `TOPOLOGICAL-SORT` produces a valid topological order of a DAG. *Proof sketch:* for any edge `(u,v)`, when it is explored `v` cannot be grey (that would be a back edge, contradicting acyclicity), so `v` is either white — and finishes before `u` — or already black, hence also `v.f < u.f`. **In a DAG, every edge `(u,v)` has `v.f < u.f`**, so decreasing finish time is a topological order.
+
+**Kahn's version also answers a question DFS's does not:** *is the order unique?* If the queue ever holds two or more vertices at once, there are multiple valid orders.
+
+### A4 STRONGLY-CONNECTED-COMPONENTS
+
+*Pseudocode: §7, "Strongly connected components".*
+
+```cpp
+// KOSARAJU: two DFS passes and one graph reversal.
+// Returns comp[v] = component id, numbered in reverse topological order of the
+// condensation (so every edge between components goes from a LOWER id to a
+// HIGHER one -- a property worth having, and free).
+vector<int> sccKosaraju(const AdjGraph& g) {
+    // 1  DFS on G to compute finish times
+    DfsOutput first = dfsIterative(g);
+
+    // 2  create G^T
+    AdjGraph gt(g.n);
+    for (int u = 0; u < g.n; ++u)
+        for (int v : g.adj[u]) gt.addDirected(v, u);
+
+    // 3  DFS on G^T, considering vertices in order of DECREASING finish time
+    vector<int> comp(g.n, -1);
+    int c = 0;
+    for (auto it = first.finishOrder.rbegin(); it != first.finishOrder.rend(); ++it) {
+        if (comp[*it] != -1) continue;
+        // Iterative flood fill: each tree of this second forest is one SCC.
+        vector<int> stk{*it};
+        comp[*it] = c;
+        while (!stk.empty()) {
+            int u = stk.back(); stk.pop_back();
+            for (int v : gt.adj[u])
+                if (comp[v] == -1) { comp[v] = c; stk.push_back(v); }
+        }
+        ++c;                                          // 4  one tree = one SCC
+    }
+    return comp;
+}
+
+// TARJAN: ONE pass, no reversal. Faster in practice and the usual choice.
+//
+// low[u] = the smallest index reachable from u's subtree using tree edges plus
+// AT MOST ONE back edge. When low[u] == index[u], u is the ROOT of an SCC, and
+// everything above u on the stack is that component.
+vector<int> sccTarjan(const AdjGraph& g) {
+    vector<int> index(g.n, -1), low(g.n, 0), comp(g.n, -1), stk;
+    vector<char> onStack(g.n, 0);
+    vector<size_t> iter(g.n, 0);
+    int counter = 0, c = 0;
+
+    for (int s = 0; s < g.n; ++s) {
+        if (index[s] != -1) continue;
+        vector<int> call{s};                          // explicit call stack (toolkit 2)
+        index[s] = low[s] = counter++;
+        stk.push_back(s); onStack[s] = 1;
+        while (!call.empty()) {
+            int u = call.back();
+            if (iter[u] < g.adj[u].size()) {
+                int v = g.adj[u][iter[u]++];
+                if (index[v] == -1) {                 // tree edge: descend
+                    index[v] = low[v] = counter++;
+                    stk.push_back(v); onStack[v] = 1;
+                    call.push_back(v);
+                } else if (onStack[v]) {              // back/cross edge INSIDE the
+                    low[u] = min(low[u], index[v]);   // current component
+                    // `index[v]`, not `low[v]`: using low here is the classic
+                    // Tarjan bug. It happens to work for SCC but breaks the
+                    // same skeleton when reused for bridges.
+                }
+            } else {
+                call.pop_back();
+                if (!call.empty()) low[call.back()] = min(low[call.back()], low[u]);
+                if (low[u] == index[u]) {             // u roots an SCC
+                    for (;;) {
+                        int w = stk.back(); stk.pop_back(); onStack[w] = 0;
+                        comp[w] = c;
+                        if (w == u) break;
+                    }
+                    ++c;
+                }
+            }
+        }
+    }
+    // Tarjan emits components in REVERSE topological order; flip the ids so the
+    // convention matches Kosaraju's above.
+    for (int& x : comp) x = c - 1 - x;
+    return comp;
+}
+
+// The CONDENSATION: contract each SCC to a single vertex. The result is ALWAYS
+// a DAG -- if it had a cycle, all the components on that cycle would be
+// mutually reachable and would therefore be one component, a contradiction.
+AdjGraph condensation(const AdjGraph& g, const vector<int>& comp) {
+    int c = 0;
+    for (int x : comp) c = max(c, x + 1);
+    AdjGraph dag(c);
+    set<pair<int,int>> seen;                          // de-duplicate parallel edges
+    for (int u = 0; u < g.n; ++u)
+        for (int v : g.adj[u])
+            if (comp[u] != comp[v] && seen.insert({comp[u], comp[v]}).second)
+                dag.addDirected(comp[u], comp[v]);
+    return dag;
+}
+```
+
+**Complexity. `Θ(V + E)` for both.** Kosaraju does two DFS passes plus a reversal — three `Θ(V+E)` sweeps and `Θ(V+E)` extra memory for `Gᵀ`. Tarjan does **one** pass and no reversal, which is why it wins in practice despite being harder to write.
+
+**Why Kosaraju works (Lemmas 20.13–20.15, Theorem 20.16).** The key lemma: if `C` and `C′` are distinct SCCs and there is an edge from `C` to `C′`, then `max{u.f : u ∈ C} > max{u.f : u ∈ C′}`. So processing vertices in **decreasing finish order** visits the components in topological order of the condensation — and in `Gᵀ` all the *outgoing* edges of a component now point at components already assigned, so the flood fill cannot escape the current SCC.
+
+**Why you care.** The condensation turns any directed graph into a DAG, and on a DAG you get topological sort, DP over vertices, longest paths, and 2-SAT. **"Find the SCCs, then work on the condensation" is a standard first move on any hard directed-graph problem.**
+
 
 ---
 

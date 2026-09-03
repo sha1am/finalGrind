@@ -893,13 +893,13 @@ COUNTING-SORT(A, n, k)
 #include <vector>
 
 // Stable counting sort of values in [0, k]. Theta(n + k) time, Theta(n + k) space.
-vector<int> countingSort(const vector<int>& a, int k) {
-    vector<int> count(k + 1, 0), out(a.size());
+vector<int> countingSort(const vector<int>& a, int maxKey) {
+    vector<int> count(maxKey + 1, 0), out(a.size());
     for (int x : a) ++count[x];
-    for (int i = 1; i <= k; ++i) count[i] += count[i - 1];   // prefix sums
+    for (int value = 1; value <= maxKey; ++value) count[value] += count[value - 1];   // prefix sums
     // Backwards for stability: the last equal element takes the last slot.
-    for (int j = static_cast<int>(a.size()) - 1; j >= 0; --j)
-        out[--count[a[j]]] = a[j];
+    for (int pos = static_cast<int>(a.size()) - 1; pos >= 0; --pos)
+        out[--count[a[pos]]] = a[pos];
     return out;
 }
 ```
@@ -1480,15 +1480,15 @@ Weiss motivates function objects [§1.6.4, p.41] with precisely the sorting prob
 
 ```cpp
 struct ByLength {                                        // 1. a function object (Weiss's form)
-    bool operator()(const string& a, const string& b) const { return a.size() < b.size(); }
+    bool operator()(const string& lhs, const string& rhs) const { return lhs.size() < rhs.size(); }
 };
-bool byLengthFn(const string& a, const string& b) { return a.size() < b.size(); }  // 2. free function
+bool byLengthFn(const string& lhs, const string& rhs) { return lhs.size() < rhs.size(); }  // 2. free function
 
-void comparatorDemo(vector<string>& v) {
-    sort(v.begin(), v.end(), ByLength{});
-    sort(v.begin(), v.end(), byLengthFn);
-    sort(v.begin(), v.end(),                             // 3. a lambda -- same thing, less typing
-         [](const string& a, const string& b) { return a.size() < b.size(); });
+void comparatorDemo(vector<string>& words) {
+    sort(words.begin(), words.end(), ByLength{});
+    sort(words.begin(), words.end(), byLengthFn);
+    sort(words.begin(), words.end(),                             // 3. a lambda -- same thing, less typing
+         [](const string& lhs, const string& rhs) { return lhs.size() < rhs.size(); });
 }
 ```
 
@@ -1510,11 +1510,11 @@ void comparatorDemo(vector<string>& v) {
 
 ```cpp
 void pqDemo() {
-    priority_queue<int> maxq;                                          // top() is the LARGEST
-    priority_queue<int, vector<int>, greater<int>> minq;               // top() is the SMALLEST
+    priority_queue<int> maxHeap;                                          // top() is the LARGEST
+    priority_queue<int, vector<int>, greater<int>> minHeap;               // top() is the SMALLEST
     // The comparator is the THIRD template argument, so you must spell out the
     // second (the container) even though you did not want to change it.
-    (void)maxq; (void)minq;
+    (void)maxHeap; (void)minHeap;
 }
 ```
 
@@ -1525,9 +1525,9 @@ Getting this backwards is the second-most-common heap bug. And note `priority_qu
 CLRS's heap indexing depends on it:
 
 ```cpp
-inline int PARENT(int i) { return i / 2; }      // 1-based: clean
-inline int LEFT(int i)   { return 2 * i; }
-inline int RIGHT(int i)  { return 2 * i + 1; }
+inline int PARENT(int node) { return node / 2; }      // 1-based: clean
+inline int LEFT(int node)   { return 2 * node; }
+inline int RIGHT(int node)  { return 2 * node + 1; }
 // 0-based equivalents are uglier and easier to get wrong:
 //   parent = (i - 1) / 2,  left = 2i + 1,  right = 2i + 2
 ```
@@ -1563,9 +1563,9 @@ mt19937& rng() { static mt19937 gen(20260903u); return gen; }   // fixed seed: r
 int randomInt(int a, int b) { return uniform_int_distribution<int>(a, b)(rng()); }
 
 // 1-BASED heap indexing, exactly as CLRS. A[0] is unused throughout this appendix.
-inline int PARENT(int i) { return i / 2; }
-inline int LEFT(int i)   { return 2 * i; }
-inline int RIGHT(int i)  { return 2 * i + 1; }
+inline int PARENT(int node) { return node / 2; }
+inline int LEFT(int node)   { return 2 * node; }
+inline int RIGHT(int node)  { return 2 * node + 1; }
 ```
 
 ### A1 MAX-HEAPIFY
@@ -1581,32 +1581,32 @@ long long heapifySteps = 0;      // instrumentation (toolkit 7)
 // `heapSize` is passed explicitly rather than being A.size(): HEAPSORT shrinks
 // the heap while leaving the sorted suffix in the same array, so "how much of A
 // is still a heap" is NOT a property of the vector.
-void maxHeapify(vector<int>& A, int i, int heapSize) {
-    int l = LEFT(i), r = RIGHT(i);
+void maxHeapify(vector<int>& heap, int node, int heapSize) {
+    int leftChild = LEFT(node), rightChild = RIGHT(node);
     int largest;
     // SHORT-CIRCUIT ORDER MATTERS: `l <= heapSize` must come first, or A[l] is
     // read out of bounds when i is a leaf. && evaluates left to right and stops.
-    if (l <= heapSize && A[l] > A[i]) largest = l;
-    else                              largest = i;
-    if (r <= heapSize && A[r] > A[largest]) largest = r;
-    if (largest != i) {
+    if (leftChild <= heapSize && heap[leftChild] > heap[node]) largest = leftChild;
+    else                              largest = node;
+    if (rightChild <= heapSize && heap[rightChild] > heap[largest]) largest = rightChild;
+    if (largest != node) {
         ++heapifySteps;
-        swap(A[i], A[largest]);
-        maxHeapify(A, largest, heapSize);      // TAIL call -- see the loop version
+        swap(heap[node], heap[largest]);
+        maxHeapify(heap, largest, heapSize);      // TAIL call -- see the loop version
     }
 }
 
 // The recursive call above is in tail position, so this is the mechanical
 // conversion. Prefer it: the depth is only lg n, but writing the loop costs
 // nothing and removes any dependence on the compiler doing TCO (M03 toolkit 2).
-void maxHeapifyIterative(vector<int>& A, int i, int heapSize) {
+void maxHeapifyIterative(vector<int>& heap, int node, int heapSize) {
     for (;;) {
-        int l = LEFT(i), r = RIGHT(i), largest = i;
-        if (l <= heapSize && A[l] > A[largest]) largest = l;
-        if (r <= heapSize && A[r] > A[largest]) largest = r;
-        if (largest == i) return;          // A[i] is already >= both children: done
-        swap(A[i], A[largest]);
-        i = largest;                       // "recurse" by reassigning the parameter
+        int leftChild = LEFT(node), rightChild = RIGHT(node), largest = node;
+        if (leftChild <= heapSize && heap[leftChild] > heap[largest]) largest = leftChild;
+        if (rightChild <= heapSize && heap[rightChild] > heap[largest]) largest = rightChild;
+        if (largest == node) return;          // A[i] is already >= both children: done
+        swap(heap[node], heap[largest]);
+        node = largest;                       // "recurse" by reassigning the parameter
     }
 }
 ```
@@ -1620,19 +1620,19 @@ void maxHeapifyIterative(vector<int>& A, int i, int heapSize) {
 *Pseudocode: §3, "Algorithm: BUILD-MAX-HEAP".*
 
 ```cpp
-void buildMaxHeap(vector<int>& A) {
-    const int n = (int)A.size() - 1;
+void buildMaxHeap(vector<int>& heap) {
+    const int count = (int)heap.size() - 1;
     // Start at floor(n/2), not at n: elements A[n/2+1 .. n] are LEAVES, and a
     // leaf is already a one-element max-heap. Half the array needs no work at all.
     // Go DOWNWARD so that when maxHeapify(i) runs, both children of i are
     // already heaps -- that is its precondition.
-    for (int i = n / 2; i >= 1; --i)
-        maxHeapify(A, i, n);
+    for (int node = count / 2; node >= 1; --node)
+        maxHeapify(heap, node, count);
 }
 
-bool isMaxHeap(const vector<int>& A, int heapSize) {
-    for (int i = 2; i <= heapSize; ++i)
-        if (A[PARENT(i)] < A[i]) return false;
+bool isMaxHeap(const vector<int>& heap, int heapSize) {
+    for (int node = 2; node <= heapSize; ++node)
+        if (heap[PARENT(node)] < heap[node]) return false;
     return true;
 }
 ```
@@ -1661,14 +1661,14 @@ using `Σ h/2^h = 2` (the standard geometric-derivative sum from [M02](M02-asymp
 *Pseudocode: §3, "Algorithm: Heapsort".*
 
 ```cpp
-void heapsort(vector<int>& A) {
-    const int n = (int)A.size() - 1;
-    buildMaxHeap(A);                    // 1  Theta(n)
-    int heapSize = n;
-    for (int i = n; i >= 2; --i) {      // 2  n-1 iterations
-        swap(A[1], A[i]);               // 3  the max goes to its FINAL position
+void heapsort(vector<int>& arr) {
+    const int count = (int)arr.size() - 1;
+    buildMaxHeap(arr);                    // 1  Theta(n)
+    int heapSize = count;
+    for (int lastUnsorted = count; lastUnsorted >= 2; --lastUnsorted) {      // 2  n-1 iterations
+        swap(arr[1], arr[lastUnsorted]);               // 3  the max goes to its FINAL position
         --heapSize;                     // 4  and leaves the heap forever
-        maxHeapify(A, 1, heapSize);     // 5  O(lg n) to restore the root
+        maxHeapify(arr, 1, heapSize);     // 5  O(lg n) to restore the root
     }
     // Note what the array looks like throughout: A[1..heapSize] is a heap and
     // A[heapSize+1..n] is the sorted suffix, already in final position. The two
@@ -1709,23 +1709,23 @@ public:
     int maximum() const { return heap_.at(1); }
 
     int extractMax() {
-        int mx = heap_.at(1);
+        int maxKey = heap_.at(1);
         heap_[1] = heap_.back();       // move the LAST leaf to the root
         heap_.pop_back();
         if (size() >= 1) siftDown(1);  // and let it sink
-        return mx;
+        return maxKey;
     }
 
     // MAX-HEAP-INCREASE-KEY, the sift-UP loop.
-    void increaseKey(int i, int key) {
+    void increaseKey(int node, int key) {
         // The pseudocode says error "new key is smaller than current key".
         // An exception is the C++ way to say that: it cannot be ignored, unlike
         // a returned error code, and it carries a message.
-        if (key < heap_[i]) throw invalid_argument("new key is smaller than current key");
-        heap_[i] = key;
-        while (i > 1 && heap_[PARENT(i)] < heap_[i]) {   // i > 1 FIRST: no parent of the root
-            swap(heap_[i], heap_[PARENT(i)]);
-            i = PARENT(i);
+        if (key < heap_[node]) throw invalid_argument("new key is smaller than current key");
+        heap_[node] = key;
+        while (node > 1 && heap_[PARENT(node)] < heap_[node]) {   // i > 1 FIRST: no parent of the root
+            swap(heap_[node], heap_[PARENT(node)]);
+            node = PARENT(node);
         }
     }
 private:
@@ -1734,15 +1734,15 @@ private:
     // one dummy element.
     vector<int> heap_{0};
 
-    void siftDown(int i) {
+    void siftDown(int node) {
         const int n = size();
         for (;;) {
-            int l = LEFT(i), r = RIGHT(i), largest = i;
-            if (l <= n && heap_[l] > heap_[largest]) largest = l;
-            if (r <= n && heap_[r] > heap_[largest]) largest = r;
-            if (largest == i) return;
-            swap(heap_[i], heap_[largest]);
-            i = largest;
+            int leftChild = LEFT(node), rightChild = RIGHT(node), largest = node;
+            if (leftChild <= n && heap_[leftChild] > heap_[largest]) largest = leftChild;
+            if (rightChild <= n && heap_[rightChild] > heap_[largest]) largest = rightChild;
+            if (largest == node) return;
+            swap(heap_[node], heap_[largest]);
+            node = largest;
         }
     }
 };
@@ -1766,27 +1766,27 @@ long long partitionSwaps = 0, partitionCompares = 0;
 //     A[i+1 .. j-1] >  x        (the "high" side)
 //     A[j   .. r-1] unexamined
 //     A[r] == x                 (the pivot, parked at the end)
-int partitionLomuto(vector<int>& A, int p, int r) {
-    int x = A[r];                       // 1  pivot = LAST element
-    int i = p - 1;                      // 2  low side is empty
-    for (int j = p; j <= r - 1; ++j) {  // 3
+int partitionLomuto(vector<int>& arr, int lo, int hi) {
+    int pivot = arr[hi];                       // 1  pivot = LAST element
+    int lowEnd = lo - 1;                      // 2  low side is empty
+    for (int scan = lo; scan <= hi - 1; ++scan) {  // 3
         ++partitionCompares;
-        if (A[j] <= x) {                // 4  <= not < : keeps the invariant on ties
-            i = i + 1;                  // 5
+        if (arr[scan] <= pivot) {                // 4  <= not < : keeps the invariant on ties
+            lowEnd = lowEnd + 1;                  // 5
             ++partitionSwaps;
-            swap(A[i], A[j]);           // 6  grow the low side by one
+            swap(arr[lowEnd], arr[scan]);           // 6  grow the low side by one
         }
     }
     ++partitionSwaps;
-    swap(A[i + 1], A[r]);               // 7  drop the pivot between the two sides
-    return i + 1;                       // 8  its FINAL index -- it never moves again
+    swap(arr[lowEnd + 1], arr[hi]);               // 7  drop the pivot between the two sides
+    return lowEnd + 1;                       // 8  its FINAL index -- it never moves again
 }
 
-void quicksort(vector<int>& A, int p, int r) {
-    if (p < r) {                                // 1
-        int q = partitionLomuto(A, p, r);       // 2
-        quicksort(A, p, q - 1);                 // 3  note: q is EXCLUDED from both
-        quicksort(A, q + 1, r);                 // 4  calls -- it is already correct
+void quicksort(vector<int>& arr, int lo, int hi) {
+    if (lo < hi) {                                // 1
+        int pivotIdx = partitionLomuto(arr, lo, hi);       // 2
+        quicksort(arr, lo, pivotIdx - 1);                 // 3  note: q is EXCLUDED from both
+        quicksort(arr, pivotIdx + 1, hi);                 // 4  calls -- it is already correct
     }
 }
 ```
@@ -1817,22 +1817,22 @@ void quicksort(vector<int>& A, int p, int r) {
 // COIN FLIPS. There is no longer any input an adversary can hand you that is
 // reliably bad -- the bad case now depends on the random draws, which they
 // cannot see.
-int randomizedPartition(vector<int>& A, int p, int r) {
-    int i = randomInt(p, r);        // 1  RANDOM(p, r) -- INCLUSIVE both ends
-    swap(A[r], A[i]);               // 2  move the chosen pivot to the end...
-    return partitionLomuto(A, p, r);// 3  ...so PARTITION is reused UNCHANGED
+int randomizedPartition(vector<int>& arr, int lo, int hi) {
+    int pivotChoice = randomInt(lo, hi);        // 1  RANDOM(p, r) -- INCLUSIVE both ends
+    swap(arr[hi], arr[pivotChoice]);               // 2  move the chosen pivot to the end...
+    return partitionLomuto(arr, lo, hi);// 3  ...so PARTITION is reused UNCHANGED
 }
 
 long long quicksortDepth = 0;
 
 // The default argument tracks recursion depth for the measurement below; it is
 // not part of the algorithm.
-void randomizedQuicksort(vector<int>& A, int p, int r, long long depth = 1) {
+void randomizedQuicksort(vector<int>& arr, int lo, int hi, long long depth = 1) {
     quicksortDepth = max(quicksortDepth, depth);
-    if (p < r) {
-        int q = randomizedPartition(A, p, r);
-        randomizedQuicksort(A, p, q - 1, depth + 1);
-        randomizedQuicksort(A, q + 1, r, depth + 1);
+    if (lo < hi) {
+        int pivotIdx = randomizedPartition(arr, lo, hi);
+        randomizedQuicksort(arr, lo, pivotIdx - 1, depth + 1);
+        randomizedQuicksort(arr, pivotIdx + 1, hi, depth + 1);
     }
 }
 ```
@@ -1849,33 +1849,33 @@ void randomizedQuicksort(vector<int>& A, int p, int r, long long depth = 1) {
 
 ```cpp
 // Requires keys in [0, k]. Returns a NEW array -- counting sort is not in place.
-vector<int> countingSort(const vector<int>& A, int k) {
-    const int n = (int)A.size() - 1;
-    vector<int> B(n + 1);                      // output
-    vector<int> C(k + 1, 0);                   // C[i] will count value i
+vector<int> countingSort(const vector<int>& input, int maxKey) {
+    const int size = (int)input.size() - 1;
+    vector<int> output(size + 1);                      // output
+    vector<int> count(maxKey + 1, 0);                   // C[i] will count value i
 
-    for (int j = 1; j <= n; ++j) C[A[j]] = C[A[j]] + 1;   // histogram
-    for (int i = 1; i <= k; ++i)  C[i] = C[i] + C[i - 1]; // PREFIX SUMS:
+    for (int pos = 1; pos <= size; ++pos) count[input[pos]] = count[input[pos]] + 1;   // histogram
+    for (int value = 1; value <= maxKey; ++value)  count[value] = count[value] + count[value - 1]; // PREFIX SUMS:
                                     // C[i] is now "how many values are <= i",
                                     // i.e. the last output slot value i may occupy
 
-    for (int j = n; j >= 1; --j) {             // <-- REVERSE order. See below.
-        B[C[A[j]]] = A[j];
-        C[A[j]] = C[A[j]] - 1;                 // next equal key goes one slot earlier
+    for (int pos = size; pos >= 1; --pos) {             // <-- REVERSE order. See below.
+        output[count[input[pos]]] = input[pos];
+        count[input[pos]] = count[input[pos]] - 1;                 // next equal key goes one slot earlier
     }
-    return B;
+    return output;
 }
 
 struct Rec { int key; int id; };               // id = original position, to test stability
 
-vector<Rec> countingSortStable(const vector<Rec>& A, int k) {
-    const int n = (int)A.size() - 1;
-    vector<Rec> B(n + 1);
-    vector<int> C(k + 1, 0);
-    for (int j = 1; j <= n; ++j) C[A[j].key]++;
-    for (int i = 1; i <= k; ++i)  C[i] += C[i - 1];
-    for (int j = n; j >= 1; --j) { B[C[A[j].key]] = A[j]; C[A[j].key]--; }
-    return B;
+vector<Rec> countingSortStable(const vector<Rec>& input, int maxKey) {
+    const int size = (int)input.size() - 1;
+    vector<Rec> output(size + 1);
+    vector<int> count(maxKey + 1, 0);
+    for (int pos = 1; pos <= size; ++pos) count[input[pos].key]++;
+    for (int value = 1; value <= maxKey; ++value)  count[value] += count[value - 1];
+    for (int pos = size; pos >= 1; --pos) { output[count[input[pos].key]] = input[pos]; count[input[pos].key]--; }
+    return output;
 }
 ```
 
@@ -1894,25 +1894,25 @@ vector<Rec> countingSortStable(const vector<Rec>& A, int k) {
 ```cpp
 // d passes of a STABLE sort, LEAST significant digit first.
 // A is taken BY VALUE because each pass overwrites it.
-vector<int> radixSort(vector<int> A, int d, int base = 10) {
-    const int n = (int)A.size() - 1;
-    vector<int> B(n + 1);
-    long long place = 1;                         // 1, base, base^2, ...  long long: base^d
+vector<int> radixSort(vector<int> keys, int digitCount, int radix = 10) {
+    const int size = (int)keys.size() - 1;
+    vector<int> output(size + 1);
+    long long placeValue = 1;                         // 1, base, base^2, ...  long long: base^d
                                                  // overflows int for d around 10
-    for (int pass = 1; pass <= d; ++pass) {      // 1  for i = 1 to d
+    for (int digitIndex = 1; digitIndex <= digitCount; ++digitIndex) {      // 1  for i = 1 to d
         // 2  "use a STABLE sort on digit i" -- counting sort, inlined
-        vector<int> C(base, 0);
-        for (int j = 1; j <= n; ++j) C[(A[j] / place) % base]++;
-        for (int i = 1; i < base; ++i) C[i] += C[i - 1];
-        for (int j = n; j >= 1; --j) {           // reversed: STABILITY, see A7
-            int digit = (int)((A[j] / place) % base);
-            B[C[digit]] = A[j];
-            C[digit]--;
+        vector<int> count(radix, 0);
+        for (int pos = 1; pos <= size; ++pos) count[(keys[pos] / placeValue) % radix]++;
+        for (int value = 1; value < radix; ++value) count[value] += count[value - 1];
+        for (int pos = size; pos >= 1; --pos) {           // reversed: STABILITY, see A7
+            int digit = (int)((keys[pos] / placeValue) % radix);
+            output[count[digit]] = keys[pos];
+            count[digit]--;
         }
-        A = B;                                   // copy back; a swap() would avoid the copy
-        place *= base;
+        keys = output;                                   // copy back; a swap() would avoid the copy
+        placeValue *= radix;
     }
-    return A;
+    return keys;
 }
 ```
 
@@ -1929,35 +1929,35 @@ vector<int> radixSort(vector<int> A, int d, int base = 10) {
 *Pseudocode: §6, "Algorithm: Bucket Sort".*
 
 ```cpp
-void insertionSortList(vector<double>& v) {
-    for (size_t i = 1; i < v.size(); ++i) {
-        double key = v[i];
-        size_t j = i;
+void insertionSortList(vector<double>& bucket) {
+    for (size_t unsortedStart = 1; unsortedStart < bucket.size(); ++unsortedStart) {
+        double key = bucket[unsortedStart];
+        size_t hole = unsortedStart;
         // `j > 0` first, then v[j-1]: with SIZE_T indices, j-1 at j==0 wraps to
         // SIZE_MAX and reads far out of bounds. Short-circuiting saves us.
-        while (j > 0 && v[j - 1] > key) { v[j] = v[j - 1]; --j; }
-        v[j] = key;
+        while (hole > 0 && bucket[hole - 1] > key) { bucket[hole] = bucket[hole - 1]; --hole; }
+        bucket[hole] = key;
     }
 }
 
 // Assumes the input is drawn UNIFORMLY from [0, 1). That assumption is the
 // entire analysis -- it is what makes the buckets evenly filled.
-vector<double> bucketSort(const vector<double>& A) {
-    const int n = (int)A.size() - 1;
-    vector<vector<double>> B(n);                  // 1  n empty lists
-    for (int i = 1; i <= n; ++i) {
-        int idx = (int)(n * A[i]);                // 4  bucket floor(n * A[i])
-        if (idx >= n) idx = n - 1;                // guard: A[i] == 1.0 would index n
-        B[idx].push_back(A[i]);
+vector<double> bucketSort(const vector<double>& input) {
+    const int size = (int)input.size() - 1;
+    vector<vector<double>> buckets(size);                  // 1  n empty lists
+    for (int unsortedStart = 1; unsortedStart <= size; ++unsortedStart) {
+        int bucketIdx = (int)(size * input[unsortedStart]);                // 4  bucket floor(n * A[i])
+        if (bucketIdx >= size) bucketIdx = size - 1;                // guard: A[i] == 1.0 would index n
+        buckets[bucketIdx].push_back(input[unsortedStart]);
     }
-    vector<double> out;
-    out.reserve(n + 1);
-    out.push_back(0.0);                           // keep the 1-based convention
-    for (int i = 0; i < n; ++i) {
-        insertionSortList(B[i]);                  // 6  sort each bucket
-        for (double x : B[i]) out.push_back(x);   // 8  concatenate in order
+    vector<double> sorted;
+    sorted.reserve(size + 1);
+    sorted.push_back(0.0);                           // keep the 1-based convention
+    for (int unsortedStart = 0; unsortedStart < size; ++unsortedStart) {
+        insertionSortList(buckets[unsortedStart]);                  // 6  sort each bucket
+        for (double value : buckets[unsortedStart]) sorted.push_back(value);   // 8  concatenate in order
     }
-    return out;
+    return sorted;
 }
 ```
 
@@ -1975,29 +1975,29 @@ vector<double> bucketSort(const vector<double>& A) {
 // Returns the i-th SMALLEST element of A[p..r], with i counted from 1.
 // Same partition as quicksort -- but recurses into only ONE side, which is the
 // entire reason the cost drops from n lg n to n.
-int randomizedSelect(vector<int>& A, int p, int r, int i) {
-    if (p == r) return A[p];                       // 1  one element: it is the answer
-    int q = randomizedPartition(A, p, r);          // 3
-    int k = q - p + 1;                             // 4  rank of the pivot WITHIN A[p..r]
-    if (i == k)      return A[q];                  // 5  the pivot is the answer
-    else if (i < k)  return randomizedSelect(A, p, q - 1, i);        // 7  left side
-    else             return randomizedSelect(A, q + 1, r, i - k);    // 9  right side,
-                     // and note `i - k`: the rank must be RE-BASED, because the
-                     // k elements at or before the pivot are gone. Forgetting
-                     // this is the classic quickselect bug.
+int randomizedSelect(vector<int>& arr, int lo, int hi, int rank) {
+    if (lo == hi) return arr[lo];                       // 1  one element: it is the answer
+    int pivotIdx = randomizedPartition(arr, lo, hi);          // 3
+    int pivotRank = pivotIdx - lo + 1;                             // 4  rank of the pivot WITHIN A[p..r]
+    if (rank == pivotRank) return arr[pivotIdx];                            // 5  the pivot IS the answer
+    if (rank <  pivotRank) return randomizedSelect(arr, lo, pivotIdx - 1, rank);   // 7  left side
+    return randomizedSelect(arr, pivotIdx + 1, hi, rank - pivotRank);       // 9  right side,
+    // and note `rank - pivotRank`: the rank must be RE-BASED, because the
+    // pivotRank elements at or before the pivot are gone. Forgetting this
+    // subtraction is the classic quickselect bug.
 }
 
 // Both recursive calls are in tail position, so quickselect becomes a loop --
 // and that drops the space from O(lg n) expected to O(1).
-int randomizedSelectIterative(vector<int>& A, int p, int r, int i) {
-    while (p != r) {
-        int q = randomizedPartition(A, p, r);
-        int k = q - p + 1;
-        if (i == k) return A[q];
-        if (i < k)  r = q - 1;                     // shrink to the left side
-        else      { p = q + 1; i -= k; }           // shrink right AND re-base i
+int randomizedSelectIterative(vector<int>& arr, int lo, int hi, int rank) {
+    while (lo != hi) {
+        int pivotIdx = randomizedPartition(arr, lo, hi);
+        int pivotRank = pivotIdx - lo + 1;
+        if (rank == pivotRank) return arr[pivotIdx];
+        if (rank < pivotRank)  hi = pivotIdx - 1;                     // shrink to the left side
+        else      { lo = pivotIdx + 1; rank -= pivotRank; }           // shrink right AND re-base rank
     }
-    return A[p];
+    return arr[lo];
 }
 ```
 

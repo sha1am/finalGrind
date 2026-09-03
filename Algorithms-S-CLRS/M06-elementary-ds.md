@@ -438,9 +438,9 @@ public:
     // Linear search. Returns end() if absent.
     iterator find(const T& v) const {
         nil_->value = v;                                     // sentinel trick:
-        iterator x = nil_->next;                             // one comparison per step
-        while (!(x->value == v)) x = x->next;
-        return x;                                            // == end() if not found
+        iterator node = nil_->next;                             // one comparison per step
+        while (!(node->value == v)) node = node->next;
+        return node;                                            // == end() if not found
     }
 
     void clear() { while (!empty()) erase(begin()); }
@@ -946,8 +946,8 @@ public:
     PlainListSketch(PlainListSketch&&) noexcept;                // moving IS safe
     PlainListSketch& operator=(PlainListSketch&&) noexcept;
 private:
-    struct N { int key; N* next; };
-    N* head_ = nullptr;
+    struct ListNode { int key; ListNode* next; };
+    ListNode* head_ = nullptr;
 };
 ```
 
@@ -1004,7 +1004,7 @@ struct Node {
     int key;
     Node* prev = nullptr;      // default member initialisers: no uninitialised pointers
     Node* next = nullptr;
-    explicit Node(int k) : key(k) {}
+    explicit Node(int value) : key(value) {}
 };
 ```
 
@@ -1019,64 +1019,64 @@ public:
 
     // THE BIG-FIVE (toolkit 2). This class owns raw pointers, so the compiler's
     // defaults are wrong and all five must be stated.
-    ~PlainList() { Node* x = head_; while (x) { Node* nx = x->next; delete x; x = nx; } }
+    ~PlainList() { Node* node = head_; while (node) { Node* next = node->next; delete node; node = next; } }
     PlainList(const PlainList&)            = delete;   // no shallow copy / double free
     PlainList& operator=(const PlainList&) = delete;
-    PlainList(PlainList&& o) noexcept : head_(o.head_) { o.head_ = nullptr; }
+    PlainList(PlainList&& other) noexcept : head_(other.head_) { other.head_ = nullptr; }
     //                                                   ^^^^^^^^^^^^^^^^ leaving the
     // source empty is REQUIRED: otherwise both destructors free the same nodes.
-    PlainList& operator=(PlainList&& o) noexcept {
-        if (this != &o) { this->~PlainList(); head_ = o.head_; o.head_ = nullptr; }
+    PlainList& operator=(PlainList&& other) noexcept {
+        if (this != &other) { this->~PlainList(); head_ = other.head_; other.head_ = nullptr; }
         return *this;
     }
 
-    long long searchSteps = 0;      // instrumentation: comparisons performed
+    long long comparisons = 0;      // instrumentation: comparisons performed
 
     // LIST-SEARCH(L, k) -- Theta(n)
-    Node* search(int k) {
-        Node* x = head_;                          // 1  x = L.head
+    Node* search(int value) {
+        Node* node = head_;                          // 1  x = L.head
         // TWO comparisons per iteration: "am I off the end?" and "is this it?".
         // That is exactly what the sentinel version in A2 removes.
-        while (x != nullptr && x->key != k) {      // 2  while x != NIL and x.key != k
-            searchSteps += 2;
-            x = x->next;                           // 3      x = x.next
+        while (node != nullptr && node->key != value) {      // 2  while x != NIL and x.key != k
+            comparisons += 2;
+            node = node->next;                           // 3      x = x.next
         }
-        if (x != nullptr) searchSteps += 2; else searchSteps += 1;
-        return x;                                  // 4  return x (nullptr if absent)
+        if (node != nullptr) comparisons += 2; else comparisons += 1;
+        return node;                                  // 4  return x (nullptr if absent)
     }
 
     // LIST-PREPEND(L, x) -- O(1)
-    Node* prepend(int k) {
-        Node* x = new Node(k);
-        x->next = head_;                           // 1  x.next = L.head
-        x->prev = nullptr;                         //    x.prev = NIL
-        if (head_ != nullptr) head_->prev = x;     // 3  if L.head != NIL: L.head.prev = x
-        head_ = x;                                 // 5  L.head = x
-        return x;                                  // hand the pointer back: O(1) erase
+    Node* prepend(int value) {
+        Node* node = new Node(value);
+        node->next = head_;                           // 1  x.next = L.head
+        node->prev = nullptr;                         //    x.prev = NIL
+        if (head_ != nullptr) head_->prev = node;     // 3  if L.head != NIL: L.head.prev = x
+        head_ = node;                                 // 5  L.head = x
+        return node;                                  // hand the pointer back: O(1) erase
     }                                              // is only possible if you KEEP it
 
     // LIST-INSERT(x, y) -- splice x in immediately after y. O(1).
-    void insertAfter(Node* x, Node* y) {
-        x->next = y->next;                         // 1
-        x->prev = y;
-        if (y->next != nullptr) y->next->prev = x; // 3
-        y->next = x;                               // 5
+    void insertAfter(Node* node, Node* after) {
+        node->next = after->next;                         // 1
+        node->prev = after;
+        if (after->next != nullptr) after->next->prev = node; // 3
+        after->next = node;                               // 5
         // ORDER MATTERS: y->next is read into x->next BEFORE being overwritten.
         // Swap lines 1 and 5 and you lose the rest of the list.
     }
 
     // LIST-DELETE(L, x) -- O(1) GIVEN THE POINTER.
-    void erase(Node* x) {
-        if (x->prev != nullptr) x->prev->next = x->next;   // 1
-        else                    head_ = x->next;           // 3  x was the head
-        if (x->next != nullptr) x->next->prev = x->prev;   // 4
-        delete x;   // the pseudocode stops here; C++ makes you free the node,
+    void erase(Node* node) {
+        if (node->prev != nullptr) node->prev->next = node->next;   // 1
+        else                    head_ = node->next;           // 3  x was the head
+        if (node->next != nullptr) node->next->prev = node->prev;   // 4
+        delete node;   // the pseudocode stops here; C++ makes you free the node,
                     // and forgetting this is the leak Weiss warns about
     }
 
     vector<int> toVector() const {
         vector<int> v;
-        for (Node* x = head_; x; x = x->next) v.push_back(x->key);
+        for (Node* node = head_; node; node = node->next) v.push_back(node->key);
         return v;
     }
     Node* head() const { return head_; }
@@ -1104,53 +1104,53 @@ public:
     SentinelList() { nil_ = new Node(0); nil_->next = nil_; nil_->prev = nil_; }
 
     ~SentinelList() {
-        Node* x = nil_->next;
-        while (x != nil_) { Node* nx = x->next; delete x; x = nx; }
+        Node* node = nil_->next;
+        while (node != nil_) { Node* next = node->next; delete node; node = next; }
         delete nil_;                    // and the sentinel itself
     }
     SentinelList(const SentinelList&)            = delete;
     SentinelList& operator=(const SentinelList&) = delete;
 
-    long long searchSteps = 0;
+    long long comparisons = 0;
 
     // LIST-INSERT'(x, y) -- no NIL test at all.
-    Node* insertAfter(int k, Node* y) {
-        Node* x = new Node(k);
-        x->next = y->next;              // 1
-        x->prev = y;
-        y->next->prev = x;              // 3  y->next is NEVER null: it is at worst nil_
-        y->next = x;
-        return x;
+    Node* insertAfter(int value, Node* after) {
+        Node* node = new Node(value);
+        node->next = after->next;              // 1
+        node->prev = after;
+        after->next->prev = node;              // 3  y->next is NEVER null: it is at worst nil_
+        after->next = node;
+        return node;
     }
     // "No separate procedure for prepending is necessary": head insertion is
     // insertion after the sentinel, tail insertion is insertion after nil_->prev.
-    Node* prepend(int k) { return insertAfter(k, nil_); }
-    Node* append(int k)  { return insertAfter(k, nil_->prev); }
+    Node* prepend(int value) { return insertAfter(value, nil_); }
+    Node* append(int value)  { return insertAfter(value, nil_->prev); }
 
     // LIST-DELETE'(x) -- TWO lines, versus four with the NIL checks.
-    void erase(Node* x) {
-        x->prev->next = x->next;        // 1
-        x->next->prev = x->prev;        // 2
-        delete x;
+    void erase(Node* node) {
+        node->prev->next = node->next;        // 1
+        node->next->prev = node->prev;        // 2
+        delete node;
     }
 
     // LIST-SEARCH'(L, k) -- the sentinel-as-guard trick.
-    Node* search(int k) {
-        nil_->key = k;                  // 1  plant the key in the sentinel, so the
+    Node* search(int value) {
+        nil_->key = value;                  // 1  plant the key in the sentinel, so the
                                         //    loop is GUARANTEED to terminate
-        Node* x = nil_->next;           // 2
-        while (x->key != k) {           // 3  ONE comparison per iteration, not two
-            ++searchSteps;
-            x = x->next;
+        Node* node = nil_->next;           // 2
+        while (node->key != value) {           // 3  ONE comparison per iteration, not two
+            ++comparisons;
+            node = node->next;
         }
-        ++searchSteps;
-        if (x == nil_) return nullptr;  // 5  we only "found" it in the sentinel
-        return x;                       // 7
+        ++comparisons;
+        if (node == nil_) return nullptr;  // 5  we only "found" it in the sentinel
+        return node;                       // 7
     }
 
     vector<int> toVector() const {
         vector<int> v;
-        for (Node* x = nil_->next; x != nil_; x = x->next) v.push_back(x->key);
+        for (Node* node = nil_->next; node != nil_; node = node->next) v.push_back(node->key);
         return v;
     }
     Node* nil() const { return nil_; }

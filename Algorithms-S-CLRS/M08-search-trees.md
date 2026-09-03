@@ -241,8 +241,8 @@ class BST {
 public:
     struct Node {
         Key   key;
-        Node *left = nullptr, *right = nullptr, *p = nullptr;
-        explicit Node(const Key& k) : key(k) {}
+        Node *left = nullptr, *right = nullptr, *parent = nullptr;
+        explicit Node(const Key& value) : key(value) {}
     };
 
     BST() = default;
@@ -251,79 +251,80 @@ public:
     BST& operator=(const BST&) = delete;
 
     Node* root() const { return root_; }
-    size_t size() const { return n_; }
+    size_t size() const { return count_; }
 
-    Node* find(const Key& k) const {
-        Node* x = root_;
-        while (x && x->key != k) x = (k < x->key) ? x->left : x->right;
-        return x;
+    Node* find(const Key& key) const {
+        Node* node = root_;
+        while (node && node->key != key) node = (key < node->key) ? node->left : node->right;
+        return node;
     }
 
-    static Node* minimum(Node* x) { while (x->left) x = x->left; return x; }
-    static Node* maximum(Node* x) { while (x->right) x = x->right; return x; }
+    static Node* minimum(Node* node) { while (node->left)  node = node->left;  return node; }
+    static Node* maximum(Node* node) { while (node->right) node = node->right; return node; }
 
-    static Node* successor(Node* x) {
-        if (x->right) return minimum(x->right);
-        Node* y = x->p;
-        while (y && x == y->right) { x = y; y = y->p; }
-        return y;
+    static Node* successor(Node* node) {
+        if (node->right) return minimum(node->right);
+        Node* ancestor = node->parent;
+        while (ancestor && node == ancestor->right) { node = ancestor; ancestor = ancestor->parent; }
+        return ancestor;
     }
 
-    Node* insert(const Key& k) {
-        Node* z = new Node(k);
-        Node* y = nullptr;
-        Node* x = root_;
-        while (x) { y = x; x = (k < x->key) ? x->left : x->right; }
-        z->p = y;
-        if (!y)                 root_ = z;
-        else if (k < y->key)    y->left = z;
-        else                    y->right = z;
-        ++n_;
-        return z;
+    Node* insert(const Key& key) {
+        Node* fresh  = new Node(key);
+        Node* parent = nullptr;                  // trails one step behind the walker
+        Node* node   = root_;
+        while (node) { parent = node; node = (key < node->key) ? node->left : node->right; }
+        fresh->parent = parent;
+        if (!parent)                 root_ = fresh;
+        else if (key < parent->key)  parent->left  = fresh;
+        else                         parent->right = fresh;
+        ++count_;
+        return fresh;
     }
 
-    // Moves the successor node into z's position; frees z itself (CLRS 4e).
-    void erase(Node* z) {
-        if (!z->left)        transplant(z, z->right);
-        else if (!z->right)  transplant(z, z->left);
+    // Moves the successor node into target's position; frees target itself (CLRS 4e).
+    void erase(Node* target) {
+        if (!target->left)        transplant(target, target->right);
+        else if (!target->right)  transplant(target, target->left);
         else {
-            Node* y = minimum(z->right);
-            if (y->p != z) {
-                transplant(y, y->right);
-                y->right = z->right;
-                y->right->p = y;
+            Node* replacement = minimum(target->right);
+            if (replacement->parent != target) {
+                transplant(replacement, replacement->right);
+                replacement->right = target->right;
+                replacement->right->parent = replacement;
             }
-            transplant(z, y);
-            y->left = z->left;
-            y->left->p = y;
+            transplant(target, replacement);
+            replacement->left = target->left;
+            replacement->left->parent = replacement;
         }
-        delete z;
-        --n_;
+        delete target;
+        --count_;
     }
 
     void inorder(vector<Key>& out) const { walk(root_, out); }
 
 private:
     Node* root_ = nullptr;
-    size_t n_ = 0;
+    size_t count_ = 0;
 
-    void transplant(Node* u, Node* v) {
-        if (!u->p)                root_ = v;
-        else if (u == u->p->left) u->p->left = v;
-        else                      u->p->right = v;
-        if (v) v->p = u->p;
+    // Splices the subtree rooted at `newSubtree` into the slot `oldSubtree` occupies.
+    void transplant(Node* oldSubtree, Node* newSubtree) {
+        if (!oldSubtree->parent)                          root_ = newSubtree;
+        else if (oldSubtree == oldSubtree->parent->left)  oldSubtree->parent->left  = newSubtree;
+        else                                              oldSubtree->parent->right = newSubtree;
+        if (newSubtree) newSubtree->parent = oldSubtree->parent;
     }
-    static void walk(Node* x, vector<Key>& out) {
-        if (!x) return;
-        walk(x->left, out);
-        out.push_back(x->key);
-        walk(x->right, out);
+    static void walk(Node* node, vector<Key>& out) {
+        if (!node) return;
+        walk(node->left, out);
+        out.push_back(node->key);
+        walk(node->right, out);
     }
-    static void destroy(Node* x) {
-        if (!x) return;
-        destroy(x->left);
-        destroy(x->right);
-        delete x;
+    static void destroy(Node* node) {
+        if (!node) return;
+        destroy(node->left);
+        destroy(node->right);
+        delete node;
     }
 };
 ```
@@ -581,14 +582,14 @@ public:
 
     struct Node {
         Key   key{};
-        Node *left, *right, *p;
+        Node *left, *right, *parent;
         bool  red;
         Aug   aug{};
     };
 
     RBTree() {
         nil_ = new Node{Key{}, nullptr, nullptr, nullptr, false, Aug{}};
-        nil_->left = nil_->right = nil_->p = nil_;
+        nil_->left = nil_->right = nil_->parent = nil_;
         root_ = nil_;
     }
     ~RBTree() { destroy(root_); delete nil_; }
@@ -597,206 +598,213 @@ public:
 
     Node* nil()  const { return nil_; }
     Node* root() const { return root_; }
-    size_t size() const { return n_; }
+    size_t size() const { return count_; }
 
-    Node* find(const Key& k) const {
-        Node* x = root_;
-        while (x != nil_) {
-            if (less_(k, x->key))      x = x->left;
-            else if (less_(x->key, k)) x = x->right;
-            else                       return x;
+    Node* find(const Key& key) const {
+        Node* node = root_;
+        while (node != nil_) {
+            if (less_(key, node->key))      node = node->left;
+            else if (less_(node->key, key)) node = node->right;
+            else                            return node;
         }
         return nil_;
     }
 
-    Node* minimum(Node* x) const { while (x->left != nil_) x = x->left; return x; }
+    Node* minimum(Node* node) const { while (node->left != nil_) node = node->left; return node; }
 
-    Node* successor(Node* x) const {
-        if (x->right != nil_) return minimum(x->right);
-        Node* y = x->p;
-        while (y != nil_ && x == y->right) { x = y; y = y->p; }
-        return y;
+    Node* successor(Node* node) const {
+        if (node->right != nil_) return minimum(node->right);
+        Node* ancestor = node->parent;
+        while (ancestor != nil_ && node == ancestor->right) { node = ancestor; ancestor = ancestor->parent; }
+        return ancestor;
     }
 
-    Node* insert(const Key& k) {
-        Node* z = new Node{k, nil_, nil_, nil_, true, Aug{}};
-        Node* y = nil_;
-        Node* x = root_;
-        while (x != nil_) { y = x; x = less_(k, x->key) ? x->left : x->right; }
-        z->p = y;
-        if (y == nil_)             root_ = z;
-        else if (less_(k, y->key)) y->left = z;
-        else                       y->right = z;
-        pullUp(z);                       // z and every proper ancestor
-        insertFixup(z);
-        ++n_;
-        return z;
+    Node* insert(const Key& key) {
+        Node* fresh  = new Node{key, nil_, nil_, nil_, true, Aug{}};
+        Node* parent = nil_;                     // trails one step behind the walker
+        Node* node   = root_;
+        while (node != nil_) { parent = node; node = less_(key, node->key) ? node->left : node->right; }
+        fresh->parent = parent;
+        if (parent == nil_)                 root_ = fresh;
+        else if (less_(key, parent->key))   parent->left  = fresh;
+        else                                parent->right = fresh;
+        pullUp(fresh);                   // fresh and every proper ancestor
+        insertFixup(fresh);
+        ++count_;
+        return fresh;
     }
 
-    void erase(Node* z) {
-        Node* y = z;
-        Node* x;
-        Node* from;                      // deepest node whose subtree changed
-        bool yWasBlack = !y->red;
-        if (z->left == nil_)       { x = z->right; transplant(z, z->right); from = z->p; }
-        else if (z->right == nil_) { x = z->left;  transplant(z, z->left);  from = z->p; }
-        else {
-            y = minimum(z->right);
-            yWasBlack = !y->red;
-            x = y->right;
-            if (y->p == z) { x->p = y; from = y; }
+    void erase(Node* target) {
+        Node* removed = target;          // the node physically unlinked or moved
+        Node* fixupAt;                   // node that slides into `removed`'s old slot
+        Node* recomputeFrom;             // deepest node whose subtree changed
+        bool removedWasBlack = !removed->red;
+        if (target->left == nil_) {
+            fixupAt = target->right; transplant(target, target->right); recomputeFrom = target->parent;
+        } else if (target->right == nil_) {
+            fixupAt = target->left;  transplant(target, target->left);  recomputeFrom = target->parent;
+        } else {
+            removed = minimum(target->right);
+            removedWasBlack = !removed->red;
+            fixupAt = removed->right;
+            if (removed->parent == target) { fixupAt->parent = removed; recomputeFrom = removed; }
             else {
-                transplant(y, y->right);
-                from = y->p;
-                y->right = z->right;
-                y->right->p = y;
+                transplant(removed, removed->right);
+                recomputeFrom = removed->parent;
+                removed->right = target->right;
+                removed->right->parent = removed;
             }
-            transplant(z, y);
-            y->left = z->left;
-            y->left->p = y;
-            y->red = z->red;
+            transplant(target, removed);
+            removed->left = target->left;
+            removed->left->parent = removed;
+            removed->red = target->red;
         }
-        pullUp(from);
-        if (yWasBlack) deleteFixup(x);
-        delete z;
-        --n_;
+        pullUp(recomputeFrom);
+        if (removedWasBlack) deleteFixup(fixupAt);
+        delete target;
+        --count_;
     }
 
 private:
     Node* root_;
     Node* nil_;
-    size_t n_ = 0;
+    size_t count_ = 0;
     Compare less_{};
 
-    void pull(Node* x)   { if (x != nil_) x->aug.pull(x); }
-    void pullUp(Node* x) { while (x != nil_) { x->aug.pull(x); x = x->p; } }
+    void pull(Node* node)   { if (node != nil_) node->aug.pull(node); }
+    void pullUp(Node* node) { while (node != nil_) { node->aug.pull(node); node = node->parent; } }
 
-    void leftRotate(Node* x) {
-        Node* y = x->right;
-        x->right = y->left;
-        if (y->left != nil_) y->left->p = x;
-        y->p = x->p;
-        if (x->p == nil_)         root_ = y;
-        else if (x == x->p->left) x->p->left = y;
-        else                      x->p->right = y;
-        y->left = x;
-        x->p = y;
-        pull(x); pull(y);                // only these two subtrees changed
+    // `pivot` descends one level; its right child `newParent` takes its place.
+    void leftRotate(Node* pivot) {
+        Node* newParent = pivot->right;
+        pivot->right = newParent->left;
+        if (newParent->left != nil_) newParent->left->parent = pivot;
+        newParent->parent = pivot->parent;
+        if (pivot->parent == nil_)              root_ = newParent;
+        else if (pivot == pivot->parent->left)  pivot->parent->left  = newParent;
+        else                                    pivot->parent->right = newParent;
+        newParent->left = pivot;
+        pivot->parent = newParent;
+        pull(pivot); pull(newParent);    // only these two subtrees changed
     }
 
-    void rightRotate(Node* x) {
-        Node* y = x->left;
-        x->left = y->right;
-        if (y->right != nil_) y->right->p = x;
-        y->p = x->p;
-        if (x->p == nil_)          root_ = y;
-        else if (x == x->p->right) x->p->right = y;
-        else                       x->p->left = y;
-        y->right = x;
-        x->p = y;
-        pull(x); pull(y);
+    void rightRotate(Node* pivot) {
+        Node* newParent = pivot->left;
+        pivot->left = newParent->right;
+        if (newParent->right != nil_) newParent->right->parent = pivot;
+        newParent->parent = pivot->parent;
+        if (pivot->parent == nil_)              root_ = newParent;
+        else if (pivot == pivot->parent->right) pivot->parent->right = newParent;
+        else                                    pivot->parent->left  = newParent;
+        newParent->right = pivot;
+        pivot->parent = newParent;
+        pull(pivot); pull(newParent);
     }
 
-    void transplant(Node* u, Node* v) {
-        if (u->p == nil_)         root_ = v;
-        else if (u == u->p->left) u->p->left = v;
-        else                      u->p->right = v;
-        v->p = u->p;                     // unconditional: v may be the sentinel
+    void transplant(Node* oldSubtree, Node* newSubtree) {
+        if (oldSubtree->parent == nil_)                   root_ = newSubtree;
+        else if (oldSubtree == oldSubtree->parent->left)  oldSubtree->parent->left  = newSubtree;
+        else                                              oldSubtree->parent->right = newSubtree;
+        newSubtree->parent = oldSubtree->parent;   // unconditional: newSubtree may be the sentinel
     }
 
-    void insertFixup(Node* z) {
-        while (z->p->red) {
-            if (z->p == z->p->p->left) {
-                Node* y = z->p->p->right;              // uncle
-                if (y->red) {                          // case 1
-                    z->p->red = false; y->red = false;
-                    z->p->p->red = true;
-                    z = z->p->p;
+    void insertFixup(Node* node) {
+        while (node->parent->red) {
+            if (node->parent == node->parent->parent->left) {
+                Node* uncle = node->parent->parent->right;
+                if (uncle->red) {                          // case 1
+                    node->parent->red = false; uncle->red = false;
+                    node->parent->parent->red = true;
+                    node = node->parent->parent;
                 } else {
-                    if (z == z->p->right) {            // case 2
-                        z = z->p;
-                        leftRotate(z);
+                    if (node == node->parent->right) {     // case 2
+                        node = node->parent;
+                        leftRotate(node);
                     }
-                    z->p->red = false;                 // case 3
-                    z->p->p->red = true;
-                    rightRotate(z->p->p);
+                    node->parent->red = false;             // case 3
+                    node->parent->parent->red = true;
+                    rightRotate(node->parent->parent);
                 }
             } else {
-                Node* y = z->p->p->left;
-                if (y->red) {
-                    z->p->red = false; y->red = false;
-                    z->p->p->red = true;
-                    z = z->p->p;
+                Node* uncle = node->parent->parent->left;
+                if (uncle->red) {
+                    node->parent->red = false; uncle->red = false;
+                    node->parent->parent->red = true;
+                    node = node->parent->parent;
                 } else {
-                    if (z == z->p->left) { z = z->p; rightRotate(z); }
-                    z->p->red = false;
-                    z->p->p->red = true;
-                    leftRotate(z->p->p);
+                    if (node == node->parent->left) { node = node->parent; rightRotate(node); }
+                    node->parent->red = false;
+                    node->parent->parent->red = true;
+                    leftRotate(node->parent->parent);
                 }
             }
         }
         root_->red = false;
     }
 
-    void deleteFixup(Node* x) {
-        while (x != root_ && !x->red) {
-            if (x == x->p->left) {
-                Node* w = x->p->right;                 // sibling
-                if (w->red) {                          // case 1
-                    w->red = false; x->p->red = true;
-                    leftRotate(x->p);
-                    w = x->p->right;
+    void deleteFixup(Node* node) {
+        while (node != root_ && !node->red) {
+            if (node == node->parent->left) {
+                Node* sibling = node->parent->right;
+                if (sibling->red) {                                    // case 1
+                    sibling->red = false; node->parent->red = true;
+                    leftRotate(node->parent);
+                    sibling = node->parent->right;
                 }
-                if (!w->left->red && !w->right->red) { // case 2
-                    w->red = true;
-                    x = x->p;
+                if (!sibling->left->red && !sibling->right->red) {     // case 2
+                    sibling->red = true;
+                    node = node->parent;
                 } else {
-                    if (!w->right->red) {              // case 3
-                        w->left->red = false;
-                        w->red = true;
-                        rightRotate(w);
-                        w = x->p->right;
+                    if (!sibling->right->red) {                        // case 3
+                        sibling->left->red = false;
+                        sibling->red = true;
+                        rightRotate(sibling);
+                        sibling = node->parent->right;
                     }
-                    w->red = x->p->red;                // case 4
-                    x->p->red = false;
-                    w->right->red = false;
-                    leftRotate(x->p);
-                    x = root_;
+                    sibling->red = node->parent->red;                  // case 4
+                    node->parent->red = false;
+                    sibling->right->red = false;
+                    leftRotate(node->parent);
+                    node = root_;
                 }
             } else {
-                Node* w = x->p->left;
-                if (w->red) { w->red = false; x->p->red = true; rightRotate(x->p); w = x->p->left; }
-                if (!w->right->red && !w->left->red) { w->red = true; x = x->p; }
+                Node* sibling = node->parent->left;
+                if (sibling->red) {
+                    sibling->red = false; node->parent->red = true;
+                    rightRotate(node->parent);
+                    sibling = node->parent->left;
+                }
+                if (!sibling->right->red && !sibling->left->red) { sibling->red = true; node = node->parent; }
                 else {
-                    if (!w->left->red) {
-                        w->right->red = false; w->red = true;
-                        leftRotate(w);
-                        w = x->p->left;
+                    if (!sibling->left->red) {
+                        sibling->right->red = false; sibling->red = true;
+                        leftRotate(sibling);
+                        sibling = node->parent->left;
                     }
-                    w->red = x->p->red;
-                    x->p->red = false;
-                    w->left->red = false;
-                    rightRotate(x->p);
-                    x = root_;
+                    sibling->red = node->parent->red;
+                    node->parent->red = false;
+                    sibling->left->red = false;
+                    rightRotate(node->parent);
+                    node = root_;
                 }
             }
         }
-        x->red = false;
+        node->red = false;
     }
 
-    void destroy(Node* x) {
-        if (x == nil_) return;
-        destroy(x->left);
-        destroy(x->right);
-        delete x;
+    void destroy(Node* node) {
+        if (node == nil_) return;
+        destroy(node->left);
+        destroy(node->right);
+        delete node;
     }
 };
 ```
 
 **Implementation notes.**
-- `pullUp(z)` after insertion walks `z` to the root, `O(lg n)` — that is the generic version of "increment sizes on the way down". The rotations inside `insertFixup` then repair only the two nodes they touch, because a rotation changes no other subtree's *contents*.
-- On erase, `from` is deliberately chosen as the **deepest node whose subtree contents changed**, in each of the three structural shapes. In the "successor is far away" shape, `from = y->p` is a node that ends up *inside* `y`'s new right subtree, so walking up from it passes through `y` and then to the root — exactly the set of nodes needing recomputation.
-- `transplant` assigns `v->p` unconditionally. Removing that condition is the whole reason `deleteFixup` can read `x->p` when `x` is the sentinel.
+- `pullUp(fresh)` after insertion walks from the new node to the root, `O(lg n)` — that is the generic version of "increment sizes on the way down". The rotations inside `insertFixup` then repair only the two nodes they touch, because a rotation changes no other subtree's *contents*.
+- On erase, `recomputeFrom` is deliberately chosen as the **deepest node whose subtree contents changed**, in each of the three structural shapes. In the "successor is far away" shape, `recomputeFrom = removed->parent` is a node that ends up *inside* `removed`'s new right subtree, so walking up from it passes through `removed` and then to the root — exactly the set of nodes needing recomputation.
+- `transplant` assigns `newSubtree->parent` unconditionally. Removing that condition is the whole reason `deleteFixup` can read `node->parent` when `node` is the sentinel.
 - The sentinel's `aug` is left at its default (`size = 0`, `maxHigh = LLONG_MIN`) and `pull` is never called on it — those defaults are the **identity elements** of the two augmentations.
 
 *Verified:* 60 000 random interleaved insert/erase operations, with full red-black property checking (root black, no red-red, equal black-heights on every path, parent pointers consistent) every 997 steps and at the end; inorder walk matched `std::multiset` exactly; measured height 16 vs. the `2 lg(n+1) = 24.85` bound.
@@ -968,60 +976,60 @@ struct SizeAug {
     using Key = int;
     int size = 0;                        // sentinel keeps 0 (the identity)
     template <class Node>
-    void pull(const Node* x) { size = 1 + x->left->aug.size + x->right->aug.size; }
+    void pull(const Node* node) { size = 1 + node->left->aug.size + node->right->aug.size; }
 };
 
 using OrderStatisticTree = RBTree<SizeAug>;
 
 template <class Tree>
-typename Tree::Node* osSelect(const Tree& t, int i) {      // 1-indexed
-    typename Tree::Node* x = t.root();
-    while (x != t.nil()) {
-        int r = x->left->aug.size + 1;
-        if (i == r) return x;
-        if (i < r)  x = x->left;
-        else      { i -= r; x = x->right; }
+typename Tree::Node* osSelect(const Tree& tree, int rank) {      // 1-indexed
+    typename Tree::Node* node = tree.root();
+    while (node != tree.nil()) {
+        int leftPlusSelf = node->left->aug.size + 1;
+        if (rank == leftPlusSelf) return node;
+        if (rank < leftPlusSelf)  node = node->left;
+        else      { rank -= leftPlusSelf; node = node->right; }
     }
-    return t.nil();
+    return tree.nil();
 }
 
 template <class Tree>
-int osRank(const Tree& t, typename Tree::Node* x) {
-    int r = x->left->aug.size + 1;
-    for (typename Tree::Node* y = x; y != t.root(); y = y->p)
-        if (y == y->p->right) r += y->p->left->aug.size + 1;
-    return r;
+int osRank(const Tree& tree, typename Tree::Node* node) {
+    int leftPlusSelf = node->left->aug.size + 1;
+    for (typename Tree::Node* climber = node; climber != tree.root(); climber = climber->parent)
+        if (climber == climber->parent->right) leftPlusSelf += climber->parent->left->aug.size + 1;
+    return leftPlusSelf;
 }
 
 // ---- intervals ----------------------------------------------------------
 struct Interval {
     long long low = 0, high = 0;
 };
-inline bool operator<(const Interval& a, const Interval& b) { return a.low < b.low; }
-inline bool overlap(const Interval& a, const Interval& b) {
-    return a.low <= b.high && b.low <= a.high;      // interval trichotomy, positive form
+inline bool operator<(const Interval& lhs, const Interval& rhs) { return lhs.low < rhs.low; }
+inline bool overlap(const Interval& lhs, const Interval& rhs) {
+    return lhs.low <= rhs.high && rhs.low <= lhs.high;      // interval trichotomy, positive form
 }
 
 struct IntervalAug {
     using Key = Interval;
     long long maxHigh = LLONG_MIN;       // sentinel keeps -infinity (the identity)
     template <class Node>
-    void pull(const Node* x) {
-        maxHigh = max(x->key.high,
-                           max(x->left->aug.maxHigh, x->right->aug.maxHigh));
+    void pull(const Node* node) {
+        maxHigh = max(node->key.high,
+                      max(node->left->aug.maxHigh, node->right->aug.maxHigh));
     }
 };
 
 using IntervalTree = RBTree<IntervalAug>;
 
 template <class Tree>
-typename Tree::Node* intervalSearch(const Tree& t, const Interval& i) {
-    typename Tree::Node* x = t.root();
-    while (x != t.nil() && !overlap(x->key, i)) {
-        if (x->left != t.nil() && x->left->aug.maxHigh >= i.low) x = x->left;
-        else                                                     x = x->right;
+typename Tree::Node* intervalSearch(const Tree& tree, const Interval& query) {
+    typename Tree::Node* node = tree.root();
+    while (node != tree.nil() && !overlap(node->key, query)) {
+        if (node->left != tree.nil() && node->left->aug.maxHigh >= query.low) node = node->left;
+        else                                                                  node = node->right;
     }
-    return x;
+    return node;
 }
 ```
 
@@ -1243,15 +1251,15 @@ Here `t` is a compile-time template parameter so the key/child arrays are fixed-
 #include <array>
 #include <vector>
 
-template <class Key, int T = 3>
+template <class Key, int MinDegree = 3>
 class BTree {
-    static_assert(T >= 2, "minimum degree must be at least 2");
+    static_assert(MinDegree >= 2, "minimum degree must be at least 2");
 public:
     struct Node {
-        int  n = 0;
+        int  keyCount = 0;
         bool leaf = true;
-        array<Key, 2 * T - 1> key{};
-        array<Node*, 2 * T>   c{};
+        array<Key, 2 * MinDegree - 1> keys{};
+        array<Node*, 2 * MinDegree>   children{};
     };
 
     BTree() { root_ = new Node(); }
@@ -1261,19 +1269,19 @@ public:
 
     Node* root() const { return root_; }
 
-    bool contains(const Key& k) const { return search(root_, k) != nullptr; }
+    bool contains(const Key& key) const { return search(root_, key) != nullptr; }
 
-    void insert(const Key& k) {
-        if (root_->n == 2 * T - 1) splitRoot();     // grow at the top
-        insertNonfull(root_, k);
+    void insert(const Key& key) {
+        if (root_->keyCount == 2 * MinDegree - 1) splitRoot();     // grow at the top
+        insertNonfull(root_, key);
     }
 
-    void erase(const Key& k) {
-        eraseFrom(root_, k);
-        if (root_->n == 0 && !root_->leaf) {        // shrink at the top
-            Node* old = root_;
-            root_ = root_->c[0];
-            delete old;
+    void erase(const Key& key) {
+        eraseFrom(root_, key);
+        if (root_->keyCount == 0 && !root_->leaf) {        // shrink at the top
+            Node* oldRoot = root_;
+            root_ = root_->children[0];
+            delete oldRoot;
         }
     }
 
@@ -1282,158 +1290,165 @@ public:
 private:
     Node* root_;
 
-    static const Node* search(const Node* x, const Key& k) {
+    static const Node* search(const Node* node, const Key& key) {
         int i = 0;
-        while (i < x->n && x->key[i] < k) ++i;
-        if (i < x->n && !(k < x->key[i])) return x;
-        return x->leaf ? nullptr : search(x->c[i], k);
+        while (i < node->keyCount && node->keys[i] < key) ++i;
+        if (i < node->keyCount && !(key < node->keys[i])) return node;
+        return node->leaf ? nullptr : search(node->children[i], key);
     }
 
     void splitRoot() {
-        Node* s = new Node();
-        s->leaf = false;
-        s->c[0] = root_;
-        root_ = s;
-        splitChild(s, 0);
+        Node* newRoot = new Node();
+        newRoot->leaf = false;
+        newRoot->children[0] = root_;
+        root_ = newRoot;
+        splitChild(newRoot, 0);
     }
 
-    // x is nonfull, x->c[i] is full: split it around its median key
-    static void splitChild(Node* x, int i) {
-        Node* y = x->c[i];
-        Node* z = new Node();
-        z->leaf = y->leaf;
-        z->n = T - 1;
-        for (int j = 0; j < T - 1; ++j) z->key[j] = y->key[j + T];
-        if (!y->leaf)
-            for (int j = 0; j < T; ++j) z->c[j] = y->c[j + T];
-        const Key median = y->key[T - 1];
-        y->n = T - 1;
-        for (int j = x->n; j >= i + 1; --j) x->c[j + 1] = x->c[j];
-        x->c[i + 1] = z;
-        for (int j = x->n - 1; j >= i; --j) x->key[j + 1] = x->key[j];
-        x->key[i] = median;
-        ++x->n;
+    // parent is nonfull, parent->children[childIndex] is full:
+    // split that child around its median key
+    static void splitChild(Node* parent, int childIndex) {
+        Node* fullChild  = parent->children[childIndex];
+        Node* newSibling = new Node();
+        newSibling->leaf = fullChild->leaf;
+        newSibling->keyCount = MinDegree - 1;
+        for (int j = 0; j < MinDegree - 1; ++j)
+            newSibling->keys[j] = fullChild->keys[j + MinDegree];
+        if (!fullChild->leaf)
+            for (int j = 0; j < MinDegree; ++j)
+                newSibling->children[j] = fullChild->children[j + MinDegree];
+        const Key median = fullChild->keys[MinDegree - 1];
+        fullChild->keyCount = MinDegree - 1;
+        for (int j = parent->keyCount; j >= childIndex + 1; --j)
+            parent->children[j + 1] = parent->children[j];
+        parent->children[childIndex + 1] = newSibling;
+        for (int j = parent->keyCount - 1; j >= childIndex; --j)
+            parent->keys[j + 1] = parent->keys[j];
+        parent->keys[childIndex] = median;
+        ++parent->keyCount;
     }
 
-    static void insertNonfull(Node* x, const Key& k) {
-        int i = x->n - 1;
-        if (x->leaf) {
-            while (i >= 0 && k < x->key[i]) { x->key[i + 1] = x->key[i]; --i; }
-            x->key[i + 1] = k;
-            ++x->n;
+    static void insertNonfull(Node* node, const Key& key) {
+        int i = node->keyCount - 1;
+        if (node->leaf) {
+            while (i >= 0 && key < node->keys[i]) { node->keys[i + 1] = node->keys[i]; --i; }
+            node->keys[i + 1] = key;
+            ++node->keyCount;
             return;
         }
-        while (i >= 0 && k < x->key[i]) --i;
+        while (i >= 0 && key < node->keys[i]) --i;
         ++i;
-        if (x->c[i]->n == 2 * T - 1) {              // split BEFORE descending
-            splitChild(x, i);
-            if (x->key[i] < k) ++i;
+        if (node->children[i]->keyCount == 2 * MinDegree - 1) {              // split BEFORE descending
+            splitChild(node, i);
+            if (node->keys[i] < key) ++i;
         }
-        insertNonfull(x->c[i], k);
+        insertNonfull(node->children[i], key);
     }
 
-    static Key maxKey(Node* x) { while (!x->leaf) x = x->c[x->n]; return x->key[x->n - 1]; }
-    static Key minKey(Node* x) { while (!x->leaf) x = x->c[0];     return x->key[0]; }
+    static Key maxKey(Node* node) { while (!node->leaf) node = node->children[node->keyCount]; return node->keys[node->keyCount - 1]; }
+    static Key minKey(Node* node) { while (!node->leaf) node = node->children[0];     return node->keys[0]; }
 
-    // merge x->c[i], x->key[i], x->c[i+1] into x->c[i]
-    static void mergeChildren(Node* x, int i) {
-        Node* y = x->c[i];
-        Node* z = x->c[i + 1];
-        y->key[T - 1] = x->key[i];
-        for (int j = 0; j < z->n; ++j) y->key[j + T] = z->key[j];
-        if (!y->leaf)
-            for (int j = 0; j <= z->n; ++j) y->c[j + T] = z->c[j];
-        y->n = 2 * T - 1;
-        for (int j = i; j + 1 < x->n; ++j) x->key[j] = x->key[j + 1];
-        for (int j = i + 1; j < x->n; ++j) x->c[j] = x->c[j + 1];
-        --x->n;
-        delete z;
+    // merge children[i], keys[i] and children[i+1] into children[i]
+    static void mergeChildren(Node* node, int i) {
+        Node* leftChild  = node->children[i];
+        Node* rightChild = node->children[i + 1];
+        leftChild->keys[MinDegree - 1] = node->keys[i];
+        for (int j = 0; j < rightChild->keyCount; ++j)
+            leftChild->keys[j + MinDegree] = rightChild->keys[j];
+        if (!leftChild->leaf)
+            for (int j = 0; j <= rightChild->keyCount; ++j)
+                leftChild->children[j + MinDegree] = rightChild->children[j];
+        leftChild->keyCount = 2 * MinDegree - 1;
+        for (int j = i; j + 1 < node->keyCount; ++j) node->keys[j] = node->keys[j + 1];
+        for (int j = i + 1; j < node->keyCount; ++j) node->children[j] = node->children[j + 1];
+        --node->keyCount;
+        delete rightChild;
     }
 
-    static void borrowFromLeft(Node* x, int i) {        // case 3a
-        Node* ch = x->c[i];
-        Node* lf = x->c[i - 1];
-        for (int j = ch->n - 1; j >= 0; --j) ch->key[j + 1] = ch->key[j];
-        if (!ch->leaf)
-            for (int j = ch->n; j >= 0; --j) ch->c[j + 1] = ch->c[j];
-        ch->key[0] = x->key[i - 1];
-        if (!ch->leaf) ch->c[0] = lf->c[lf->n];
-        x->key[i - 1] = lf->key[lf->n - 1];
-        ++ch->n;
-        --lf->n;
+    static void borrowFromLeft(Node* node, int i) {        // case 3a
+        Node* child = node->children[i];
+        Node* leftSibling = node->children[i - 1];
+        for (int j = child->keyCount - 1; j >= 0; --j) child->keys[j + 1] = child->keys[j];
+        if (!child->leaf)
+            for (int j = child->keyCount; j >= 0; --j) child->children[j + 1] = child->children[j];
+        child->keys[0] = node->keys[i - 1];
+        if (!child->leaf) child->children[0] = leftSibling->children[leftSibling->keyCount];
+        node->keys[i - 1] = leftSibling->keys[leftSibling->keyCount - 1];
+        ++child->keyCount;
+        --leftSibling->keyCount;
     }
 
-    static void borrowFromRight(Node* x, int i) {       // case 3a, mirrored
-        Node* ch = x->c[i];
-        Node* rt = x->c[i + 1];
-        ch->key[ch->n] = x->key[i];
-        if (!ch->leaf) ch->c[ch->n + 1] = rt->c[0];
-        x->key[i] = rt->key[0];
-        for (int j = 0; j + 1 < rt->n; ++j) rt->key[j] = rt->key[j + 1];
-        if (!rt->leaf)
-            for (int j = 0; j < rt->n; ++j) rt->c[j] = rt->c[j + 1];
-        ++ch->n;
-        --rt->n;
+    static void borrowFromRight(Node* node, int i) {       // case 3a, mirrored
+        Node* child = node->children[i];
+        Node* rightSibling = node->children[i + 1];
+        child->keys[child->keyCount] = node->keys[i];
+        if (!child->leaf) child->children[child->keyCount + 1] = rightSibling->children[0];
+        node->keys[i] = rightSibling->keys[0];
+        for (int j = 0; j + 1 < rightSibling->keyCount; ++j) rightSibling->keys[j] = rightSibling->keys[j + 1];
+        if (!rightSibling->leaf)
+            for (int j = 0; j < rightSibling->keyCount; ++j) rightSibling->children[j] = rightSibling->children[j + 1];
+        ++child->keyCount;
+        --rightSibling->keyCount;
     }
 
-    // precondition: x is the root, or x->n >= T
-    static void eraseFrom(Node* x, const Key& k) {
+    // precondition: node is the root, or node->keyCount >= MinDegree
+    static void eraseFrom(Node* node, const Key& key) {
         int i = 0;
-        while (i < x->n && x->key[i] < k) ++i;
-        const bool here = (i < x->n && !(k < x->key[i]));
+        while (i < node->keyCount && node->keys[i] < key) ++i;
+        const bool foundHere = (i < node->keyCount && !(key < node->keys[i]));
 
-        if (x->leaf) {                                     // case 1
-            if (!here) return;                             // key not in the tree
-            for (int j = i; j + 1 < x->n; ++j) x->key[j] = x->key[j + 1];
-            --x->n;
+        if (node->leaf) {                                     // case 1
+            if (!foundHere) return;                             // key not in the tree
+            for (int j = i; j + 1 < node->keyCount; ++j) node->keys[j] = node->keys[j + 1];
+            --node->keyCount;
             return;
         }
-        if (here) {                                        // case 2
-            Node* y = x->c[i];
-            Node* z = x->c[i + 1];
-            if (y->n >= T) {                               // 2a: predecessor
-                const Key pred = maxKey(y);
-                x->key[i] = pred;
-                eraseFrom(y, pred);
-            } else if (z->n >= T) {                        // 2b: successor
-                const Key succ = minKey(z);
-                x->key[i] = succ;
-                eraseFrom(z, succ);
+        if (foundHere) {                                   // case 2
+            Node* leftChild  = node->children[i];
+            Node* rightChild = node->children[i + 1];
+            if (leftChild->keyCount >= MinDegree) {        // 2a: predecessor
+                const Key pred = maxKey(leftChild);
+                node->keys[i] = pred;
+                eraseFrom(leftChild, pred);
+            } else if (rightChild->keyCount >= MinDegree) {// 2b: successor
+                const Key succ = minKey(rightChild);
+                node->keys[i] = succ;
+                eraseFrom(rightChild, succ);
             } else {                                       // 2c: merge, then recurse
-                mergeChildren(x, i);
-                eraseFrom(y, k);
+                mergeChildren(node, i);
+                eraseFrom(leftChild, key);
             }
             return;
         }
-        // case 3: descend, but only into a child with at least T keys
-        if (x->c[i]->n == T - 1) {
-            if (i > 0 && x->c[i - 1]->n >= T)         borrowFromLeft(x, i);    // 3a
-            else if (i < x->n && x->c[i + 1]->n >= T) borrowFromRight(x, i);   // 3a
-            else if (i < x->n)                        mergeChildren(x, i);     // 3b
-            else                                    { mergeChildren(x, i - 1); --i; }
+        // case 3: descend, but only into a child with at least MinDegree keys
+        if (node->children[i]->keyCount == MinDegree - 1) {
+            if (i > 0 && node->children[i - 1]->keyCount >= MinDegree)         borrowFromLeft(node, i);    // 3a
+            else if (i < node->keyCount && node->children[i + 1]->keyCount >= MinDegree) borrowFromRight(node, i);   // 3a
+            else if (i < node->keyCount)                        mergeChildren(node, i);     // 3b
+            else                                    { mergeChildren(node, i - 1); --i; }
         }
-        eraseFrom(x->c[i], k);
+        eraseFrom(node->children[i], key);
     }
 
-    static void walk(const Node* x, vector<Key>& out) {
-        for (int i = 0; i < x->n; ++i) {
-            if (!x->leaf) walk(x->c[i], out);
-            out.push_back(x->key[i]);
+    static void walk(const Node* node, vector<Key>& out) {
+        for (int i = 0; i < node->keyCount; ++i) {
+            if (!node->leaf) walk(node->children[i], out);
+            out.push_back(node->keys[i]);
         }
-        if (!x->leaf) walk(x->c[x->n], out);
+        if (!node->leaf) walk(node->children[node->keyCount], out);
     }
-    static void destroy(Node* x) {
-        if (!x) return;
-        if (!x->leaf) for (int i = 0; i <= x->n; ++i) destroy(x->c[i]);
-        delete x;
+    static void destroy(Node* node) {
+        if (!node) return;
+        if (!node->leaf) for (int i = 0; i <= node->keyCount; ++i) destroy(node->children[i]);
+        delete node;
     }
 };
 ```
 
 **Implementation notes.**
-- All comparisons go through `operator<` only (`!(k < x->key[i])` for `≥`), which is the C++ convention — one comparator, no `operator==` requirement.
-- `eraseFrom`'s precondition ("x is the root, or `x->n ≥ T`") is the CLRS invariant made explicit as a comment. Every recursive call site establishes it: 2a/2b descend into a child with ≥ `t` keys, 2c descends into a freshly merged node with `2t − 1` keys, case 3 fixes the child *before* descending.
-- The `else { mergeChildren(x, i - 1); --i; }` branch is the "no right sibling" corner (`i == x->n`): merge with the **left** sibling and shift the target index down. Getting this one wrong is the single most common B-tree deletion bug.
+- All comparisons go through `operator<` only (`!(key < node->keys[i])` for `≥`), which is the C++ convention — one comparator, no `operator==` requirement.
+- `eraseFrom`'s precondition ("`node` is the root, or `node->keyCount ≥ MinDegree`") is the CLRS invariant made explicit as a comment. Every recursive call site establishes it: 2a/2b descend into a child with ≥ `t` keys, 2c descends into a freshly merged node with `2t − 1` keys, case 3 fixes the child *before* descending.
+- The `else { mergeChildren(node, i - 1); --i; }` branch is the "no right sibling" corner (`i == node->keyCount`): merge with the **left** sibling and shift the target index down. Getting this one wrong is the single most common B-tree deletion bug.
 
 *Verified:* 60 000 randomized insert/erase operations against `std::set` with `t = 3` — `contains` agreed on every step; at every checkpoint every non-root node held 2–5 keys, keys within each node were strictly increasing, and all leaves were at equal depth; the final inorder walk matched `std::set` exactly.
 
@@ -1612,8 +1627,8 @@ struct BstNode {
     int key;
     BstNode* left  = nullptr;
     BstNode* right = nullptr;
-    BstNode* p     = nullptr;          // parent: TREE-SUCCESSOR needs to climb
-    explicit BstNode(int k) : key(k) {}
+    BstNode* parent = nullptr;         // TREE-SUCCESSOR needs to climb upward
+    explicit BstNode(int key) : key(key) {}
 };
 
 class Bst {
@@ -1623,33 +1638,36 @@ public:
     Bst(const Bst&)            = delete;    // owns raw pointers (toolkit 4)
     Bst& operator=(const Bst&) = delete;
 
-    void inorderWalk(BstNode* x, vector<int>& out) const;      // A1
-    BstNode* search(BstNode* x, int k) const;                  // A2
-    BstNode* iterativeSearch(BstNode* x, int k) const;         // A2
-    BstNode* minimum(BstNode* x) const;                        // A2
-    BstNode* maximum(BstNode* x) const;                        // A2
-    BstNode* successor(BstNode* x) const;                      // A3
-    void transplant(BstNode* u, BstNode* v);                   // A4
-    void erase(BstNode* z);                                    // A5
+    void     inorderWalk(BstNode* node, vector<int>& out) const;    // A1
+    BstNode* search(BstNode* node, int key) const;                  // A2
+    BstNode* iterativeSearch(BstNode* node, int key) const;         // A2
+    BstNode* minimum(BstNode* node) const;                          // A2
+    BstNode* maximum(BstNode* node) const;                          // A2
+    BstNode* successor(BstNode* node) const;                        // A3
+    void     transplant(BstNode* oldSubtree, BstNode* newSubtree);  // A4
+    void     erase(BstNode* target);                                // A5
 
     // An ordinary BST insert: descend to a leaf position, then link. Included
     // so the appendix is runnable; CLRS gives it as TREE-INSERT.
-    BstNode* insert(int k) {
-        BstNode* y = nullptr;
-        BstNode* x = root_;
-        while (x) { y = x; x = (k < x->key) ? x->left : x->right; }
-        BstNode* z = new BstNode(k);
-        z->p = y;
-        if (!y)                 root_ = z;
-        else if (k < y->key)    y->left  = z;
-        else                    y->right = z;
-        return z;
+    BstNode* insert(int key) {
+        BstNode* parent = nullptr;              // trails one step behind the walker
+        BstNode* node   = root_;
+        while (node) { parent = node; node = (key < node->key) ? node->left : node->right; }
+        BstNode* fresh = new BstNode(key);
+        fresh->parent = parent;
+        if (!parent)                 root_ = fresh;
+        else if (key < parent->key)  parent->left  = fresh;
+        else                         parent->right = fresh;
+        return fresh;
     }
     BstNode* root() const { return root_; }
-    vector<int> inorder() const { vector<int> v; inorderWalk(root_, v); return v; }
+    vector<int> inorder() const { vector<int> result; inorderWalk(root_, result); return result; }
 private:
     BstNode* root_ = nullptr;
-    static void destroy(BstNode* x) { if (!x) return; destroy(x->left); destroy(x->right); delete x; }
+    static void destroy(BstNode* node) {
+        if (!node) return;
+        destroy(node->left); destroy(node->right); delete node;
+    }
 };
 
 // ---------- red-black tree (A6-A10) ----------
@@ -1660,7 +1678,7 @@ struct RbNode {
     Color color = Color::Black;
     RbNode* left  = nullptr;
     RbNode* right = nullptr;
-    RbNode* p     = nullptr;
+    RbNode* parent = nullptr;
     int size = 1;                      // A11/A12 augmentation: nodes in this subtree
 };
 
@@ -1670,48 +1688,51 @@ public:
         nil_ = new RbNode();
         nil_->color = Color::Black;
         nil_->size  = 0;               // the sentinel contributes nothing to any count
-        nil_->left = nil_->right = nil_->p = nil_;
+        nil_->left = nil_->right = nil_->parent = nil_;
         root_ = nil_;
     }
     ~RbTree() { destroy(root_); delete nil_; }
     RbTree(const RbTree&)            = delete;
     RbTree& operator=(const RbTree&) = delete;
 
-    void leftRotate(RbNode* x);                    // A6
-    void rightRotate(RbNode* y);                   // A6
-    RbNode* insert(int k);
-    void insertFixup(RbNode* z);                   // A7
-    void rbTransplant(RbNode* u, RbNode* v);       // A8
-    void erase(RbNode* z);                         // A9
-    void deleteFixup(RbNode* x);                   // A10
-    RbNode* osSelect(RbNode* x, int i) const;      // A11
-    int osRank(RbNode* x) const;                   // A12
+    void    leftRotate(RbNode* pivot);                            // A6
+    void    rightRotate(RbNode* pivot);                           // A6
+    RbNode* insert(int key);                       // ordinary BST insert + fixup
+    void    insertFixup(RbNode* node);                            // A7
+    void    rbTransplant(RbNode* oldSubtree, RbNode* newSubtree); // A8
+    void    erase(RbNode* target);                                // A9
+    void    deleteFixup(RbNode* node);                            // A10
+    RbNode* osSelect(RbNode* node, int rank) const;               // A11
+    int     osRank(RbNode* node) const;                           // A12
 
-    RbNode* minimum(RbNode* x) const { while (x->left != nil_) x = x->left; return x; }
-    RbNode* find(int k) const {
-        RbNode* x = root_;
-        while (x != nil_ && x->key != k) x = (k < x->key) ? x->left : x->right;
-        return x == nil_ ? nullptr : x;
+    RbNode* minimum(RbNode* node) const { while (node->left != nil_) node = node->left; return node; }
+    RbNode* find(int key) const {
+        RbNode* node = root_;
+        while (node != nil_ && node->key != key) node = (key < node->key) ? node->left : node->right;
+        return node == nil_ ? nullptr : node;
     }
     RbNode* root() const { return root_; }
     RbNode* nil()  const { return nil_; }
     int size() const { return root_->size; }
-    void inorder(RbNode* x, vector<int>& out) const {
-        if (x == nil_) return;
-        inorder(x->left, out); out.push_back(x->key); inorder(x->right, out);
+    void inorder(RbNode* node, vector<int>& out) const {
+        if (node == nil_) return;
+        inorder(node->left, out); out.push_back(node->key); inorder(node->right, out);
     }
-    vector<int> inorder() const { vector<int> v; inorder(root_, v); return v; }
+    vector<int> inorder() const { vector<int> result; inorder(root_, result); return result; }
 private:
     RbNode* root_ = nullptr;
     RbNode* nil_  = nullptr;
-    void destroy(RbNode* x) { if (x == nil_) return; destroy(x->left); destroy(x->right); delete x; }
+    void destroy(RbNode* node) {
+        if (node == nil_) return;
+        destroy(node->left); destroy(node->right); delete node;
+    }
     // Recompute one node's augmented data from its children. Called after every
     // structural change -- this is step 4 of CLRS's four-step augmentation method.
-    void pull(RbNode* x) { if (x != nil_) x->size = x->left->size + x->right->size + 1; }
-    // Recompute from x up to the root. After a structural change, EVERY ancestor
+    void pull(RbNode* node) { if (node != nil_) node->size = node->left->size + node->right->size + 1; }
+    // Recompute from `node` up to the root. After a structural change, EVERY ancestor
     // of the deepest changed node has a stale count, so one bottom-up sweep
     // fixes them all -- and it is O(lg n), the same as the operation itself.
-    void pullUp(RbNode* x) { while (x != nil_) { pull(x); x = x->p; } }
+    void pullUp(RbNode* node) { while (node != nil_) { pull(node); node = node->parent; } }
 };
 ```
 
@@ -1726,11 +1747,11 @@ private:
 // append to ONE vector. Returning a vector by value from each call instead would
 // be Theta(n lg n) work in copies for a balanced tree, and Theta(n^2) for a
 // degenerate one.
-void Bst::inorderWalk(BstNode* x, vector<int>& out) const {
-    if (x != nullptr) {                       // 1  if x != NIL
-        inorderWalk(x->left, out);            // 2      INORDER-TREE-WALK(x.left)
-        out.push_back(x->key);                // 3      print x.key
-        inorderWalk(x->right, out);           // 4      INORDER-TREE-WALK(x.right)
+void Bst::inorderWalk(BstNode* node, vector<int>& out) const {
+    if (node != nullptr) {                       // 1  if x != NIL
+        inorderWalk(node->left, out);            // 2      INORDER-TREE-WALK(x.left)
+        out.push_back(node->key);                // 3      print x.key
+        inorderWalk(node->right, out);           // 4      INORDER-TREE-WALK(x.right)
     }
 }
 ```
@@ -1745,32 +1766,32 @@ void Bst::inorderWalk(BstNode* x, vector<int>& out) const {
 
 ```cpp
 // Recursive form -- a direct transcription.
-BstNode* Bst::search(BstNode* x, int k) const {
-    if (x == nullptr || k == x->key) return x;      // 1-2
-    if (k < x->key) return search(x->left, k);      // 3-4
-    else            return search(x->right, k);     // 5
+BstNode* Bst::search(BstNode* node, int key) const {
+    if (node == nullptr || key == node->key) return node;      // 1-2
+    if (key < node->key) return search(node->left, key);      // 3-4
+    else            return search(node->right, key);     // 5
 }
 
 // Iterative form. Both recursive calls above are TAIL calls, so this conversion
 // is mechanical -- and it matters here more than usual, because h can be n on a
 // degenerate tree, and Theta(n) recursion depth is a segfault (toolkit 6).
-BstNode* Bst::iterativeSearch(BstNode* x, int k) const {
-    while (x != nullptr && k != x->key) {           // 1
-        if (k < x->key) x = x->left;                // 2-3
-        else            x = x->right;               // 4
+BstNode* Bst::iterativeSearch(BstNode* node, int key) const {
+    while (node != nullptr && key != node->key) {           // 1
+        if (key < node->key) node = node->left;                // 2-3
+        else            node = node->right;               // 4
     }
-    return x;                                       // 5  nullptr if absent
+    return node;                                       // 5  nullptr if absent
 }
 
 // TREE-MINIMUM: "the leftmost node". No comparison with k at all -- the
 // structure alone answers the question.
-BstNode* Bst::minimum(BstNode* x) const {
-    while (x != nullptr && x->left != nullptr) x = x->left;
-    return x;
+BstNode* Bst::minimum(BstNode* node) const {
+    while (node != nullptr && node->left != nullptr) node = node->left;
+    return node;
 }
-BstNode* Bst::maximum(BstNode* x) const {
-    while (x != nullptr && x->right != nullptr) x = x->right;
-    return x;
+BstNode* Bst::maximum(BstNode* node) const {
+    while (node != nullptr && node->right != nullptr) node = node->right;
+    return node;
 }
 ```
 
@@ -1785,20 +1806,20 @@ BstNode* Bst::maximum(BstNode* x) const {
 ```cpp
 // The next key in sorted order, or nullptr if x is the maximum.
 // Two genuinely different cases, and the second is the one people forget.
-BstNode* Bst::successor(BstNode* x) const {
+BstNode* Bst::successor(BstNode* node) const {
     // CASE A: x has a right subtree. The successor is the SMALLEST thing bigger
     // than x, which is the leftmost node of that subtree.
-    if (x->right != nullptr) return minimum(x->right);   // 1-2
+    if (node->right != nullptr) return minimum(node->right);   // 1-2
 
     // CASE B: no right subtree. Everything below x is smaller than x, so the
     // successor must be an ANCESTOR -- specifically the lowest ancestor whose
     // LEFT subtree contains x. Climb while x is a right child.
-    BstNode* y = x->p;                                   // 4
-    while (y != nullptr && x == y->right) {              // 5
-        x = y;                                           // 6
-        y = y->p;                                        // 7
+    BstNode* ancestor = node->parent;                                   // 4
+    while (ancestor != nullptr && node == ancestor->right) {              // 5
+        node = ancestor;                                           // 6
+        ancestor = ancestor->parent;                                        // 7
     }
-    return y;                                            // 8  nullptr if x was the maximum
+    return ancestor;                                            // 8  nullptr if x was the maximum
 }
 ```
 
@@ -1814,11 +1835,11 @@ BstNode* Bst::successor(BstNode* x) const {
 // Replace the subtree rooted at u with the subtree rooted at v.
 // TRANSPLANT does NOT touch v's children -- it only fixes the link from above,
 // plus v's parent pointer. Everything else is the caller's job.
-void Bst::transplant(BstNode* u, BstNode* v) {
-    if (u->p == nullptr)          root_ = v;         // 1  u was the root
-    else if (u == u->p->left)     u->p->left  = v;   // 2  u was a left child
-    else                          u->p->right = v;   // 3  u was a right child
-    if (v != nullptr) v->p = u->p;                   // 4  NULL-CHECKED here...
+void Bst::transplant(BstNode* oldSubtree, BstNode* newSubtree) {
+    if (oldSubtree->parent == nullptr)          root_ = newSubtree;         // 1  u was the root
+    else if (oldSubtree == oldSubtree->parent->left)     oldSubtree->parent->left  = newSubtree;   // 2  u was a left child
+    else                          oldSubtree->parent->right = newSubtree;   // 3  u was a right child
+    if (newSubtree != nullptr) newSubtree->parent = oldSubtree->parent;                   // 4  NULL-CHECKED here...
     // ...but the red-black version (A8) drops the check, because there v can be
     // the SENTINEL and RB-DELETE-FIXUP genuinely needs nil's parent set.
     // That one difference is the reason two nearly identical procedures exist.
@@ -1834,26 +1855,26 @@ void Bst::transplant(BstNode* u, BstNode* v) {
 *Pseudocode: §1, "Deletion — three shapes, four code paths".*
 
 ```cpp
-void Bst::erase(BstNode* z) {
-    if (z->left == nullptr) {                    // 1  CASE 1: no left child
-        transplant(z, z->right);                 // 2      (covers "no children" too)
-    } else if (z->right == nullptr) {            // 3  CASE 2: exactly one child, on the left
-        transplant(z, z->left);                  // 4
+void Bst::erase(BstNode* target) {
+    if (target->left == nullptr) {                    // 1  CASE 1: no left child
+        transplant(target, target->right);                 // 2      (covers "no children" too)
+    } else if (target->right == nullptr) {            // 3  CASE 2: exactly one child, on the left
+        transplant(target, target->left);                  // 4
     } else {
         // Two children. Replace z with its SUCCESSOR y, which is the minimum of
         // z's right subtree and therefore has NO LEFT CHILD -- that is what makes
         // it removable by a single transplant.
-        BstNode* y = minimum(z->right);          // 5
-        if (y != z->right) {                     // 6  CASE 4: y is deeper than z.right
-            transplant(y, y->right);             // 7      lift y out of where it lives
-            y->right = z->right;                 // 8      give y all of z's right subtree
-            y->right->p = y;                     // 9
+        BstNode* successorNode = minimum(target->right);          // 5
+        if (successorNode != target->right) {                     // 6  CASE 4: y is deeper than z.right
+            transplant(successorNode, successorNode->right);             // 7      lift y out of where it lives
+            successorNode->right = target->right;                 // 8      give y all of z's right subtree
+            successorNode->right->parent = successorNode;                     // 9
         }
-        transplant(z, y);                        // 10 CASE 3 joins here: y takes z's slot
-        y->left = z->left;                       // 11
-        y->left->p = y;                          // 12
+        transplant(target, successorNode);                        // 10 CASE 3 joins here: y takes z's slot
+        successorNode->left = target->left;                       // 11
+        successorNode->left->parent = successorNode;                          // 12
     }
-    delete z;   // the pseudocode ends at line 12; C++ makes you free the node
+    delete target;   // the pseudocode ends at line 12; C++ makes you free the node
 }
 ```
 
@@ -1868,47 +1889,47 @@ void Bst::erase(BstNode* z) {
 *Pseudocode: §2, "Rotations".*
 
 ```cpp
-// Rotate x down-left and its right child y up. PRESERVES the BST property:
+// Rotate `pivot` down-left and its right child up. PRESERVES the BST property:
 //
-//        x                y
-//       / \              / \
-//      a   y    ---->   x   c
-//         / \          / \
-//        b   c        a   b
+//      pivot            newParent
+//       / \                / \
+//      a   newParent -> pivot  c
+//         / \            / \
+//        b   c          a   b
 //
-// Before: a < x < b < y < c.   After: a < x < b < y < c.   Same order, new shape.
-void RbTree::leftRotate(RbNode* x) {
-    RbNode* y = x->right;                              // 1  assumes x->right != nil
-    x->right = y->left;                                // 2  y's left subtree becomes x's right
-    if (y->left != nil_) y->left->p = x;               // 3
-    y->p = x->p;                                       // 4  link y to x's parent
-    if (x->p == nil_)            root_ = y;            // 5
-    else if (x == x->p->left)    x->p->left  = y;      // 6
-    else                         x->p->right = y;      // 7
-    y->left = x;                                       // 8  put x on y's left
-    x->p = y;                                          // 9
-    // AUGMENTATION MAINTENANCE (Theorem 17.1): x and y changed children, so
-    // their subtree sizes must be recomputed -- x FIRST, because it is now
-    // y's child and y's size depends on it. Order matters.
-    pull(x);
-    pull(y);
+// Before: a < pivot < b < newParent < c.   After: unchanged.  New shape, same order.
+void RbTree::leftRotate(RbNode* pivot) {
+    RbNode* newParent = pivot->right;          // 1  assumes pivot->right != nil
+    pivot->right = newParent->left;            // 2  its left subtree becomes pivot's right
+    if (newParent->left != nil_) newParent->left->parent = pivot;          // 3
+    newParent->parent = pivot->parent;         // 4  link newParent to pivot's parent
+    if (pivot->parent == nil_)                 root_ = newParent;          // 5
+    else if (pivot == pivot->parent->left)     pivot->parent->left  = newParent;   // 6
+    else                                       pivot->parent->right = newParent;   // 7
+    newParent->left = pivot;                   // 8  put pivot on newParent's left
+    pivot->parent = newParent;                 // 9
+    // AUGMENTATION MAINTENANCE (Theorem 17.1): both nodes changed children, so
+    // their subtree sizes must be recomputed -- `pivot` FIRST, because it is now
+    // newParent's child and newParent's size depends on it. Order matters.
+    pull(pivot);
+    pull(newParent);
 }
 
 // The exact mirror image. Writing it out rather than parameterising by direction
 // is deliberate: the mirrored version is where transcription bugs hide, and
 // having both side by side makes them visible.
-void RbTree::rightRotate(RbNode* y) {
-    RbNode* x = y->left;
-    y->left = x->right;
-    if (x->right != nil_) x->right->p = y;
-    x->p = y->p;
-    if (y->p == nil_)            root_ = x;
-    else if (y == y->p->right)   y->p->right = x;
-    else                         y->p->left  = x;
-    x->right = y;
-    y->p = x;
-    pull(y);
-    pull(x);
+void RbTree::rightRotate(RbNode* pivot) {
+    RbNode* newParent = pivot->left;
+    pivot->left = newParent->right;
+    if (newParent->right != nil_) newParent->right->parent = pivot;
+    newParent->parent = pivot->parent;
+    if (pivot->parent == nil_)                 root_ = newParent;
+    else if (pivot == pivot->parent->right)    pivot->parent->right = newParent;
+    else                                       pivot->parent->left  = newParent;
+    newParent->right = pivot;
+    pivot->parent = newParent;
+    pull(pivot);
+    pull(newParent);
 }
 ```
 
@@ -1928,39 +1949,39 @@ void RbTree::rightRotate(RbNode* y) {
 //   c. at most one red-black property is violated, and if so it is either
 //      property 2 (root is black, when z IS the root) or property 4 (z and z.p
 //      are both red).
-void RbTree::insertFixup(RbNode* z) {
-    while (z->p->color == Color::Red) {                       // 1
-        if (z->p == z->p->p->left) {                          // 2  parent is a LEFT child
-            RbNode* y = z->p->p->right;                       // 3  y = z's UNCLE
-            if (y->color == Color::Red) {                     // 4  ---- CASE 1: red uncle
-                z->p->color   = Color::Black;                 // 5
-                y->color      = Color::Black;                 // 6
-                z->p->p->color = Color::Red;                  // 7  push blackness DOWN
-                z = z->p->p;                                  // 8  violation moves up TWO levels
+void RbTree::insertFixup(RbNode* node) {
+    while (node->parent->color == Color::Red) {                       // 1
+        if (node->parent == node->parent->parent->left) {                          // 2  parent is a LEFT child
+            RbNode* uncle = node->parent->parent->right;                       // 3  y = z's UNCLE
+            if (uncle->color == Color::Red) {                     // 4  ---- CASE 1: red uncle
+                node->parent->color   = Color::Black;                 // 5
+                uncle->color      = Color::Black;                 // 6
+                node->parent->parent->color = Color::Red;                  // 7  push blackness DOWN
+                node = node->parent->parent;                                  // 8  violation moves up TWO levels
                 // No rotation at all. This is the only case that iterates, and
                 // it climbs by 2, which is why the loop runs O(lg n) times.
             } else {
-                if (z == z->p->right) {                       // 10 ---- CASE 2: black uncle, zig-zag
-                    z = z->p;                                 // 11
-                    leftRotate(z);                            // 12 straighten into Case 3
+                if (node == node->parent->right) {                       // 10 ---- CASE 2: black uncle, zig-zag
+                    node = node->parent;                                 // 11
+                    leftRotate(node);                            // 12 straighten into Case 3
                 }
-                z->p->color   = Color::Black;                 // 13 ---- CASE 3: black uncle, straight
-                z->p->p->color = Color::Red;                  // 14
-                rightRotate(z->p->p);                         // 15 loop EXITS after this: z->p
+                node->parent->color   = Color::Black;                 // 13 ---- CASE 3: black uncle, straight
+                node->parent->parent->color = Color::Red;                  // 14
+                rightRotate(node->parent->parent);                         // 15 loop EXITS after this: z->p
                                                               //    is now black, so the test fails
             }
         } else {                                              // 16 mirror image
-            RbNode* y = z->p->p->left;
-            if (y->color == Color::Red) {
-                z->p->color = Color::Black;
-                y->color = Color::Black;
-                z->p->p->color = Color::Red;
-                z = z->p->p;
+            RbNode* uncle = node->parent->parent->left;
+            if (uncle->color == Color::Red) {
+                node->parent->color = Color::Black;
+                uncle->color = Color::Black;
+                node->parent->parent->color = Color::Red;
+                node = node->parent->parent;
             } else {
-                if (z == z->p->left) { z = z->p; rightRotate(z); }
-                z->p->color = Color::Black;
-                z->p->p->color = Color::Red;
-                leftRotate(z->p->p);
+                if (node == node->parent->left) { node = node->parent; rightRotate(node); }
+                node->parent->color = Color::Black;
+                node->parent->parent->color = Color::Red;
+                leftRotate(node->parent->parent);
             }
         }
     }
@@ -1969,24 +1990,24 @@ void RbTree::insertFixup(RbNode* z) {
 
 // The insert itself: an ordinary BST insert, coloured red, then fix up.
 RbNode* RbTree::insert(int k) {
-    RbNode* z = new RbNode();
-    z->key = k;
-    z->left = z->right = z->p = nil_;
-    z->color = Color::Red;
-    z->size = 1;
+    RbNode* node = new RbNode();
+    node->key = k;
+    node->left = node->right = node->parent = nil_;
+    node->color = Color::Red;
+    node->size = 1;
 
-    RbNode* y = nil_;
+    RbNode* uncle = nil_;
     RbNode* x = root_;
-    while (x != nil_) { y = x; ++x->size; x = (k < x->key) ? x->left : x->right; }
+    while (x != nil_) { uncle = x; ++x->size; x = (k < x->key) ? x->left : x->right; }
     //                        ^^^^^^^^^^ the augmentation, updated on the way DOWN:
     //                        every node on the search path gains one descendant.
-    z->p = y;
-    if (y == nil_)            root_ = z;
-    else if (k < y->key)      y->left = z;
-    else                      y->right = z;
+    node->parent = uncle;
+    if (uncle == nil_)            root_ = node;
+    else if (k < uncle->key)      uncle->left = node;
+    else                      uncle->right = node;
 
-    insertFixup(z);
-    return z;
+    insertFixup(node);
+    return node;
 }
 ```
 
@@ -1999,11 +2020,11 @@ RbNode* RbTree::insert(int k) {
 *Pseudocode: §2, "Deletion".*
 
 ```cpp
-void RbTree::rbTransplant(RbNode* u, RbNode* v) {
-    if (u->p == nil_)             root_ = v;         // 1
-    else if (u == u->p->left)     u->p->left  = v;   // 2
-    else                          u->p->right = v;   // 3
-    v->p = u->p;                                     // 4  UNCONDITIONAL -- no null check
+void RbTree::rbTransplant(RbNode* oldSubtree, RbNode* newSubtree) {
+    if (oldSubtree->parent == nil_)             root_ = newSubtree;         // 1
+    else if (oldSubtree == oldSubtree->parent->left)     oldSubtree->parent->left  = newSubtree;   // 2
+    else                          oldSubtree->parent->right = newSubtree;   // 3
+    newSubtree->parent = oldSubtree->parent;                                     // 4  UNCONDITIONAL -- no null check
     // This single line is the whole difference from A4's TRANSPLANT. v may be
     // the sentinel nil_, and RB-DELETE-FIXUP will climb from x == nil_ using
     // exactly this parent pointer. Guarding it with `if (v != nil_)` -- the
@@ -2019,37 +2040,37 @@ void RbTree::rbTransplant(RbNode* u, RbNode* v) {
 *Pseudocode: §2, "Deletion".*
 
 ```cpp
-void RbTree::erase(RbNode* z) {
-    RbNode* y = z;                                   // 1  y is the node actually REMOVED
-    Color yOriginal = y->color;                      // 2      or MOVED within the tree
-    RbNode* x = nil_;                                //    x takes y's place
+void RbTree::erase(RbNode* target) {
+    RbNode* removed = target;                                   // 1  y is the node actually REMOVED
+    Color removedWasRed = removed->color;                      // 2      or MOVED within the tree
+    RbNode* fixupAt = nil_;                                //    x takes y's place
     RbNode* from = nil_;                             //    deepest node whose subtree changed
 
-    if (z->left == nil_) {                           // 3
-        x = z->right;                                // 4
-        from = z->p;
-        rbTransplant(z, z->right);
-    } else if (z->right == nil_) {                   // 5
-        x = z->left;                                 // 6
-        from = z->p;
-        rbTransplant(z, z->left);
+    if (target->left == nil_) {                           // 3
+        fixupAt = target->right;                                // 4
+        from = target->parent;
+        rbTransplant(target, target->right);
+    } else if (target->right == nil_) {                   // 5
+        fixupAt = target->left;                                 // 6
+        from = target->parent;
+        rbTransplant(target, target->left);
     } else {
-        y = minimum(z->right);                       // 7  y = z's successor
-        yOriginal = y->color;                        // 8
-        x = y->right;                                // 9
-        if (y != z->right) {                         // 10 y is farther down
-            from = y->p;                             //    y's old parent lost a subtree
-            rbTransplant(y, y->right);               // 11
-            y->right = z->right;                     // 12
-            y->right->p = y;
+        removed = minimum(target->right);                       // 7  y = z's successor
+        removedWasRed = removed->color;                        // 8
+        fixupAt = removed->right;                                // 9
+        if (removed != target->right) {                         // 10 y is farther down
+            from = removed->parent;                             //    y's old parent lost a subtree
+            rbTransplant(removed, removed->right);               // 11
+            removed->right = target->right;                     // 12
+            removed->right->parent = removed;
         } else {
-            x->p = y;                                // 13 "in case x is nil_" -- and it
-            from = y;                                //    matters, see A8
+            fixupAt->parent = removed;                                // 13 "in case x is nil_" -- and it
+            from = removed;                                //    matters, see A8
         }
-        rbTransplant(z, y);                          // 14
-        y->left = z->left;                           // 15
-        y->left->p = y;
-        y->color = z->color;                         // 16 y INHERITS z's colour, so no
+        rbTransplant(target, removed);                          // 14
+        removed->left = target->left;                           // 15
+        removed->left->parent = removed;
+        removed->color = target->color;                         // 16 y INHERITS z's colour, so no
     }                                                //    violation is introduced HERE
 
     // AUGMENTATION MAINTENANCE. Do NOT try to decrement counts on the way down:
@@ -2064,8 +2085,8 @@ void RbTree::erase(RbNode* z) {
     // no red-red pair can be created. Removing a BLACK node removes one black
     // from every path through it -- that is the violation the fixup repairs.
     // (deleteFixup's rotations call pull() themselves, so sizes stay correct.)
-    if (yOriginal == Color::Black) deleteFixup(x);   // 17-18
-    delete z;
+    if (removedWasRed == Color::Black) deleteFixup(fixupAt);   // 17-18
+    delete target;
 }
 ```
 
@@ -2081,60 +2102,60 @@ void RbTree::erase(RbNode* z) {
 // 1.5 (red-and-black). The loop pushes that extra unit up the tree until it can
 // be absorbed: by a red node (which just turns black), or by the root (where it
 // simply evaporates, since every path loses one black equally).
-void RbTree::deleteFixup(RbNode* x) {
-    while (x != root_ && x->color == Color::Black) {                      // 1
-        if (x == x->p->left) {                                            // 2
-            RbNode* w = x->p->right;                                      // 3  w = x's SIBLING
+void RbTree::deleteFixup(RbNode* node) {
+    while (node != root_ && node->color == Color::Black) {                      // 1
+        if (node == node->parent->left) {                                            // 2
+            RbNode* sibling = node->parent->right;                                      // 3  w = x's SIBLING
             // w can never be nil_: x is doubly black, so the path through x
             // already has >= 2 blacks, so x's sibling subtree must be non-empty.
-            if (w->color == Color::Red) {                                 // 4  -- CASE 1
-                w->color   = Color::Black;                                // 5
-                x->p->color = Color::Red;
-                leftRotate(x->p);                                         // 7
-                w = x->p->right;   // ...and now w is BLACK: cases 2/3/4 follow
+            if (sibling->color == Color::Red) {                                 // 4  -- CASE 1
+                sibling->color   = Color::Black;                                // 5
+                node->parent->color = Color::Red;
+                leftRotate(node->parent);                                         // 7
+                sibling = node->parent->right;   // ...and now w is BLACK: cases 2/3/4 follow
             }
-            if (w->left->color == Color::Black &&
-                w->right->color == Color::Black) {                        // 9  -- CASE 2
-                w->color = Color::Red;                                    // 10 take a black off w
-                x = x->p;                                                 //    and push the extra
+            if (sibling->left->color == Color::Black &&
+                sibling->right->color == Color::Black) {                        // 9  -- CASE 2
+                sibling->color = Color::Red;                                    // 10 take a black off w
+                node = node->parent;                                                 //    and push the extra
                                                                           //    black up to the parent
                 // THE ONLY case that iterates. It climbs one level, so the loop
                 // runs O(lg n) times -- and does no rotation.
             } else {
-                if (w->right->color == Color::Black) {                    // 13 -- CASE 3
-                    w->left->color = Color::Black;                        // 14
-                    w->color = Color::Red;
-                    rightRotate(w);                                       // 16
-                    w = x->p->right;   // turn Case 3 into Case 4
+                if (sibling->right->color == Color::Black) {                    // 13 -- CASE 3
+                    sibling->left->color = Color::Black;                        // 14
+                    sibling->color = Color::Red;
+                    rightRotate(sibling);                                       // 16
+                    sibling = node->parent->right;   // turn Case 3 into Case 4
                 }
-                w->color = x->p->color;                                   // 18 -- CASE 4
-                x->p->color   = Color::Black;                             // 19
-                w->right->color = Color::Black;
-                leftRotate(x->p);                                         // 21
-                x = root_;                                                //    DONE: forces exit
+                sibling->color = node->parent->color;                                   // 18 -- CASE 4
+                node->parent->color   = Color::Black;                             // 19
+                sibling->right->color = Color::Black;
+                leftRotate(node->parent);                                         // 21
+                node = root_;                                                //    DONE: forces exit
             }
         } else {                                                          // mirror image
-            RbNode* w = x->p->left;
-            if (w->color == Color::Red) {
-                w->color = Color::Black; x->p->color = Color::Red;
-                rightRotate(x->p); w = x->p->left;
+            RbNode* sibling = node->parent->left;
+            if (sibling->color == Color::Red) {
+                sibling->color = Color::Black; node->parent->color = Color::Red;
+                rightRotate(node->parent); sibling = node->parent->left;
             }
-            if (w->right->color == Color::Black && w->left->color == Color::Black) {
-                w->color = Color::Red; x = x->p;
+            if (sibling->right->color == Color::Black && sibling->left->color == Color::Black) {
+                sibling->color = Color::Red; node = node->parent;
             } else {
-                if (w->left->color == Color::Black) {
-                    w->right->color = Color::Black; w->color = Color::Red;
-                    leftRotate(w); w = x->p->left;
+                if (sibling->left->color == Color::Black) {
+                    sibling->right->color = Color::Black; sibling->color = Color::Red;
+                    leftRotate(sibling); sibling = node->parent->left;
                 }
-                w->color = x->p->color;
-                x->p->color = Color::Black;
-                w->left->color = Color::Black;
-                rightRotate(x->p);
-                x = root_;
+                sibling->color = node->parent->color;
+                node->parent->color = Color::Black;
+                sibling->left->color = Color::Black;
+                rightRotate(node->parent);
+                node = root_;
             }
         }
     }
-    x->color = Color::Black;    // absorb the extra black; also fixes a red x
+    node->color = Color::Black;    // absorb the extra black; also fixes a red x
 }
 ```
 
@@ -2149,13 +2170,13 @@ void RbTree::deleteFixup(RbNode* x) {
 ```cpp
 // The i-th smallest key in x's subtree, 1-indexed. Requires the `size`
 // augmentation, which leftRotate/rightRotate/insert/erase above maintain.
-RbNode* RbTree::osSelect(RbNode* x, int i) const {
-    if (x == nil_) return nullptr;
-    int r = x->left->size + 1;              // 1  x's own rank WITHIN ITS SUBTREE
+RbNode* RbTree::osSelect(RbNode* node, int rank) const {
+    if (node == nil_) return nullptr;
+    int leftPlusSelf = node->left->size + 1;              // 1  x's own rank WITHIN ITS SUBTREE
     //      ^^^^^^^^^^^^^^ this is why nil_->size == 0: no special case needed
-    if (i == r)      return x;              // 2
-    else if (i < r)  return osSelect(x->left, i);       // 3
-    else             return osSelect(x->right, i - r);  // 4
+    if (rank == leftPlusSelf)      return node;              // 2
+    else if (rank < leftPlusSelf)  return osSelect(node->left, rank);       // 3
+    else             return osSelect(node->right, rank - leftPlusSelf);  // 4
     //                                          ^^^^^ RE-BASE: the r elements at
     //                 or before x are gone from consideration. Forgetting this
     //                 subtraction is the same bug as in quickselect (M05 A10).
@@ -2170,16 +2191,16 @@ RbNode* RbTree::osSelect(RbNode* x, int i) const {
 
 ```cpp
 // The position of x in the tree's sorted order, 1-indexed. The inverse of osSelect.
-int RbTree::osRank(RbNode* x) const {
-    int r = x->left->size + 1;              // 1  rank within x's own subtree
-    const RbNode* y = x;                    // 2
-    while (y != root_) {                    // 3  climb to the root
-        if (y == y->p->right)               // 4  y is a RIGHT child, so its parent
-            r += y->p->left->size + 1;      // 5  and the parent's entire LEFT subtree
+int RbTree::osRank(RbNode* node) const {
+    int rank = node->left->size + 1;              // 1  rank within x's own subtree
+    const RbNode* climber = node;                    // 2
+    while (climber != root_) {                    // 3  climb to the root
+        if (climber == climber->parent->right)               // 4  y is a RIGHT child, so its parent
+            rank += climber->parent->left->size + 1;      // 5  and the parent's entire LEFT subtree
                                             //    all precede x -- add them in
-        y = y->p;                           // 6
+        climber = climber->parent;                           // 6
     }
-    return r;                               // 7
+    return rank;                               // 7
 }
 ```
 
@@ -2198,27 +2219,27 @@ struct Interval { long long low, high; };
 //   (a) they overlap, (b) i.high < j.low, (c) j.high < i.low.
 // So "overlap" is the NEGATION of the two easy cases, which is why the test is
 // written this way rather than as four comparisons.
-static bool overlaps(const Interval& a, const Interval& b) {
-    return a.low <= b.high && b.low <= a.high;
+static bool overlaps(const Interval& lhs, const Interval& rhs) {
+    return lhs.low <= rhs.high && rhs.low <= lhs.high;
 }
 
 struct IntervalNode {
     Interval interval{0, 0};
     long long maxHigh = LLONG_MIN;   // the augmentation: max `high` in this subtree
     Color color = Color::Black;
-    IntervalNode *left = nullptr, *right = nullptr, *p = nullptr;
+    IntervalNode *left = nullptr, *right = nullptr, *parent = nullptr;
 };
 
 // Keyed by interval.low; augmented with maxHigh = max over the subtree.
-IntervalNode* intervalSearch(IntervalNode* root, IntervalNode* nil, const Interval& i) {
-    IntervalNode* x = root;                                    // 1
-    while (x != nil && !overlaps(i, x->interval)) {            // 2
-        if (x->left != nil && x->left->maxHigh >= i.low)       // 3
-            x = x->left;                                       // 4
+IntervalNode* intervalSearch(IntervalNode* root, IntervalNode* nil, const Interval& query) {
+    IntervalNode* node = root;                                    // 1
+    while (node != nil && !overlaps(query, node->interval)) {            // 2
+        if (node->left != nil && node->left->maxHigh >= query.low)       // 3
+            node = node->left;                                       // 4
         else
-            x = x->right;                                      // 5
+            node = node->right;                                      // 5
     }
-    return x == nil ? nullptr : x;                             // 6
+    return node == nil ? nullptr : node;                             // 6
 }
 ```
 
@@ -2239,27 +2260,27 @@ IntervalNode* intervalSearch(IntervalNode* root, IntervalNode* nil, const Interv
 // Minimum degree t: every node except the root holds between t-1 and 2t-1 keys,
 // and between t and 2t children. `t` is a template parameter so the arrays can
 // be fixed-size -- a real B-tree sizes t so that one node fills one disk block.
-template <int T>
+template <int MinDegree>                     // CLRS calls this `t`
 struct BTreeNode {
-    int n = 0;                                  // number of keys currently stored
-    bool leaf = true;
-    array<int, 2 * T - 1> key{};                // 1-indexed in the pseudocode;
-    array<BTreeNode*, 2 * T> c{};               // 0-indexed here, hence the -1s below
+    int  keyCount = 0;                          // number of keys currently stored (CLRS: x.n)
+    bool leaf     = true;
+    array<int, 2 * MinDegree - 1> keys{};       // 1-indexed in the pseudocode;
+    array<BTreeNode*, 2 * MinDegree> children{};// 0-indexed here, hence the -1s below
 };
 
 // Returns (node, index) or (nullptr, -1). `pair` rather than two out-parameters:
 // the two values are meaningless apart.
-template <int T>
-pair<BTreeNode<T>*, int> bTreeSearch(BTreeNode<T>* x, int k) {
-    int i = 0;                                          // 1  (pseudocode: i = 1)
-    while (i < x->n && k > x->key[i]) ++i;              // 2-3  linear scan WITHIN the node
+template <int MinDegree>
+pair<BTreeNode<MinDegree>*, int> bTreeSearch(BTreeNode<MinDegree>* node, int key) {
+    int i = 0;                                              // 1  (pseudocode: i = 1)
+    while (i < node->keyCount && key > node->keys[i]) ++i;  // 2-3 linear scan WITHIN the node
     // A binary search here would be O(lg t) instead of O(t), but t is chosen so
     // a node fits one disk block: the scan is in RAM and free next to the I/O.
-    if (i < x->n && k == x->key[i]) return {x, i};      // 4-5  found
-    if (x->leaf) return {nullptr, -1};                  // 6-7  absent
+    if (i < node->keyCount && key == node->keys[i]) return {node, i};   // 4-5 found
+    if (node->leaf) return {nullptr, -1};                   // 6-7  absent
     // 8  DISK-READ(x.c_i) -- in a real B-tree this is the expensive line, and
     //    it is the only one the complexity analysis counts.
-    return bTreeSearch(x->c[i], k);                     // 9
+    return bTreeSearch(node->children[i], key);             // 9
 }
 ```
 
@@ -2276,28 +2297,30 @@ pair<BTreeNode<T>*, int> bTreeSearch(BTreeNode<T>* x, int k) {
 ```cpp
 // x is NONFULL, x->c[i] is FULL (2t-1 keys). Split that child into two nodes of
 // t-1 keys each and push its MEDIAN key up into x. x gains one key and one child.
-template <int T>
-void bTreeSplitChild(BTreeNode<T>* x, int i) {
-    BTreeNode<T>* y = x->c[i];                           // 1
-    BTreeNode<T>* z = new BTreeNode<T>();                // 2  ALLOCATE-NODE()
-    z->leaf = y->leaf;                                   // 3
-    z->n = T - 1;                                        // 4
+template <int MinDegree>
+void bTreeSplitChild(BTreeNode<MinDegree>* parent, int childIndex) {
+    constexpr int t = MinDegree;                         //    local shorthand, CLRS's `t`
+    BTreeNode<t>* fullChild  = parent->children[childIndex];      // 1
+    BTreeNode<t>* newSibling = new BTreeNode<t>();               // 2  ALLOCATE-NODE()
+    newSibling->leaf     = fullChild->leaf;              // 3
+    newSibling->keyCount = t - 1;                        // 4
 
-    for (int j = 0; j < T - 1; ++j)                      // 5  z takes y's GREATEST t-1 keys
-        z->key[j] = y->key[j + T];                       // 6
-    if (!y->leaf)                                        // 7
-        for (int j = 0; j < T; ++j)                      // 8  ...and the matching t children
-            z->c[j] = y->c[j + T];                       // 9
-    y->n = T - 1;                                        // 10 y keeps the SMALLEST t-1 keys
-                                                         //    and y->key[T-1], the median, moves up
+    for (int j = 0; j < t - 1; ++j)          // 5  newSibling takes the GREATEST t-1 keys
+        newSibling->keys[j] = fullChild->keys[j + t];    // 6
+    if (!fullChild->leaf)                                // 7
+        for (int j = 0; j < t; ++j)                      // 8  ...and the matching t children
+            newSibling->children[j] = fullChild->children[j + t];   // 9
+    const int median = fullChild->keys[t - 1];           //    saved before it is overwritten
+    fullChild->keyCount = t - 1;             // 10 fullChild keeps the SMALLEST t-1 keys
+                                             //    and the median moves up
 
-    for (int j = x->n; j >= i + 1; --j)                  // 11 shift x's children right
-        x->c[j + 1] = x->c[j];                           // 12  -- DOWNWARD loop, because the
-    x->c[i + 1] = z;                                     // 13     ranges overlap and an upward
-    for (int j = x->n - 1; j >= i; --j)                  // 14     loop would overwrite entries
-        x->key[j + 1] = x->key[j];                       // 15     before reading them
-    x->key[i] = y->key[T - 1];                           // 16 the MEDIAN moves up into x
-    x->n = x->n + 1;                                     // 17
+    for (int j = parent->keyCount; j >= childIndex + 1; --j)   // 11 shift children right
+        parent->children[j + 1] = parent->children[j];         // 12  -- DOWNWARD loop, because
+    parent->children[childIndex + 1] = newSibling;             // 13     the ranges overlap and an
+    for (int j = parent->keyCount - 1; j >= childIndex; --j)   // 14     upward loop would overwrite
+        parent->keys[j + 1] = parent->keys[j];                 // 15     entries before reading them
+    parent->keys[childIndex] = median;                   // 16 the MEDIAN moves up into parent
+    parent->keyCount = parent->keyCount + 1;             // 17
     // 18 DISK-WRITE(y); DISK-WRITE(z); DISK-WRITE(x)
 }
 ```
@@ -2311,51 +2334,52 @@ void bTreeSplitChild(BTreeNode<T>* x, int i) {
 ```cpp
 // Forward declarations: BTree::insert calls these before they are defined
 // (A15 and A17 give the definitions). A template must be DECLARED before use.
-template <int T> void bTreeSplitChild(BTreeNode<T>* x, int i);
-template <int T> void bTreeInsertNonfull(BTreeNode<T>* x, int k);
+template <int MinDegree> void bTreeSplitChild(BTreeNode<MinDegree>* node, int childIndex);
+template <int MinDegree> void bTreeInsertNonfull(BTreeNode<MinDegree>* node, int key);
 
-template <int T>
+template <int MinDegree>
 class BTree {
 public:
-    BTree() : root_(new BTreeNode<T>()) {}
+    BTree() : root_(new BTreeNode<MinDegree>()) {}
     ~BTree() { destroy(root_); }
     BTree(const BTree&)            = delete;
     BTree& operator=(const BTree&) = delete;
 
-    void insert(int k);
-    bool contains(int k) const { return bTreeSearch(root_, k).first != nullptr; }
-    int height() const { int h = 0; for (auto* x = root_; !x->leaf; x = x->c[0]) ++h; return h; }
-    BTreeNode<T>* root() const { return root_; }
+    void insert(int key);
+    bool contains(int key) const { return bTreeSearch(root_, key).first != nullptr; }
+    int height() const { int h = 0; for (auto* node = root_; !node->leaf; node = node->children[0]) ++h; return h; }
+    BTreeNode<MinDegree>* root() const { return root_; }
 private:
-    BTreeNode<T>* root_;
-    BTreeNode<T>* splitRoot();
-    static void destroy(BTreeNode<T>* x) {
-        if (!x) return;
-        if (!x->leaf) for (int i = 0; i <= x->n; ++i) destroy(x->c[i]);
-        delete x;
+    BTreeNode<MinDegree>* root_;
+    BTreeNode<MinDegree>* splitRoot();
+    static void destroy(BTreeNode<MinDegree>* node) {
+        if (!node) return;
+        if (!node->leaf) for (int i = 0; i <= node->keyCount; ++i) destroy(node->children[i]);
+        delete node;
     }
 };
 
 // B-TREE-SPLIT-ROOT: the ONLY operation that makes a B-tree taller.
-template <int T>
-BTreeNode<T>* BTree<T>::splitRoot() {
-    BTreeNode<T>* s = new BTreeNode<T>();   // 1
-    s->leaf = false;                        // 2
-    s->n = 0;                               // 3
-    s->c[0] = root_;                        // 4  the old root becomes s's only child
-    root_ = s;                              // 5
-    bTreeSplitChild<T>(s, 0);               // 6  then split it, giving s one key and two children
-    return s;                               // 7
+template <int MinDegree>
+BTreeNode<MinDegree>* BTree<MinDegree>::splitRoot() {
+    BTreeNode<MinDegree>* newRoot = new BTreeNode<MinDegree>();  // 1
+    newRoot->leaf = false;                                       // 2
+    newRoot->keyCount = 0;                                       // 3
+    newRoot->children[0] = root_;        // 4  the old root becomes newRoot's only child
+    root_ = newRoot;                                             // 5
+    bTreeSplitChild<MinDegree>(newRoot, 0);
+                    // 6  then split it, giving newRoot one key and two children
+    return newRoot;                                              // 7
 }
 
-template <int T>
-void BTree<T>::insert(int k) {
-    BTreeNode<T>* r = root_;                        // 1
-    if (r->n == 2 * T - 1) {                        // 2  root is full
-        BTreeNode<T>* s = splitRoot();              // 3
-        bTreeInsertNonfull<T>(s, k);                // 4
+template <int MinDegree>
+void BTree<MinDegree>::insert(int key) {
+    BTreeNode<MinDegree>* oldRoot = root_;                   // 1
+    if (oldRoot->keyCount == 2 * MinDegree - 1) {            // 2  root is full
+        BTreeNode<MinDegree>* newRoot = splitRoot();         // 3
+        bTreeInsertNonfull<MinDegree>(newRoot, key);         // 4
     } else {
-        bTreeInsertNonfull<T>(r, k);                // 5
+        bTreeInsertNonfull<MinDegree>(oldRoot, key);         // 5
     }
 }
 ```
@@ -2372,28 +2396,28 @@ void BTree<T>::insert(int k) {
 // PRECONDITION: x is not full. That precondition is maintained by splitting any
 // full child BEFORE descending into it -- the "proactive splitting" that lets
 // insertion finish in ONE downward pass, with no recursion back up the tree.
-template <int T>
-void bTreeInsertNonfull(BTreeNode<T>* x, int k) {
-    int i = x->n - 1;                                     // 1  (pseudocode: i = x.n)
-    if (x->leaf) {                                        // 2
-        while (i >= 0 && k < x->key[i]) {                 // 3  shift to make room
-            x->key[i + 1] = x->key[i];                    // 4
+template <int MinDegree>
+void bTreeInsertNonfull(BTreeNode<MinDegree>* node, int key) {
+    int i = node->keyCount - 1;                           // 1  (pseudocode: i = x.n)
+    if (node->leaf) {                                     // 2
+        while (i >= 0 && key < node->keys[i]) {           // 3  shift to make room
+            node->keys[i + 1] = node->keys[i];            // 4
             --i;
         }
-        x->key[i + 1] = k;                                // 6  -- this is INSERTION-SORT's
-        x->n = x->n + 1;                                  //     inner loop (M01 A5), on one node
+        node->keys[i + 1] = key;                          // 6  -- this is INSERTION-SORT's
+        node->keyCount = node->keyCount + 1;              //     inner loop (M01 A5), on one node
         // 8 DISK-WRITE(x)
     } else {
-        while (i >= 0 && k < x->key[i]) --i;              // 9-10 find the child to descend into
+        while (i >= 0 && key < node->keys[i]) --i;        // 9-10 find the child to descend into
         ++i;                                              // 11
         // 12 DISK-READ(x.c_i)
-        if (x->c[i]->n == 2 * T - 1) {                    // 13 child is FULL: split it NOW,
-            bTreeSplitChild<T>(x, i);                     // 14 while we are still here and x
+        if (node->children[i]->keyCount == 2 * MinDegree - 1) {   // 13 child is FULL: split it NOW,
+            bTreeSplitChild<MinDegree>(node, i);          // 14 while we are still here and node
                                                           //    is guaranteed to have room
-            if (k > x->key[i]) ++i;                       // 15 the split pushed a median up;
-        }                                                 //    decide which half k belongs in
-        bTreeInsertNonfull<T>(x->c[i], k);                // 17 tail call -> a loop, so only
-    }                                                     //    O(1) nodes need be resident
+            if (key > node->keys[i]) ++i;                 // 15 the split pushed a median up;
+        }                                                 //    decide which half key belongs in
+        bTreeInsertNonfull<MinDegree>(node->children[i], key);   // 17 tail call -> a loop, so
+    }                                                     //    only O(1) nodes need be resident
 }
 ```
 

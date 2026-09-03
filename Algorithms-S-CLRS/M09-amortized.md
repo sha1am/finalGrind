@@ -70,6 +70,8 @@ MULTIPOP(S, k)
 3      k = k − 1
 ```
 
+→ **C++ implementation:** [A1 MULTIPOP](#a1-multipop)
+
 The actual cost of `MULTIPOP(S, k)` on a stack of `s` objects is `min{s, k}`.
 
 **The naive bound.** A `MULTIPOP` can cost `O(n)` since the stack holds at most `n` items. There are at most `n` operations. Therefore `O(n²)`. **This is correct and useless.**
@@ -91,6 +93,8 @@ INCREMENT(A, k)
 5  if i < k
 6      A[i] = 1
 ```
+
+→ **C++ implementation:** [A2 INCREMENT](#a2-increment)
 
 The cost is the number of bits flipped.
 
@@ -237,6 +241,8 @@ TABLE-INSERT(T, x)
 11  T.num = T.num + 1
 ```
 
+→ **C++ implementation:** [A3 TABLE-INSERT (and TABLE-DELETE)](#a3-table-insert-and-table-delete)
+
 Actual cost, counting elementary insertions:
 
 ```
@@ -360,70 +366,70 @@ Maximum amortized cost is **3**, so any sequence of `n` operations costs `O(n)`.
 template <class T>
 class MultipopStack {
 public:
-    void push(const T& x) { s_.push_back(x); ++work_; }
+    void push(const T& value) { stack_.push_back(value); ++work_; }
 
     bool pop() {
-        if (s_.empty()) return false;
-        s_.pop_back();
+        if (stack_.empty()) return false;
+        stack_.pop_back();
         ++work_;
         return true;
     }
 
     // Pops min(k, size) elements; actual cost is the number popped.
-    std::size_t multipop(std::size_t k) {
-        const std::size_t popped = std::min(k, s_.size());
-        s_.resize(s_.size() - popped);
+    size_t multipop(size_t k) {
+        const size_t popped = min(k, stack_.size());
+        stack_.resize(stack_.size() - popped);
         work_ += popped;
         return popped;
     }
 
-    bool empty() const { return s_.empty(); }
-    std::size_t size() const { return s_.size(); }
-    std::size_t work() const { return work_; }      // total elementary pushes+pops
+    bool empty() const { return stack_.empty(); }
+    size_t size() const { return stack_.size(); }
+    size_t work() const { return work_; }      // total elementary pushes+pops
 
 private:
-    std::vector<T> s_;
-    std::size_t work_ = 0;
+    vector<T> stack_;
+    size_t work_ = 0;
 };
 
 // ------------------------------------------------------- binary counter
 class BinaryCounter {
 public:
-    explicit BinaryCounter(int k) : a_(k, 0) {}
+    explicit BinaryCounter(int k) : bits_(k, 0) {}
 
     // Returns the number of bits flipped (the actual cost).
     int increment() {
         int i = 0, flips = 0;
-        const int k = (int)a_.size();
-        while (i < k && a_[i] == 1) { a_[i] = 0; ++i; ++flips; }
-        if (i < k) { a_[i] = 1; ++flips; }
+        const int k = (int)bits_.size();
+        while (i < k && bits_[i] == 1) { bits_[i] = 0; ++i; ++flips; }
+        if (i < k) { bits_[i] = 1; ++flips; }
         return flips;
     }
 
     unsigned long long value() const {
-        unsigned long long v = 0;
-        for (int i = (int)a_.size() - 1; i >= 0; --i) v = v * 2 + a_[i];
-        return v;
+        unsigned long long total = 0;
+        for (int i = (int)bits_.size() - 1; i >= 0; --i) total = total * 2 + bits_[i];
+        return total;
     }
-    int ones() const { return (int)std::count(a_.begin(), a_.end(), 1); }
+    int ones() const { return (int)count(bits_.begin(), bits_.end(), 1); }
 
 private:
-    std::vector<unsigned char> a_;
+    vector<unsigned char> bits_;
 };
 
 // -------------------------------------------------------- dynamic table
 // Doubles when full; halves when the load factor drops below 1/4.
 class DynamicTable {
 public:
-    void insert(int x) {
+    void insert(int value) {
         if (size_ == 0) { data_.assign(1, 0); size_ = 1; }
         if (num_ == size_) {
-            std::vector<int> bigger(size_ * 2);
-            for (std::size_t i = 0; i < num_; ++i) { bigger[i] = data_[i]; ++work_; }
+            vector<int> bigger(size_ * 2);
+            for (size_t i = 0; i < num_; ++i) { bigger[i] = data_[i]; ++work_; }
             data_.swap(bigger);
             size_ *= 2;
         }
-        data_[num_++] = x;
+        data_[num_++] = value;
         ++work_;
     }
 
@@ -432,18 +438,18 @@ public:
         --num_;
         ++work_;
         if (size_ > 0 && num_ * 4 < size_) {
-            const std::size_t half = size_ / 2;
-            std::vector<int> smaller(half);
-            for (std::size_t i = 0; i < num_; ++i) { smaller[i] = data_[i]; ++work_; }
+            const size_t half = size_ / 2;
+            vector<int> smaller(half);
+            for (size_t i = 0; i < num_; ++i) { smaller[i] = data_[i]; ++work_; }
             data_.swap(smaller);
             size_ = half;
             if (num_ == 0) { data_.clear(); size_ = 0; }
         }
     }
 
-    std::size_t num() const { return num_; }
-    std::size_t capacity() const { return size_; }
-    std::size_t work() const { return work_; }      // elementary insertions+deletions
+    size_t num() const { return num_; }
+    size_t capacity() const { return size_; }
+    size_t work() const { return work_; }      // elementary insertions+deletions
 
     // CLRS potential (16.5): 0 exactly when the load factor is 1/2.
     double potential() const {
@@ -454,8 +460,8 @@ public:
     }
 
 private:
-    std::vector<int> data_;
-    std::size_t num_ = 0, size_ = 0, work_ = 0;
+    vector<int> data_;
+    size_t num_ = 0, size_ = 0, work_ = 0;
 };
 ```
 
@@ -495,24 +501,24 @@ Support `INSERT(S, x)` and `DELETE-LARGER-HALF(S)` (delete the largest `⌈|S|/2
 
 class HalvingMultiset {
 public:
-    void insert(int x) { v_.push_back(x); ++work_; }
+    void insert(int value) { elements_.push_back(value); ++work_; }
 
     void deleteLargerHalf() {
-        if (v_.empty()) return;
-        const std::size_t keep = v_.size() / 2;            // floor(|S|/2) smallest survive
-        work_ += v_.size();                                 // nth_element is Theta(|S|)
-        if (keep == 0) { v_.clear(); return; }
-        std::nth_element(v_.begin(), v_.begin() + (long)keep, v_.end());
-        v_.resize(keep);
+        if (elements_.empty()) return;
+        const size_t keep = elements_.size() / 2;            // floor(|S|/2) smallest survive
+        work_ += elements_.size();                                 // nth_element is Theta(|S|)
+        if (keep == 0) { elements_.clear(); return; }
+        nth_element(elements_.begin(), elements_.begin() + (long)keep, elements_.end());
+        elements_.resize(keep);
     }
 
-    std::size_t size() const { return v_.size(); }
-    std::size_t work() const { return work_; }
-    std::vector<int> elements() const { return v_; }        // Theta(|S|) output
+    size_t size() const { return elements_.size(); }
+    size_t work() const { return work_; }
+    vector<int> elements() const { return elements_; }        // Theta(|S|) output
 
 private:
-    std::vector<int> v_;
-    std::size_t work_ = 0;
+    vector<int> elements_;
+    size_t work_ = 0;
 };
 ```
 
@@ -537,50 +543,59 @@ private:
 class LogMethodSet {
 public:
     // Search every nonempty run: O(lg^2 n) worst case.
-    bool contains(int x) const {
+    bool contains(int key) const {
         for (const auto& run : runs_)
-            if (!run.empty() && std::binary_search(run.begin(), run.end(), x))
+            if (!run.empty() && binary_search(run.begin(), run.end(), key))
                 return true;
         return false;
     }
 
     // Insert a singleton, then carry: merge equal-sized runs, exactly like
     // INCREMENT on a binary counter where flipping bit i costs 2^i.
-    void insert(int x) {
-        std::vector<int> carry{x};
-        std::size_t i = 0;
+    void insert(int key) {
+        vector<int> carry{key};
+        size_t i = 0;
         while (i < runs_.size() && !runs_[i].empty()) {
-            carry = merge(runs_[i], carry);
+            carry = mergeRuns(runs_[i], carry);
             runs_[i].clear();
             runs_[i].shrink_to_fit();
             ++i;
         }
         if (i == runs_.size()) runs_.emplace_back();
-        runs_[i] = std::move(carry);
-        ++n_;
+        runs_[i] = move(carry);
+        ++count_;
     }
 
-    std::size_t size() const { return n_; }
-    std::size_t work() const { return work_; }     // total elements copied during merges
+    size_t size() const { return count_; }
+    size_t work() const { return work_; }     // total elements copied during merges
 
-    std::vector<int> sorted() const {
-        std::vector<int> all;
-        for (const auto& run : runs_) all.insert(all.end(), run.begin(), run.end());
-        std::sort(all.begin(), all.end());
-        return all;
+    vector<int> sorted() const {
+        vector<int> merged;
+        for (const auto& run : runs_) merged.insert(merged.end(), run.begin(), run.end());
+        sort(merged.begin(), merged.end());
+        return merged;
     }
 
 private:
-    std::vector<std::vector<int>> runs_;           // runs_[i] is empty or has 2^i elements
-    std::size_t n_ = 0;
-    mutable std::size_t work_ = 0;
+    vector<vector<int>> runs_;           // runs_[i] is empty or has 2^i elements
+    size_t count_ = 0;
+    mutable size_t work_ = 0;
 
-    std::vector<int> merge(const std::vector<int>& a, const std::vector<int>& b) {
-        std::vector<int> out;
-        out.reserve(a.size() + b.size());
-        std::merge(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(out));
-        work_ += out.size();
-        return out;
+    // NAME LOOKUP LESSON: this helper is deliberately NOT called `merge`.
+    // A class member name hides every namespace-scope name with the same
+    // identifier, so inside the class a call to `merge(...)` would find only
+    // this member — `using namespace std;` would not rescue it, and you would
+    // get "candidate expects 2 arguments, 5 provided". Rename, or write
+    // `::merge` / `std::merge`. Renaming is the honest fix.
+    vector<int> mergeRuns(const vector<int>& lhs, const vector<int>& rhs) {
+        vector<int> out;
+        out.reserve(lhs.size() + rhs.size());        // one allocation, not log(n) of them
+        // std::merge from <algorithm>: consumes two SORTED ranges and writes the
+        // sorted union to an output iterator. back_inserter turns push_back into
+        // an output iterator, so `out` grows as merge writes.
+        merge(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), back_inserter(out));
+        work_ += out.size();                     // count elements copied, for the amortized bound
+        return out;                              // return-by-value: C++11 MOVES this vector out
     }
 };
 ```
@@ -604,20 +619,20 @@ static inline unsigned long long grayCode(unsigned long long i) { return i ^ (i 
 
 // Which bit flips going from Gray(i-1) to Gray(i): the number of trailing zeros of i.
 static inline int grayFlippedBit(unsigned long long i) {
-    int j = 0;
-    while ((i & 1ULL) == 0) { i >>= 1; ++j; }
-    return j;
+    int bitIndex = 0;
+    while ((i & 1ULL) == 0) { i >>= 1; ++bitIndex; }
+    return bitIndex;
 }
 
 // Build the whole sequence in Theta(2^k) by flipping one bit at a time.
-static std::vector<unsigned long long> grayCodeSequence(int k) {
+static vector<unsigned long long> grayCodeSequence(int k) {
     const unsigned long long n = 1ULL << k;
-    std::vector<unsigned long long> out(n);
-    unsigned long long cur = 0;
+    vector<unsigned long long> out(n);
+    unsigned long long current = 0;
     out[0] = 0;
     for (unsigned long long i = 1; i < n; ++i) {
-        cur ^= (1ULL << grayFlippedBit(i));
-        out[i] = cur;
+        current ^= (1ULL << grayFlippedBit(i));
+        out[i] = current;
     }
     return out;
 }
@@ -724,6 +739,315 @@ Reach for amortized analysis when you see:
 - **Dynamic table, insert only:** double on full. `Φ = 2(num − size/2)`. `ĉ = 3` in every case. Skiena: each element moves twice on average.
 - **Dynamic table, insert + delete:** double on full, **halve at `α < 1/4`** (not `1/2` — that thrashes at `Θ(n)` amortized). `Φ = 2(num − size/2)` if `α ≥ 1/2`, else `size/2 − num`. Max `ĉ = 3`; `α` stays in `[1/4, 1]`.
 - **The recognition sentence** for the whole module: *"each element is pushed and popped at most once, so the total is `O(n)`."*
+
+---
+
+## Practice — where to drill this module
+
+Amortized analysis has few problems *about* it and shows up inside almost every design problem. These are the ones where the amortized argument is the difference between an accepted and a rejected solution.
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| Dynamic array growth, live | [380 · Insert Delete GetRandom O(1)](https://leetcode.com/problems/insert-delete-getrandom-o1/) | a `vector` that grows and a swap-with-last erase; the `O(1)` in the title is **amortized**, and saying so is part of the answer |
+| Build the table that rehashes | [706 · Design HashMap](https://leetcode.com/problems/design-hashmap/) · [705 · Design HashSet](https://leetcode.com/problems/design-hashset/) | rehashing is `TABLE-INSERT` under another name — `A3` |
+| Amortized `O(1)` per op across a sequence | [225 · Implement Stack using Queues](https://leetcode.com/problems/implement-stack-using-queues/) | the "expensive push, cheap pop" version is `O(1)` amortized; explaining *why* is the interview |
+| Every element enters and leaves once | [146 · LRU Cache](https://leetcode.com/problems/lru-cache/) · [460 · LFU Cache](https://leetcode.com/problems/lfu-cache/description/) | the aggregate argument of `MULTIPOP`: total work is bounded by total insertions, not by per-op worst case |
+| The monotonic-stack family | [739 · Daily Temperatures](https://leetcode.com/problems/daily-temperatures/) · [84 · Largest Rectangle in Histogram](https://leetcode.com/problems/largest-rectangle-in-histogram/) | the inner `while` looks `O(n)`, so the whole thing looks `O(n²)` — it is `O(n)`, **by exactly the `MULTIPOP` argument**, and this is the single highest-value application of the module |
+| Amortized growth in a stream | [703 · Kth Largest Element in a Stream](https://leetcode.com/problems/kth-largest-element-in-a-stream/) | heap resizing plus a bounded-size invariant |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *Sorting and Searching* (several are monotonic-stack/two-pointer amortized arguments). [Codeforces `data structures` tag](https://codeforces.com/problemset?tags=data+structures) · [`two pointers` tag](https://codeforces.com/problemset?tags=two+pointers) — the two-pointer technique is an amortized argument wearing a different hat: each pointer only moves forward, so the total work is `O(n)` however the inner loop looks.
+
+**The drill that matters here:** whenever you write a loop with an inner `while`, ask *"can I bound the total number of inner iterations across the whole run?"* If yes, you have an amortized bound and the naive `O(n²)` is wrong. Monotonic stacks, two pointers, and union-find ([M10](M10-union-find.md)) are all this one question.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., §1.5 and §3.4 (the `vector` implementation).*
+
+### 1. `vector` growth — the module's running example, in the standard library
+
+`std::vector` **is** `TABLE-INSERT`. Three members expose the machinery:
+
+```cpp
+void growthDemo() {
+    vector<int> numbers;
+    numbers.size();        // how many elements are in it
+    numbers.capacity();    // how many it can hold before the next reallocation
+    numbers.reserve(1000); // pre-allocate: no reallocation until size exceeds 1000
+    numbers.shrink_to_fit();  // a NON-BINDING request to release spare capacity
+}
+```
+
+The standard does not fix the growth factor; it only requires that `push_back` be **amortized `O(1)`**, which forces geometric growth. libstdc++ and libc++ double (factor 2); MSVC uses 1.5. **Any constant factor > 1 gives amortized `O(1)`; growing by a constant *amount* gives `Θ(n)` per insert on average** — that is the entire content of §2 of this module, and the standard encodes it as a complexity requirement rather than a policy.
+
+### 2. Reallocation invalidates everything
+
+```cpp
+void danger(vector<int>& numbers) {
+    int* first = &numbers[0];
+    numbers.push_back(42);   // MAY reallocate...
+    // *p is now a dangling pointer if it did. Same for iterators and references.
+}
+```
+
+This is the hidden cost the amortized analysis does not mention: a `Θ(n)` copy is *also* a moment when every outstanding pointer into the vector dies. `reserve()` up front removes both the copies and the invalidation. (Contrast `std::list` and `std::deque`, which never invalidate references to existing elements on insertion — see [M06](M06-elementary-ds.md).)
+
+### 3. `noexcept` moves, and why they change the constant
+
+When a `vector` reallocates, it must relocate every element. It **moves** them only if the element's move constructor is `noexcept`; otherwise it **copies**, to preserve the strong exception guarantee. So a type with a non-`noexcept` move turns every doubling from a pointer shuffle into a deep copy. Weiss's Big-Five discussion [§1.5.6, p.30] is the background; the practical rule is one word:
+
+```cpp
+struct Buf {
+    vector<int> data;
+    Buf(Buf&& other) noexcept = default;   // the `noexcept` is load-bearing
+};
+```
+
+### 4. `mutable`, for instrumentation that does not change logical state
+
+`A3` counts elementary moves from inside a `const` accessor. `mutable` is the keyword that permits it:
+
+```cpp
+class Counted {
+public:
+    int value() const { ++reads_; return value_; }   // legal only because reads_ is mutable
+private:
+    int value_ = 0;
+    mutable long long reads_ = 0;   // not part of the object's logical state
+};
+```
+
+Use it for caches, counters and locks — never to smuggle real mutation past a `const` promise.
+
+### 5. Integer types for counters — again
+
+The binary counter in `A2` flips up to `2n` bits over `n` increments, and the dynamic table in `A3` moves up to `2n` elements. Both are `long long`. At `n = 10⁹` an `int` counter overflows, and signed overflow is **undefined behaviour**, not wraparound.
+
+### 6. `size_t` arithmetic in a shrinking structure
+
+`A3`'s deletion path compares `num` against `size / 4`. With unsigned types, `num - 1` when `num == 0` wraps to `SIZE_MAX`. Every comparison below is written so the subtraction never happens on an unsigned zero — check emptiness first, or keep the counters signed. This is the same trap as [M02](M02-asymptotics.md) toolkit §2, and it is why the appendix uses `long long` for `num` and `size` rather than `size_t`.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+### A1 MULTIPOP
+
+*Pseudocode: §1, "Running example 1 — a stack with MULTIPOP".*
+
+```cpp
+// A stack with a MULTIPOP that removes min(s, k) items in one call.
+//
+// The elementary-operation counter is what the analysis is about: `cost` counts
+// individual pushes and pops, NOT calls. A MULTIPOP that pops 1000 items costs
+// 1000, and the whole point is that such a call can only happen after 1000
+// pushes already paid for those items.
+class MultipopStack {
+public:
+    void push(int value) {
+        stack_.push_back(value);
+        ++elementaryOps_;          // one elementary operation
+    }
+
+    // Returns false on an empty stack rather than throwing: POP on empty is a
+    // caller error the caller can cheaply avoid, and this keeps MULTIPOP's loop
+    // simple. (CLRS calls it an error; either convention is defensible.)
+    bool pop() {
+        if (stack_.empty()) return false;
+        stack_.pop_back();
+        ++elementaryOps_;
+        return true;
+    }
+
+    // MULTIPOP(S, k)
+    void multipop(long long k) {
+        // 1  while not STACK-EMPTY(S) and k > 0
+        // Note the order: emptiness FIRST. Reversed, the loop would still be
+        // correct here, but writing the cheap/guarding test first is the habit
+        // that matters when the second test can fault (M05 A1).
+        while (!stack_.empty() && k > 0) {
+            stack_.pop_back();          // 2  POP(S)
+            ++elementaryOps_;
+            k = k - 1;              // 3  k = k - 1
+        }
+    }
+
+    bool empty() const { return stack_.empty(); }
+    size_t size() const { return stack_.size(); }
+    long long elementaryOps() const { return elementaryOps_; }
+    void resetCounter() { elementaryOps_ = 0; }
+private:
+    vector<int> stack_;
+    long long elementaryOps_ = 0;   // long long: 2n can exceed int (toolkit 5)
+};
+```
+
+**Complexity.** A single `MULTIPOP(S, k)` costs `min(s, k)`, which is `O(n)` — so the naive bound on `n` operations is **`O(n²)`. That bound is correct and useless.**
+
+**The aggregate argument.** *An object cannot be popped unless it was first pushed.* The number of `POP` calls — including those performed inside `MULTIPOP` — is at most the number of `PUSH` calls, which is at most `n`. So the total elementary work across any sequence of `n` operations is at most `2n = O(n)`, and the **amortized cost of each of `PUSH`, `POP` and `MULTIPOP` is `O(1)`**.
+
+**The accounting version:** charge 2 for each `PUSH` — 1 to perform it, 1 stored as credit *on that object* to pay for its eventual pop. `POP` and `MULTIPOP` then cost 0 amortized, because every pop is paid for by the credit sitting on the item it removes. Credit never goes negative, because you cannot pop an item that was never pushed.
+
+**The potential version:** `Φ(D) = |S|`, the number of items on the stack. `PUSH`: `ĉ = 1 + 1 = 2`. `POP`: `ĉ = 1 − 1 = 0`. `MULTIPOP(k')` where `k' = min(s,k)`: `ĉ = k' − k' = 0`. Same answer, third time.
+
+**Where you have already used this:** the monotonic stack. In "Daily Temperatures" or "Largest Rectangle in Histogram", the inner `while` pops an unbounded number of elements, so the code *looks* `O(n²)` — and is `O(n)`, because each index is pushed once and popped once. **That is `MULTIPOP`, exactly.**
+
+### A2 INCREMENT
+
+*Pseudocode: §1, "Running example 2 — incrementing a `k`-bit binary counter".*
+
+```cpp
+// A k-bit binary counter stored one bit per element, A[0] least significant,
+// so the value is sum over i of A[i] * 2^i.
+//
+// vector<char>, NOT vector<bool>: vector<bool> is the bit-packed
+// specialisation whose operator[] returns a proxy rather than a reference
+// (M07 toolkit 7). Here we want ordinary, predictable element access.
+class BinaryCounter {
+public:
+    explicit BinaryCounter(int k) : bits_(k, 0) {}
+
+    // INCREMENT(A, k)
+    void increment() {
+        int i = 0;                                  // 1  i = 0
+        while (i < (int)bits_.size() && bits_[i] == 1) {  // 2  while i < k and A[i] == 1
+            bits_[i] = 0;                              // 3      A[i] = 0
+            ++flips_;                               //        (count the bit flip)
+            i = i + 1;                              // 4      i = i + 1
+        }
+        if (i < (int)bits_.size()) {                   // 5  if i < k
+            bits_[i] = 1;                              // 6      A[i] = 1
+            ++flips_;
+        }
+        // If the loop ran off the end, the counter OVERFLOWED and is now all
+        // zeros -- CLRS's convention, and the reason line 5 is guarded.
+    }
+
+    long long flips() const { return flips_; }      // long long: the total is ~2n
+    int bit(int i) const { return bits_[i]; }
+    // The counter's value, for testing. Only valid while it fits in 64 bits.
+    unsigned long long value() const {
+        unsigned long long total = 0;
+        for (int i = (int)bits_.size() - 1; i >= 0; --i) total = total * 2 + (unsigned)bits_[i];
+        return total;
+    }
+private:
+    vector<char> bits_;
+    long long flips_ = 0;
+};
+```
+
+**Complexity.** One `INCREMENT` flips up to `k` bits, so `n` increments naively cost `O(nk)`. **Correct, not tight.**
+
+**The aggregate argument.** Bit `A[i]` flips only once every `2ⁱ` increments, so over `n` increments the total is
+
+```
+Σ_{i=0}^{k−1} ⌊n/2ⁱ⌋  <  n · Σ_{i=0}^{∞} 1/2ⁱ  =  2n
+```
+
+using the geometric sum `Σ 1/2ⁱ = 2` from [M02](M02-asymptotics.md). So `n` increments cost `O(n)`, and the amortized cost per `INCREMENT` is `O(1)` — **at most 2 bit flips per increment.**
+
+**The potential version, which is the one worth memorizing.** Let `Φ(Dᵢ) = bᵢ =` the number of 1-bits after the `i`-th increment. If the `i`-th increment resets `tᵢ` bits, its actual cost is at most `tᵢ + 1`, and `bᵢ ≤ b_{i−1} − tᵢ + 1`. So
+
+```
+ĉᵢ = cᵢ + Φ(Dᵢ) − Φ(Dᵢ₋₁)  ≤  (tᵢ + 1) + (1 − tᵢ)  =  2
+```
+
+The `tᵢ` cancels — **that cancellation is the whole trick**, and it is the template for every potential-function argument in the chapter. Starting from zero, `Φ(D₀) = 0 ≤ Φ(Dₙ)`, so `Σĉ` really is an upper bound on `Σc`.
+
+### A3 TABLE-INSERT (and TABLE-DELETE)
+
+*Pseudocode: §3, "16.4.1 — Expansion only".*
+
+```cpp
+// A dynamic table that doubles on overflow. The `moves_` counter tracks
+// ELEMENTARY INSERTIONS -- the quantity the analysis bounds -- so the amortized
+// claim can be checked rather than believed.
+class DynamicTable {
+public:
+    // TABLE-INSERT(T, x)
+    void insert(int value) {
+        if (size_ == 0) {                       // 1  if T.size == 0
+            table_.assign(1, 0);                // 2      allocate 1 slot
+            size_ = 1;                          // 3      T.size = 1
+        }
+        if (num_ == size_) {                    // 4  if T.num == T.size
+            vector<int> fresh(2 * size_);       // 5      allocate 2 * T.size slots
+            for (long long i = 0; i < num_; ++i) {   // 6  insert all items into it
+                fresh[(size_t)i] = table_[(size_t)i];
+                ++moves_;                       //        <-- THE EXPENSIVE PART:
+            }                                   //        Theta(num) elementary moves
+            table_.swap(fresh);                 // 7-8    free old, install new.
+            // swap(), not assignment: swapping two vectors exchanges their
+            // internal pointers in O(1) and lets `fresh`'s destructor free the
+            // OLD buffer when it goes out of scope. `table_ = fresh` would copy.
+            size_ = 2 * size_;                  // 9      T.size = 2 * T.size
+        }
+        table_[(size_t)num_] = value;               // 10 insert x
+        ++moves_;
+        num_ = num_ + 1;                        // 11 T.num = T.num + 1
+    }
+
+    // TABLE-DELETE with the QUARTER rule (CLRS 16.4.2). Contracting at HALF
+    // full is the natural-looking choice and it is Theta(n) amortized: sitting
+    // exactly at the boundary, insert-delete-insert-delete forces a full
+    // expansion or contraction on EVERY operation. Waiting until the table is
+    // one QUARTER full leaves a gap between the expansion and contraction
+    // thresholds, so a rebuild is always followed by at least size/4 cheap
+    // operations before the next one. That gap is the whole fix.
+    bool erase() {
+        if (num_ == 0) return false;            // check emptiness BEFORE
+        --num_;                                 // decrementing (toolkit 6)
+        ++moves_;
+        if (size_ > 1 && num_ > 0 && num_ <= size_ / 4) {
+            long long newSize = size_ / 2;
+            vector<int> fresh((size_t)newSize);
+            for (long long i = 0; i < num_; ++i) {
+                fresh[(size_t)i] = table_[(size_t)i];
+                ++moves_;
+            }
+            table_.swap(fresh);
+            size_ = newSize;
+        }
+        return true;
+    }
+
+    // The potential function of CLRS (16.5), exposed so it can be inspected:
+    //     Phi(T) = 2 * T.num - T.size    when the table is at least half full
+    // It is 0 right after an expansion (num == size/2) and equals num right
+    // before the next one (num == size), which is exactly enough stored credit
+    // to pay for copying all num items. THAT is how the function is DESIGNED
+    // rather than guessed: pick Phi so it is zero after the expensive operation
+    // and equals the expensive operation's cost just before it.
+    long long potential() const { return 2 * num_ - size_; }
+
+    long long num() const { return num_; }
+    long long size() const { return size_; }
+    long long moves() const { return moves_; }
+    void resetCounter() { moves_ = 0; }
+private:
+    vector<int> table_;
+    long long num_ = 0;    // items stored
+    long long size_ = 0;   // slots allocated
+    long long moves_ = 0;  // elementary insertions performed (long long: ~2n)
+};
+```
+
+**Complexity.**
+
+- **A single `TABLE-INSERT` is `Θ(num)` in the worst case** — the one that triggers a doubling.
+- **Amortized `O(1)`.** Over `n` insertions starting from an empty table, expansions happen at sizes `1, 2, 4, …`, so the total copying work is `1 + 2 + 4 + … + 2^{⌊lg n⌋} < 2n`. Adding the `n` ordinary insertions gives **at most `3n` elementary operations for `n` inserts.**
+- **Space `Θ(n)`**, but the table can be up to 2× larger than needed — `shrink_to_fit` exists for exactly this.
+
+**Why geometric growth and not a fixed increment.** Growing by a constant `c` slots means expansions at `c, 2c, 3c, …`, and the total copying is `c + 2c + … + n = Θ(n²/c) = Θ(n²)` — **`Θ(n)` amortized per insert.** Doubling turns an arithmetic series into a geometric one, and geometric series are dominated by their last term ([M02](M02-asymptotics.md)). *Any* factor `> 1` works; 2 and 1.5 are both in production use.
+
+**Skiena's warning about what the amortized bound costs you:**
+
+> *"The primary thing lost in using dynamic arrays is the guarantee that each insertion takes constant time in the worst case… What we get instead is a promise that the `n`th element insertion will be completed quickly enough that the total effort expended so far will still be `O(n)`."*
+
+For a game loop, an audio callback, or anything with a tail-latency budget, that occasional `Θ(n)` stall is exactly what you cannot afford. The fixes are to `reserve()` up front, or to use a structure that spreads the work out (incremental rehashing, or the logarithmic method of §5).
+
 
 ---
 

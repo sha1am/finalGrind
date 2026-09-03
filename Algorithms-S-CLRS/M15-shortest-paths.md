@@ -24,6 +24,8 @@ RELAX(u, v, w)
       v.π = u
 ```
 
+→ **C++ implementation:** [A1 RELAX (and INITIALIZE-SINGLE-SOURCE)](#a1-relax-and-initialize-single-source)
+
 `v.d` is an *upper-bound estimate* on `δ(s,v)` that only ever decreases, and `v.π` is a predecessor pointer. Every single-source algorithm here initializes `s.d = 0`, everything else `∞`, and then relaxes edges. **The only difference between them is the order in which edges are relaxed, and how many times.**
 
 | Algorithm | Relaxation order | Requires | Time |
@@ -237,6 +239,8 @@ BELLMAN-FORD(G, w, s)
 8  return TRUE
 ```
 
+→ **C++ implementation:** [A2 BELLMAN-FORD](#a2-bellman-ford)
+
 ### Why it works
 
 **The entire correctness argument is one application of the path-relaxation property.**
@@ -378,6 +382,8 @@ DAG-SHORTEST-PATHS(G, w, s)
 5          RELAX(u, v, w)
 ```
 
+→ **C++ implementation:** [A3 DAG-SHORTEST-PATHS](#a3-dag-shortest-paths)
+
 **One pass. Every edge relaxed exactly once. Negative weights are fine.**
 
 ### Why It Works — Theorem 22.5
@@ -468,6 +474,8 @@ DIJKSTRA(G, w, s)
 10         if RELAX(u, v, w)
 11             DECREASE-KEY(Q, v, v.d)
 ```
+
+→ **C++ implementation:** [A4 DIJKSTRA](#a4-dijkstra)
 
 **Skiena's framing is the one to keep**, because it makes the algorithm impossible to forget: *"The basic idea is very similar to Prim's algorithm. In each iteration, we add exactly one vertex to the tree of vertices for which we know the shortest path from s. As in Prim's, we keep track of the best path seen to date for all vertices outside the tree, and insert them in order of increasing cost."* And then the punchline — he presents Dijkstra as *"an implementation of Dijkstra's algorithm based on changing exactly four lines from our Prim's implementation—one of which is simply the name of the function!"*
 
@@ -837,6 +845,8 @@ FLOYD-WARSHALL(W, n)
 7  return D^(n)
 ```
 
+→ **C++ implementation:** [A5 FLOYD-WARSHALL](#a5-floyd-warshall)
+
 ### The one thing to never get wrong: loop order
 
 **`k` must be the OUTERMOST loop.** This is the most common Floyd–Warshall bug in existence, and it is silent — the code compiles, runs in the same time, and returns wrong answers on some graphs.
@@ -1034,6 +1044,8 @@ JOHNSON(G, w)
 9          d_uv = δ̂(u,v) + h(v) − h(u)                                   (23.11)
 10 return D
 ```
+
+→ **C++ implementation:** [A6 JOHNSON](#a6-johnson)
 
 **Line 9 undoes the reweighting.** By Lemma 23.1, `δ̂(u,v) = δ(u,v) + h(u) − h(v)`, so `δ(u,v) = δ̂(u,v) + h(v) − h(u)`. **Note the sign flip — `+h(v) − h(u)`, the reverse of the edge formula.** Getting this backwards is the classic Johnson bug.
 
@@ -1247,4 +1259,547 @@ And then Harald's objection, which is the actual lesson:
 
 ---
 
-*Next: [M16 — Network Flow & Matching](M16-flow-matching.md) (CLRS 24–25 + Skiena 8.5) — max-flow min-cut, Ford-Fulkerson and Edmonds-Karp, Dinic, and matching as a flow problem.*
+## Practice — where to drill this module
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| Dijkstra, plain | [743 · Network Delay Time](https://leetcode.com/problems/network-delay-time/) | the minimal complete Dijkstra: build the graph, relax, take the max |
+| Dijkstra with **extra state** | [787 · Cheapest Flights Within K Stops](https://leetcode.com/problems/cheapest-flights-within-k-stops/) | the state is `(city, stopsUsed)`; also solvable by `k+1` rounds of Bellman-Ford — do both |
+| Dijkstra with a different **semiring** | [1514 · Path with Maximum Probability](https://leetcode.com/problems/path-with-maximum-probability/) | maximise a **product**; take `−log` and it is ordinary Dijkstra ([M02](M02-asymptotics.md)) |
+| **0-1 BFS** | [1368 · Minimum Cost to Make at Least One Valid Path in a Grid](https://leetcode.com/problems/minimum-cost-to-make-at-least-one-valid-path-in-a-grid/) | weights in `{0,1}` ⟹ a **deque** replaces the heap and it is `Θ(V+E)` |
+| Floyd–Warshall, whole | [1334 · Find the City With the Smallest Number of Neighbors at a Threshold Distance](https://leetcode.com/problems/find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance/) | `n ≤ 100`, so the `Θ(V³)` triple loop is *intended* — `A5` as a submission |
+| DAG shortest/longest paths | [329 · Longest Increasing Path in a Matrix](https://leetcode.com/problems/longest-increasing-path-in-a-matrix/) | the graph is acyclic by construction, so topological order works and longest path is easy |
+| Bitmask state + BFS | [847 · Shortest Path Visiting All Nodes](https://leetcode.com/problems/shortest-path-visiting-all-nodes/) | `(node, visitedMask)`; the Held–Karp shape |
+| "Design the graph, not the algorithm" | [1584 · Min Cost to Connect All Points](https://leetcode.com/problems/min-cost-to-connect-all-points/) | contrast with [M14](M14-mst.md): MST minimises the **total**, shortest paths minimise **each path** |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *Graph Algorithms* has a dedicated shortest-path run (Dijkstra, Bellman-Ford with negative cycles, Floyd–Warshall) and is the best single ladder for this module. [Codeforces `shortest paths` tag](https://codeforces.com/problemset?tags=shortest+paths) · [`graphs` tag](https://codeforces.com/problemset?tags=graphs).
+
+**The drill that matters here** is the five-second decision: *unweighted → BFS; DAG → topological order; `w ≥ 0` → Dijkstra; any negative weight → Bellman-Ford; all pairs and dense → Floyd–Warshall; all pairs and sparse → Johnson.* Say it out loud before writing anything.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 9 and §6.9.*
+
+### 1. `INF` as a finite sentinel, and the two ways it bites
+
+```cpp
+const long long PATH_INF = LLONG_MAX / 4;   // NOT LLONG_MAX
+```
+
+Two separate hazards, and they need two separate defences:
+
+- **Overflow.** `INF + w` with `INF == LLONG_MAX` is signed overflow — **undefined behaviour**, not saturation. Dividing by 4 leaves headroom for an addition and a comparison.
+- **Relaxing out of unreachable.** With a negative `w`, `INF + w < INF` is *true*, so an unreachable vertex would "improve" a neighbour. **The guard `if (d[u] == INF) return false;` is not optional** — it is the single most common source of wrong answers in negative-weight code, and it is silent.
+
+### 2. `priority_queue` for Dijkstra: min-heap, and `pair` order matters
+
+```cpp
+void dijkstraQueueShape() {
+    using Item = pair<long long,int>;                       // (distance, vertex)
+    priority_queue<Item, vector<Item>, greater<Item>> pq;   // greater<> => MIN-heap
+    (void)pq;
+}
+```
+
+`priority_queue` is a **max**-heap by default; `greater<>` inverts it, and the comparator is the **third** template argument so the container must be spelled out. `pair` compares lexicographically, so **distance must be `.first`** — reversing to `(vertex, distance)` orders by vertex id and produces a wrong answer that runs to completion.
+
+### 3. The lazy decrease-key idiom — the same one as [M14](M14-mst.md)
+
+`std::priority_queue` has no `decrease-key`, which `DIJKSTRA` line 11 wants. Push a duplicate on every improvement and skip stale entries on pop:
+
+```cpp
+// if (du > d[u]) continue;   // this entry is out of date; a better one exists
+```
+
+`O(E lg E) = O(E lg V)` — the same bound, `Θ(E)` memory instead of `Θ(V)`, and no custom heap. **This is the default.** Note that it also means there is **no `visited` set**, which has a consequence for negative edges — see `A4`.
+
+### 4. `vector<vector<long long>>` for the all-pairs matrix
+
+Floyd–Warshall touches `V³` cells with a fixed scan pattern, so locality dominates. `vector<vector<long long>>` matches the recurrence's `d[i][j]` and is what the appendix uses; for large `V`, one flat `vector<long long>` of size `n*n` indexed `d[i*n + j]` is measurably faster ([M03](M03-divide-conquer.md) toolkit §7). The `Θ(V²)` output is unavoidable either way.
+
+### 5. `unsigned __int128` is not needed here, but `long long` everywhere is
+
+Path weights accumulate over up to `V−1` edges. `V = 10⁵` with weights to `10⁹` gives `10¹⁴` — well past `int`. Every distance, every accumulator, every matrix cell in this module is `long long`.
+
+### 6. Returning a struct, not a pair
+
+```cpp
+struct PathResult { vector<long long> d; vector<int> pi; };
+```
+
+Every single-source algorithm produces **two** arrays — distances and predecessors — and they are meaningless apart. `.d` and `.pi` beat `.first` and `.second`, and adding a `bool ok` for the negative-cycle case later does not break existing call sites.
+
+### 7. Reverse iterators and `reverse` for path reconstruction
+
+Predecessor chains are walked backwards and must be flipped:
+
+```cpp
+void reconstructShape(vector<int>& path) {
+    reverse(path.begin(), path.end());   // <algorithm>, in place, Theta(n)
+}
+```
+
+Always check reachability **before** walking `pi`: from an unreachable vertex the chain either terminates at `-1` without reaching the source, or (with a bug) loops forever.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+The body of this module already contains the *practical* implementations. These are the **literal** ones — line for line against the pseudocode, with the C++ decisions spelled out.
+
+```cpp
+// Shared representation for the appendix.
+const long long PATH_INF = LLONG_MAX / 4;      // toolkit 1
+
+struct WEdge { int u, v; long long w; };
+
+struct WGraph {
+    int n = 0;
+    vector<vector<pair<int,long long>>> adj;   // (neighbour, weight)
+    vector<WEdge> edges;                       // flat list, for Bellman-Ford
+    explicit WGraph(int n_) : n(n_), adj(n_) {}
+    void addEdge(int u, int v, long long w) {
+        adj[u].push_back({v, w});
+        edges.push_back({u, v, w});
+    }
+};
+
+// Every single-source algorithm returns these two arrays together (toolkit 6).
+struct PathResult {
+    vector<long long> d;    // d[v] = shortest-path estimate
+    vector<int> pi;         // pi[v] = predecessor, -1 = NIL
+};
+```
+
+### A1 RELAX (and INITIALIZE-SINGLE-SOURCE)
+
+*Pseudocode: Big Idea.*
+
+```cpp
+// INITIALIZE-SINGLE-SOURCE(G, s)
+void initSingleSource(const WGraph& g, int s, PathResult& r) {
+    r.d.assign(g.n, PATH_INF);      // v.d = infinity
+    r.pi.assign(g.n, -1);           // v.pi = NIL
+    r.d[s] = 0;                     // s.d = 0
+}
+
+// RELAX(u, v, w) -- the ONE operation every algorithm in this module is built
+// from. "Is going through u a better way to reach v than what I already have?"
+//
+// Returns whether the estimate actually improved. That single bool is what
+// makes Bellman-Ford's early exit, Dijkstra's push, and the negative-cycle
+// test each a one-liner.
+bool relax(int u, int v, long long w, PathResult& r) {
+    // THE GUARD (toolkit 1). Without it, an unreachable u with a negative w
+    // gives PATH_INF + w < PATH_INF, and the algorithm confidently computes
+    // distances to vertices it cannot reach. Silent, and always wrong.
+    if (r.d[u] == PATH_INF) return false;
+    if (r.d[v] > r.d[u] + w) {          // 1  if v.d > u.d + w(u,v)
+        r.d[v] = r.d[u] + w;            // 2      v.d = u.d + w(u,v)
+        r.pi[v] = u;                    // 3      v.pi = u
+        return true;
+    }
+    return false;
+}
+
+// Walk pi backwards from v to s, then reverse (toolkit 7).
+vector<int> extractPath(const PathResult& r, int s, int v) {
+    if (r.d[v] == PATH_INF) return {};              // unreachable: check FIRST
+    vector<int> path;
+    for (int x = v; x != -1; x = r.pi[x]) {
+        path.push_back(x);
+        if (x == s) break;
+    }
+    if (path.back() != s) return {};                // pi chain did not reach s
+    reverse(path.begin(), path.end());
+    return path;
+}
+```
+
+**Complexity. `Θ(1)` per relaxation; `Θ(V)` to initialise.**
+
+**The name is backwards and CLRS says so:** you are *tightening* an estimate by *relaxing* the violated constraint `v.d ≤ u.d + w(u,v)`. Do not fight it.
+
+**The six properties that every correctness proof in this module is assembled from:** triangle inequality (`δ(s,v) ≤ δ(s,u) + w(u,v)`), upper-bound (`v.d ≥ δ(s,v)`, and once equal it never changes), no-path, convergence, **path-relaxation** (relax a shortest path's edges *in order* and its endpoint converges, whatever else happened in between), and predecessor-subgraph. **Path-relaxation is the one that does the work** — every algorithm below is just a different way of guaranteeing that ordering.
+
+### A2 BELLMAN-FORD
+
+*Pseudocode: Part 2.*
+
+```cpp
+struct BellmanFordOutput {
+    bool ok = true;      // false <=> a negative-weight cycle is REACHABLE from s
+    PathResult r;
+};
+
+BellmanFordOutput bellmanFord(const WGraph& g, int s) {
+    BellmanFordOutput out;
+    initSingleSource(g, s, out.r);                       // 1
+
+    for (int i = 1; i < g.n; ++i) {                      // 2  |V| - 1 passes
+        bool changed = false;
+        for (const WEdge& e : g.edges)                   // 3  for each edge
+            if (relax(e.u, e.v, e.w, out.r)) changed = true;   // 4  RELAX
+        // EARLY EXIT -- not in the pseudocode, always worth writing. If a whole
+        // pass changes nothing, no later pass will either. This turns Theta(VE)
+        // into Theta(hE) where h is the largest hop-count of any shortest path,
+        // which on real graphs is far below V.
+        if (!changed) break;
+    }
+
+    // 5-7  The |V|-th pass IS the test: if anything can still be relaxed after
+    // |V|-1 passes, some shortest "path" uses >= |V| edges, which means it
+    // repeats a vertex, which means there is a negative-weight cycle.
+    for (const WEdge& e : g.edges)
+        if (out.r.d[e.u] != PATH_INF && out.r.d[e.v] > out.r.d[e.u] + e.w) {
+            out.ok = false;                              // 7  return FALSE
+            break;
+        }
+    return out;                                          // 8  return TRUE
+}
+
+const long long PATH_NEG_INF = LLONG_MIN / 4;
+
+// Exercise 22.1-4: mark the vertices whose true shortest-path weight is -infinity.
+// Run AFTER bellmanFord. A vertex is -infinity iff it is reachable from a
+// negative cycle that is itself reachable from s -- so: find the still-relaxable
+// endpoints, then flood forward from them.
+void markNegativeInfinity(const WGraph& g, PathResult& r) {
+    vector<char> bad(g.n, 0);
+    vector<int> stack;
+    for (const WEdge& e : g.edges)
+        if (r.d[e.u] != PATH_INF && r.d[e.v] > r.d[e.u] + e.w && !bad[e.v]) {
+            bad[e.v] = 1; stack.push_back(e.v);
+        }
+    while (!stack.empty()) {                             // everything downstream
+        int u = stack.back(); stack.pop_back();
+        for (const auto& [v, w] : g.adj[u]) {
+            (void)w;
+            if (!bad[v]) { bad[v] = 1; stack.push_back(v); }
+        }
+    }
+    for (int v = 0; v < g.n; ++v) if (bad[v]) r.d[v] = PATH_NEG_INF;
+}
+
+// Exercise 22.1-7: PRINT an actual negative cycle, not merely detect one.
+vector<int> findNegativeCycle(const WGraph& g, int s) {
+    PathResult r;
+    initSingleSource(g, s, r);
+    int x = -1;
+    for (int i = 0; i < g.n; ++i) {                      // |V| passes, not |V|-1
+        x = -1;
+        for (const WEdge& e : g.edges)
+            if (relax(e.u, e.v, e.w, r)) x = e.v;        // remember the LAST change
+    }
+    if (x == -1) return {};                              // nothing relaxed: no cycle
+
+    // x is reachable from a cycle via pi pointers, but may not be ON it. The
+    // pi-chain's prefix before the cycle has fewer than |V| vertices, so
+    // walking back |V| steps lands INSIDE the cycle for certain.
+    for (int i = 0; i < g.n; ++i) x = r.pi[x];
+
+    vector<int> cycle;
+    for (int v = x;; v = r.pi[v]) {
+        cycle.push_back(v);
+        if (v == x && cycle.size() > 1) break;
+    }
+    reverse(cycle.begin(), cycle.end());
+    return cycle;                                        // v0 == vk
+}
+```
+
+**Complexity. `Θ(VE)`** — `|V|−1` passes over `|E|` edges — or `Θ(hE)` with the early exit. **Space `Θ(V)`, no recursion.**
+
+**Why `|V| − 1` and not some safety margin:** a shortest path may be assumed **simple**, so it has at most `|V| − 1` edges. Pass `i` relaxes the `i`-th edge of *every* shortest path, so after `|V|−1` passes every shortest path has been relaxed in order — and the **path-relaxation property** then guarantees convergence. That is the entire correctness argument (Lemma 22.2 → Theorem 22.4).
+
+**The negative-cycle proof is worth memorising verbatim**, because the same move appears three more times in this module. Suppose the check does *not* fire on a negative cycle `c = ⟨v₀,…,v_k⟩`, `v₀ = v_k`. Then `vᵢ.d ≤ v_{i−1}.d + w(v_{i−1},vᵢ)` for every `i`. Sum around the cycle: each `d` appears once on each side and they are **finite** (the cycle is reachable), so they cancel, leaving `0 ≤ w(c) < 0`. Contradiction. ∎ *(The same cancellation proves Theorem 22.9 for difference constraints and Lemma 23.1 for Johnson's reweighting.)*
+
+**A negative cycle not reachable from `s` is harmless** and Bellman-Ford correctly returns `true`. Marking `−∞` is a separate reachability computation, which is why it is a separate function.
+
+### A3 DAG-SHORTEST-PATHS
+
+*Pseudocode: Part 3.*
+
+```cpp
+// Kahn topological order; empty result means the graph has a cycle.
+vector<int> topoOrder(const WGraph& g) {
+    vector<int> indeg(g.n, 0), order, q;
+    for (const WEdge& e : g.edges) ++indeg[e.v];
+    for (int v = 0; v < g.n; ++v) if (indeg[v] == 0) q.push_back(v);
+    while (!q.empty()) {
+        int u = q.back(); q.pop_back();
+        order.push_back(u);
+        for (const auto& [v, w] : g.adj[u]) { (void)w; if (--indeg[v] == 0) q.push_back(v); }
+    }
+    return (int)order.size() == g.n ? order : vector<int>{};
+}
+
+PathResult dagShortestPaths(const WGraph& g, int s) {
+    PathResult r;
+    initSingleSource(g, s, r);                    // 2
+    for (int u : topoOrder(g))                    // 1,3  in TOPOLOGICAL order
+        if (r.d[u] != PATH_INF)                   //      skip unreachable vertices
+            for (const auto& [v, w] : g.adj[u])   // 4
+                relax(u, v, w, r);                // 5
+    // ONE pass. Every edge relaxed EXACTLY ONCE.
+    return r;
+}
+
+// LONGEST path in a DAG -- the critical path / PERT computation.
+// Negate every weight, run the same algorithm, negate the answers back.
+// This is legal ONLY because there are no cycles: negation in a general graph
+// manufactures negative cycles and destroys the problem.
+PathResult dagLongestPaths(const WGraph& g, int s) {
+    WGraph h(g.n);
+    for (const WEdge& e : g.edges) h.addEdge(e.u, e.v, -e.w);
+    PathResult r = dagShortestPaths(h, s);
+    for (long long& x : r.d) if (x != PATH_INF) x = -x;
+    return r;
+}
+```
+
+**Complexity. `Θ(V + E)`** — topological sort plus one pass. **Space `Θ(V)`. This is the fastest shortest-path algorithm in the module, and it tolerates negative weights.**
+
+**Why (Theorem 22.5):** for any shortest path `⟨v₀,…,v_k⟩`, the vertices appear in that relative order in *any* topological order (Lemma 20.11 / [M13](M13-graphs-traversal.md)). The algorithm relaxes all of `u`'s out-edges when it reaches `u`, so it relaxes the path's edges **in order** — and the path-relaxation property finishes the argument. The proof never used `w ≥ 0`, which is why negative weights are fine.
+
+**Longest path is NP-hard in a general graph and linear in a DAG.** Whenever a problem's dependency structure is acyclic — jobs with prerequisites, stages in a pipeline, a grid you only move right/down through, the subproblem graph of a DP — this is the tool.
+
+### A4 DIJKSTRA
+
+*Pseudocode: Part 4.*
+
+```cpp
+// REQUIRES w(u,v) >= 0 for every edge.
+PathResult dijkstra(const WGraph& g, int s) {
+    PathResult r;
+    initSingleSource(g, s, r);                              // 1
+
+    using Item = pair<long long,int>;                       // (d[v], v) -- distance
+    priority_queue<Item, vector<Item>, greater<Item>> Q;    // FIRST (toolkit 2)
+    Q.push({0, s});                                         // 4-5  INSERT all vertices
+    // (only s is pushed: a vertex enters the queue the first time its estimate
+    //  becomes finite, which is equivalent and avoids V pointless entries)
+
+    while (!Q.empty()) {                                    // 6
+        auto [du, u] = Q.top(); Q.pop();                    // 7  u = EXTRACT-MIN(Q)
+        if (du > r.d[u]) continue;                          //    STALE entry (toolkit 3)
+        // 8  S = S union {u}. There is no explicit S: the stale check does its
+        //    job, because once d[u] is final no later entry can beat it.
+        for (const auto& [v, w] : g.adj[u])                 // 9
+            if (relax(u, v, w, r))                          // 10
+                Q.push({r.d[v], v});                        // 11 DECREASE-KEY, lazily
+    }
+    return r;
+}
+
+// Theta(V^2) Dijkstra: no heap, linear scan for the minimum. The RIGHT choice
+// on a dense graph, and Skiena's implementation ([M14] toolkit 4 makes the same
+// point for Prim).
+PathResult dijkstraDense(const WGraph& g, int s) {
+    PathResult r;
+    initSingleSource(g, s, r);
+    vector<char> done(g.n, 0);                              // the explicit set S
+    for (int iter = 0; iter < g.n; ++iter) {
+        int u = -1;
+        long long best = PATH_INF;
+        for (int i = 0; i < g.n; ++i)                       // EXTRACT-MIN by scan
+            if (!done[i] && r.d[i] < best) { best = r.d[i]; u = i; }
+        if (u == -1) break;                                 // the rest is unreachable
+        done[u] = 1;
+        for (const auto& [v, w] : g.adj[u]) relax(u, v, w, r);
+    }
+    return r;
+}
+```
+
+**Complexity — read the table as `V · T_extract + E · T_decrease`:**
+
+| priority queue | **total** | best when |
+|---|---|---|
+| array / linear scan | **`Θ(V² + E) = Θ(V²)`** | **dense** |
+| binary heap (lazy) | **`O((V+E) lg V) = O(E lg V)`** | **sparse** — the default |
+| Fibonacci heap | **`O(V lg V + E)`** | theory; large constants |
+
+`V` extract-mins because each vertex is finalised once; `≤ E` decrease-keys because each edge can improve a key once. **Fibonacci heaps were invented to make that second line `O(1)`** — Dijkstra is their design brief.
+
+**Theorem 22.6, the squeeze.** Suppose `u` is the first vertex extracted with `u.d ≠ δ(s,u)`. Walk a shortest path `s ⇝ u` to the first vertex `y` not yet in `S`, with predecessor `x ∈ S`. Then:
+
+```
+δ(s,y)  ≤  δ(s,u)  ≤  u.d  ≤  y.d  =  δ(s,y)
+```
+
+— `y` precedes `u` on a shortest path; upper-bound property; `EXTRACT-MIN` chose `u` over `y`; convergence property applied when `(x,y)` was relaxed. Everything collapses to equality, contradiction. ∎
+
+**Non-negativity is used in exactly one step: `δ(s,y) ≤ δ(s,u)`**, which needs the segment `y ⇝ u` to have weight `≥ 0`. Knowing *which* line fails is what separates "Dijkstra doesn't work with negative edges" from an actual answer.
+
+**And here is the subtlety worth carrying:** the lazy version above has **no `visited` set**, so if a negative edge later improves an already-popped vertex it is simply pushed again. That makes it *correct* on negative edges (absent negative cycles) and destroys the `O(E lg V)` bound — it degenerates into a Bellman-Ford-flavoured algorithm. `dijkstraDense`, which *does* keep `done[]`, returns a **wrong answer** instead. **With a visited set: wrong. Without one: slow.** Use Bellman-Ford, or reweight with Johnson.
+
+### A5 FLOYD-WARSHALL
+
+*Pseudocode: Part 7.*
+
+```cpp
+struct AllPairs {
+    vector<vector<long long>> d;
+    vector<vector<int>> pi;      // -1 = NIL
+};
+
+// W is the weight matrix: W[i][i] = 0, W[i][j] = w(i,j) or PATH_INF.
+AllPairs floydWarshall(const vector<vector<long long>>& W) {
+    const int n = (int)W.size();
+    AllPairs a;
+    a.d = W;
+    a.pi.assign(n, vector<int>(n, -1));
+    for (int i = 0; i < n; ++i)                        // (23.7) predecessor init
+        for (int j = 0; j < n; ++j)
+            if (i != j && W[i][j] < PATH_INF) a.pi[i][j] = i;
+
+    // k IS THE OUTERMOST LOOP. This is the one thing never to get wrong.
+    // d^(k)[i][j] depends on ALL of stage k-1, so only "for each k, fill the
+    // whole table" establishes the invariant "every path through {0..k} found".
+    // Writing for i / for j / for k compiles, runs in the same time, and
+    // silently returns wrong answers on some graphs.
+    for (int k = 0; k < n; ++k)
+        for (int i = 0; i < n; ++i) {
+            if (a.d[i][k] == PATH_INF) continue;       // nothing routes through k
+            // Hoisting this test out of the inner loop is the single most
+            // valuable micro-optimisation here, and it removes the
+            // PATH_INF + PATH_INF overflow risk as a bonus.
+            for (int j = 0; j < n; ++j) {
+                if (a.d[k][j] == PATH_INF) continue;
+                long long through = a.d[i][k] + a.d[k][j];
+                if (through < a.d[i][j]) {
+                    a.d[i][j] = through;               // (23.6)
+                    a.pi[i][j] = a.pi[k][j];           // (23.8) -- pi[k][j], NOT k
+                }                                      // and not pi[i][k]
+            }
+        }
+    return a;
+}
+
+// Exercise 23.2-4: the superscripts are unnecessary -- update in place.
+// During iteration k, d[i][k] and d[k][j] cannot change (d[k][k] == 0 given no
+// negative cycles), so reading a partially-updated row is harmless.
+// Theta(n^3) space becomes Theta(n^2).
+vector<vector<long long>> floydWarshallInPlace(vector<vector<long long>> d) {
+    const int n = (int)d.size();
+    for (int k = 0; k < n; ++k)
+        for (int i = 0; i < n; ++i)
+            for (int j = 0; j < n; ++j)
+                if (d[i][k] != PATH_INF && d[k][j] != PATH_INF &&
+                    d[i][k] + d[k][j] < d[i][j])
+                    d[i][j] = d[i][k] + d[k][j];
+    return d;
+}
+
+// TRANSITIVE CLOSURE (23.9): the SAME recurrence with (min,+) replaced by
+// (OR, AND). Booleans instead of longs, so it also bitset-vectorises: pack row
+// j into a bitset and the inner loop becomes `if (t[i][k]) t[i] |= t[k];`,
+// giving Theta(V^3 / 64).
+vector<vector<char>> transitiveClosure(const vector<vector<char>>& adj) {
+    const int n = (int)adj.size();
+    vector<vector<char>> t = adj;
+    for (int i = 0; i < n; ++i) t[i][i] = 1;           // reflexive
+    for (int k = 0; k < n; ++k)
+        for (int i = 0; i < n; ++i)
+            if (t[i][k])
+                for (int j = 0; j < n; ++j)
+                    if (t[k][j]) t[i][j] = 1;
+    return t;
+}
+
+void printAllPairsPath(const AllPairs& a, int i, int j, vector<int>& out) {
+    if (i == j) out.push_back(i);
+    else if (a.pi[i][j] == -1) out.clear();            // no path
+    else { printAllPairsPath(a, i, a.pi[i][j], out); out.push_back(j); }
+}
+```
+
+**Complexity. `Θ(V³)` time — `Θ`, not `O`: no early exit, no data dependence, always exactly `n³` iterations. Space `Θ(V²)` in place.**
+
+**The recurrence and the subtle step.** `d^(k)[i][j]` is the shortest `i → j` path whose **intermediate** vertices all lie in `{0..k}`. Either `k` is not on the path — so `d^(k) = d^(k−1)` — or it is, and the path splits as `i ⇝ k ⇝ j`. **The crucial observation is that `k` is an *endpoint* of each half, not an intermediate**, so both halves have intermediates in `{0..k−1}` and are already computed. If you cannot say that sentence, you do not yet understand Floyd–Warshall.
+
+**Three facts that come free with the matrix:**
+
+- **`d[i][i] < 0` after the run ⟺ vertex `i` lies on a negative-weight cycle.** The cheapest global negative-cycle detector there is, and it names the vertices involved.
+- **Diameter** = `max` over finite `d[i][j]`; **centre** = `argmin_i max_j d[i][j]`.
+- Swap `(min,+)` for `(max,min)` and you get **widest-path / bottleneck** capacities; for `(+,×)` on a DAG you get **path counts**. Same loops, different algebra.
+
+**Why it beats `V` × Dijkstra despite matching asymptotically:** three flat arrays, unit-stride inner loop, no heap, no pointer chasing, perfectly predictable branches. Constant factors, and this is the canonical example of them mattering.
+
+### A6 JOHNSON
+
+*Pseudocode: Part 8.*
+
+```cpp
+// All-pairs shortest paths on a SPARSE graph that may have negative edges.
+// Fills D[u][v]; returns false if a negative-weight cycle exists.
+bool johnson(const WGraph& g, vector<vector<long long>>& D) {
+    const int n = g.n;
+
+    // 1  G' = G plus a new source s with a 0-weight edge to EVERY vertex.
+    // Why the new vertex: it guarantees every vertex is reachable, so h is
+    // finite everywhere and Bellman-Ford sees every negative cycle. It cannot
+    // change any delta(u,v) for u,v in V, because s has NO INCOMING EDGES and
+    // therefore lies on no u -> v path.
+    WGraph gp(n + 1);
+    for (const WEdge& e : g.edges) gp.addEdge(e.u, e.v, e.w);
+    for (int v = 0; v < n; ++v) gp.addEdge(n, v, 0);
+
+    BellmanFordOutput bf = bellmanFord(gp, n);         // 2  one Bellman-Ford run
+    if (!bf.ok) return false;                          // 3  negative-weight cycle
+
+    // 4-5  h(v) = delta(s, v). Always <= 0, since the 0-edge s->v is one option.
+    vector<long long> h(bf.r.d.begin(), bf.r.d.begin() + n);
+
+    // 6-7  w-hat(u,v) = w(u,v) + h(u) - h(v).
+    //
+    // WHY THIS WORKS (Lemma 23.1): summing along a path, every interior h
+    // cancels and only the endpoints survive:
+    //     w-hat(p) = w(p) + h(v_0) - h(v_k)
+    // The correction depends ONLY on the endpoints, not on the path or its
+    // length -- so EVERY u->v path shifts by the same amount and the RANKING is
+    // preserved. Cycle weights are completely unchanged (v_0 == v_k).
+    //
+    // AND w-hat >= 0, by the triangle inequality:
+    //     delta(s,v) <= delta(s,u) + w(u,v)   <=>   h(v) <= h(u) + w(u,v)
+    //                                         <=>   w(u,v) + h(u) - h(v) >= 0
+    // One line of Chapter 22 makes Dijkstra legal on a graph with negative edges.
+    //
+    // NOT to be confused with the WRONG fix (Exercise 23.3-4): subtracting the
+    // minimum weight from every edge penalises paths with MORE edges, so it
+    // changes which path is shortest.
+    WGraph gh(n);
+    for (const WEdge& e : g.edges) gh.addEdge(e.u, e.v, e.w + h[e.u] - h[e.v]);
+
+    D.assign(n, vector<long long>(n, PATH_INF));
+    for (int u = 0; u < n; ++u) {                      // 9  for each u in V
+        PathResult r = dijkstra(gh, u);                // 10 DIJKSTRA on w-hat
+        for (int v = 0; v < n; ++v)
+            if (r.d[v] != PATH_INF)
+                D[u][v] = r.d[v] + h[v] - h[u];        // 12 (23.11) undo the shift
+                // NOTE THE SIGN FLIP: edges use +h(u) - h(v); distances use
+                // +h(v) - h(u). Getting this backwards is the classic Johnson
+                // bug, and it produces plausible wrong numbers.
+    }
+    return true;                                       // 13 return D
+}
+```
+
+**Complexity. `O(V² lg V + VE)`** with Fibonacci heaps, `O(VE lg V)` with binary heaps. Breakdown: one `O(VE)` Bellman-Ford, `Θ(E)` reweighting, then **`V` Dijkstras, which dominate**. Space `Θ(V²)` for the output, `Θ(V+E)` besides.
+
+**When to use which:**
+
+| | sparse `E ≈ V` | dense `E ≈ V²` |
+|---|---|---|
+| **Johnson** | `O(V² lg V)` — **wins** | `O(V³ lg V)` |
+| **Floyd–Warshall** | `Θ(V³)` | `Θ(V³)` — **wins**, and by more than the `lg` suggests |
+
+**Johnson is the best example in either book of composing three techniques.** The reweighting scheme is a system of **difference constraints** (`h(v) − h(u) ≤ w(u,v)`, Part 5); **Bellman-Ford** solves that system; **Dijkstra** exploits the result. The same "reweight so a faster algorithm becomes legal" move reappears in min-cost max-flow, where Johnson potentials are exactly what lets successive-shortest-paths run Dijkstra instead of Bellman-Ford — and in **A\***, where a consistent heuristic `h` makes the search *literally* Dijkstra on `w(u,v) + h(v) − h(u)`, the same formula.
+
+
+---
+
+*Next: [M16 — Network Flow & Matching *(planned)*](INDEX.md#module-map) (CLRS 24–25 + Skiena 8.5) — max-flow min-cut, Ford-Fulkerson and Edmonds-Karp, Dinic, and matching as a flow problem.*

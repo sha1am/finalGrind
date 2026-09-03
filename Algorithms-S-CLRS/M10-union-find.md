@@ -71,6 +71,8 @@ CONNECTED-COMPONENTS(G)             SAME-COMPONENT(u, v)
 5          UNION(u, v)
 ```
 
+→ **C++ implementation:** [A1 CONNECTED-COMPONENTS and SAME-COMPONENT](#a1-connected-components-and-same-component)
+
 After processing all edges, two vertices are in the same connected component **iff** they're in the same set.
 
 **When to use this instead of DFS.** CLRS is explicit: *when the edges are static, depth-first search computes the connected components faster.* DFS is `Θ(V + E)`, plainly linear; union–find is `Θ((V+E)·α(V))`. **Union–find wins when edges arrive dynamically** and components must be updated incrementally, because re-running DFS after every new edge is `Θ(E(V+E))`.
@@ -145,6 +147,8 @@ FIND-SET(x)
 3  return x.p                      // return the root
 ```
 
+→ **C++ implementation:** [A2 FIND-SET (with path compression)](#a2-find-set-with-path-compression)
+
 Three lines. It is a **two-pass method**: the recursion walks *up* the find path to the root, and the unwinding walks back *down* relinking each node. Note the elegance: `FIND-SET` returns `x.p` in line 3 in both cases — if `x` is the root, line 2 is skipped and `x.p` is `x` itself.
 
 Skiena's summary: *"Shrinking the path traced after each find, by explicitly pointing each path node directly to the root, is called path compression and reduces the tree to almost constant height."*
@@ -159,6 +163,8 @@ MAKE-SET(x)              UNION(x, y)                      LINK(x, y)
                                                           4      if x.rank == y.rank
                                                           5          y.rank = y.rank + 1
 ```
+
+→ **C++ implementation:** [A3 MAKE-SET, UNION and LINK](#a3-make-set-union-and-link)
 
 #### Effect of the heuristics
 
@@ -307,37 +313,38 @@ Tarjan proved `Ω(m α(m,n))` is **required** for any disjoint-set structure sat
 
 class DisjointSet {
 public:
-    explicit DisjointSet(int n) : p_(n), rank_(n, 0), sets_(n) {
-        std::iota(p_.begin(), p_.end(), 0);          // MAKE-SET for every element
+    explicit DisjointSet(int n) : parent_(n), rank_(n, 0), componentCount_(n) {
+        iota(parent_.begin(), parent_.end(), 0);          // MAKE-SET for every element
     }
 
     // Two-pass FIND-SET: walk to the root, then point every node on the
     // find path directly at it.  Iterative, so no O(depth) stack.
     int find(int x) {
         int root = x;
-        while (p_[root] != root) root = p_[root];
-        while (p_[x] != root) { const int next = p_[x]; p_[x] = root; x = next; }
+        while (parent_[root] != root) root = parent_[root];
+        while (parent_[x] != root) { const int nextOnPath = parent_[x]; parent_[x] = root; x = nextOnPath; }
         return root;
     }
 
     // LINK the two roots: smaller rank hangs off larger; on a tie, bump.
     bool unite(int x, int y) {
-        int a = find(x), b = find(y);
-        if (a == b) return false;
-        if (rank_[a] > rank_[b]) std::swap(a, b);    // now rank_[a] <= rank_[b]
-        p_[a] = b;
-        if (rank_[a] == rank_[b]) ++rank_[b];
-        --sets_;
+        int rootX = find(x), rootY = find(y);
+        if (rootX == rootY) return false;
+        // After this swap, rootX is the SHORTER tree and hangs under rootY.
+        if (rank_[rootX] > rank_[rootY]) swap(rootX, rootY);
+        parent_[rootX] = rootY;
+        if (rank_[rootX] == rank_[rootY]) ++rank_[rootY];
+        --componentCount_;
         return true;
     }
 
     bool sameSet(int x, int y) { return find(x) == find(y); }
-    int  count() const { return sets_; }
+    int  count() const { return componentCount_; }
     int  rankOf(int x) const { return rank_[x]; }
 
 private:
-    std::vector<int> p_, rank_;
-    int sets_;
+    vector<int> parent_, rank_;
+    int componentCount_;
 };
 ```
 
@@ -356,33 +363,34 @@ private:
 
 class DisjointSetBySize {
 public:
-    explicit DisjointSetBySize(int n) : p_(n), size_(n, 1), sets_(n) {
-        std::iota(p_.begin(), p_.end(), 0);
+    explicit DisjointSetBySize(int n) : parent_(n), size_(n, 1), componentCount_(n) {
+        iota(parent_.begin(), parent_.end(), 0);
     }
 
     // One-pass find: halve the path as we climb (every other node is relinked).
     int find(int x) {
-        while (p_[x] != x) { p_[x] = p_[p_[x]]; x = p_[x]; }
+        while (parent_[x] != x) { parent_[x] = parent_[parent_[x]]; x = parent_[x]; }
         return x;
     }
 
     bool unite(int x, int y) {
-        int a = find(x), b = find(y);
-        if (a == b) return false;
-        if (size_[a] > size_[b]) std::swap(a, b);    // smaller tree becomes the child
-        p_[a] = b;
-        size_[b] += size_[a];
-        --sets_;
+        int rootX = find(x), rootY = find(y);
+        if (rootX == rootY) return false;
+        // After this swap, rootX is the SMALLER tree and becomes the child.
+        if (size_[rootX] > size_[rootY]) swap(rootX, rootY);
+        parent_[rootX] = rootY;
+        size_[rootY] += size_[rootX];
+        --componentCount_;
         return true;
     }
 
     bool sameSet(int x, int y) { return find(x) == find(y); }
     int  sizeOf(int x) { return size_[find(x)]; }
-    int  count() const { return sets_; }
+    int  count() const { return componentCount_; }
 
 private:
-    std::vector<int> p_, size_;
-    int sets_;
+    vector<int> parent_, size_;
+    int componentCount_;
 };
 ```
 
@@ -419,45 +427,48 @@ Generalized, this is the **weighted / potential DSU**: maintain `value[x] − va
 
 class WeightedDSU {
 public:
-    explicit WeightedDSU(int n) : p_(n), rank_(n, 0), off_(n, 0) {
-        std::iota(p_.begin(), p_.end(), 0);
+    explicit WeightedDSU(int n) : parent_(n), rank_(n, 0), offsetToParent_(n, 0) {
+        iota(parent_.begin(), parent_.end(), 0);
     }
 
     // Returns {root, value[x] - value[root]}.
-    std::pair<int, long long> find(int x) {
-        if (p_[x] == x) return {x, 0};
-        const auto up = find(p_[x]);          // recursive: compresses on unwind
-        p_[x] = up.first;
-        off_[x] += up.second;
-        return {p_[x], off_[x]};
+    pair<int, long long> find(int x) {
+        if (parent_[x] == x) return {x, 0};
+        const auto parentInfo = find(parent_[x]);          // recursive: compresses on unwind
+        parent_[x] = parentInfo.first;
+        offsetToParent_[x] += parentInfo.second;
+        return {parent_[x], offsetToParent_[x]};
     }
 
     // Assert value[y] - value[x] == d. Returns false on contradiction.
-    bool relate(int x, int y, long long d) {
-        auto fx = find(x), fy = find(y);
-        if (fx.first == fy.first) return fy.second - fx.second == d;
-        int a = fx.first, b = fy.first;
-        long long da = fx.second, db = fy.second;   // value[x]-value[a], value[y]-value[b]
-        // want value[y] - value[x] = d  =>  value[b] - value[a] = da + d - db
-        long long delta = da + d - db;
-        if (rank_[a] > rank_[b]) { std::swap(a, b); std::swap(da, db); delta = -delta; }
-        p_[a] = b;                              // a hangs under b
-        off_[a] = -delta;                       // value[a] - value[b]
-        if (rank_[a] == rank_[b]) ++rank_[b];
+    bool relate(int x, int y, long long wantedGap) {
+        auto infoX = find(x), infoY = find(y);
+        if (infoX.first == infoY.first) return infoY.second - infoX.second == wantedGap;
+        int rootX = infoX.first, rootY = infoY.first;
+        // offsetX = value[x] - value[rootX];  offsetY = value[y] - value[rootY]
+        long long offsetX = infoX.second, offsetY = infoY.second;
+        // want value[y] - value[x] = wantedGap
+        //   =>  value[rootY] - value[rootX] = offsetX + wantedGap - offsetY
+        long long rootGap = offsetX + wantedGap - offsetY;
+        // After this swap, rootX is the shorter tree and hangs under rootY.
+        if (rank_[rootX] > rank_[rootY]) { swap(rootX, rootY); swap(offsetX, offsetY); rootGap = -rootGap; }
+        parent_[rootX] = rootY;
+        offsetToParent_[rootX] = -rootGap;                   // value[rootX] - value[rootY]
+        if (rank_[rootX] == rank_[rootY]) ++rank_[rootY];
         return true;
     }
 
     // value[y] - value[x] if x and y are in the same set
-    bool diff(int x, int y, long long& out) {
-        auto fx = find(x), fy = find(y);
-        if (fx.first != fy.first) return false;
-        out = fy.second - fx.second;
+    bool diff(int x, int y, long long& gap) {
+        auto infoX = find(x), infoY = find(y);
+        if (infoX.first != infoY.first) return false;
+        gap = infoY.second - infoX.second;
         return true;
     }
 
 private:
-    std::vector<int> p_, rank_;
-    std::vector<long long> off_;
+    vector<int> parent_, rank_;
+    vector<long long> offsetToParent_;
 };
 ```
 
@@ -479,40 +490,40 @@ Path compression is **destructive**: it rewrites parent pointers of nodes you we
 
 class RollbackDSU {
 public:
-    explicit RollbackDSU(int n) : p_(n), size_(n, 1), sets_(n) {
-        std::iota(p_.begin(), p_.end(), 0);
+    explicit RollbackDSU(int n) : parent_(n), size_(n, 1), componentCount_(n) {
+        iota(parent_.begin(), parent_.end(), 0);
     }
 
-    int find(int x) const { while (p_[x] != x) x = p_[x]; return x; }   // O(lg n), no compression
+    int find(int x) const { while (parent_[x] != x) x = parent_[x]; return x; }   // O(lg n), no compression
 
     bool unite(int x, int y) {
-        int a = find(x), b = find(y);
-        if (a == b) { history_.push_back({-1, -1, 0}); return false; }
-        if (size_[a] > size_[b]) std::swap(a, b);
-        history_.push_back({a, b, size_[b]});
-        p_[a] = b;
-        size_[b] += size_[a];
-        --sets_;
+        int rootX = find(x), rootY = find(y);
+        if (rootX == rootY) { history_.push_back({-1, -1, 0}); return false; }
+        if (size_[rootX] > size_[rootY]) swap(rootX, rootY);
+        history_.push_back({rootX, rootY, size_[rootY]});
+        parent_[rootX] = rootY;
+        size_[rootY] += size_[rootX];
+        --componentCount_;
         return true;
     }
 
     void rollback() {
         assert(!history_.empty());
-        const Rec r = history_.back();
+        const UnionRecord record = history_.back();
         history_.pop_back();
-        if (r.child < 0) return;                       // the union was a no-op
-        p_[r.child] = r.child;
-        size_[r.parent] = r.parentSize;
-        ++sets_;
+        if (record.child < 0) return;                       // the union was a no-op
+        parent_[record.child] = record.child;
+        size_[record.parent] = record.parentSize;
+        ++componentCount_;
     }
 
-    int count() const { return sets_; }
+    int count() const { return componentCount_; }
 
 private:
-    struct Rec { int child, parent, parentSize; };
-    std::vector<int> p_, size_;
-    std::vector<Rec> history_;
-    int sets_;
+    struct UnionRecord { int child, parent, parentSize; };
+    vector<int> parent_, size_;
+    vector<UnionRecord> history_;
+    int componentCount_;
 };
 ```
 
@@ -559,6 +570,8 @@ LCA(u)
 10          print LCA of u and v is FIND-SET(v).ancestor
 ```
 
+→ **C++ implementation:** [A5 Tarjan's offline LCA](#a5-tarjans-offline-lca)
+
 **Why it works.** The invariant is: *at the moment `LCA(u)` is called, the number of sets equals `u`'s depth* — the sets are exactly the "already-finished subtrees hanging off the root path to `u`", each labeled with the ancestor on that root path. So when we finish `u` and find a black partner `v`, `FIND-SET(v).ancestor` is precisely the deepest ancestor of `u` that is also an ancestor of `v`. Line 10 fires exactly once per pair (the second of the two to turn black triggers it).
 
 ```cpp
@@ -566,29 +579,29 @@ LCA(u)
 #include <utility>
 #include <vector>
 
-static std::vector<int> offlineLCA(const std::vector<std::vector<int>>& children,
+static vector<int> offlineLCA(const vector<vector<int>>& children,
                                    int root,
-                                   const std::vector<std::pair<int, int>>& queries) {
+                                   const vector<pair<int, int>>& queries) {
     const int n = (int)children.size();
-    std::vector<std::vector<std::pair<int, int>>> byNode(n);   // (other, query index)
+    vector<vector<pair<int, int>>> byNode(n);   // (other, query index)
     for (int i = 0; i < (int)queries.size(); ++i) {
         byNode[queries[i].first].push_back({queries[i].second, i});
         byNode[queries[i].second].push_back({queries[i].first, i});
     }
-    DisjointSet ds(n);
-    std::vector<int> ancestor(n), answer(queries.size(), -1);
-    std::vector<char> black(n, 0);
+    DisjointSet dsu(n);
+    vector<int> ancestor(n), answer(queries.size(), -1);
+    vector<char> black(n, 0);
 
-    std::function<void(int)> dfs = [&](int u) {
-        ancestor[ds.find(u)] = u;
+    function<void(int)> dfs = [&](int u) {
+        ancestor[dsu.find(u)] = u;
         for (int v : children[u]) {
             dfs(v);
-            ds.unite(u, v);
-            ancestor[ds.find(u)] = u;      // the merged set is still "under u"
+            dsu.unite(u, v);
+            ancestor[dsu.find(u)] = u;      // the merged set is still "under u"
         }
         black[u] = 1;
-        for (const auto& q : byNode[u])
-            if (black[q.first]) answer[q.second] = ancestor[ds.find(q.first)];
+        for (const auto& queryPair : byNode[u])
+            if (black[queryPair.first]) answer[queryPair.second] = ancestor[dsu.find(queryPair.first)];
     };
     dfs(root);
     return answer;
@@ -615,6 +628,8 @@ OFFLINE-MINIMUM(m, n)
 6          K_l = K_j ∪ K_l, destroying K_j
 7  return extracted
 ```
+
+→ **C++ implementation:** [A6 OFFLINE-MINIMUM](#a6-offline-minimum)
 
 This is the **"next free slot"** idiom in disguise, and that idiom is worth memorizing on its own: *maintain `find(i)` = the smallest index `≥ i` that is still available; when you consume `i`, `unite(i, i+1)`.*
 
@@ -694,6 +709,487 @@ Reach for union–find when the problem says any of these:
 - **The linked-list lesson worth keeping:** "always merge the smaller into the larger" ⟹ each element is touched `O(lg n)` times. That's **small-to-large merging**, and it's reusable far beyond this chapter.
 - **Cannot do:** delete an element, split a set, undo a union (unless you drop compression), or tell you the *path* between two connected nodes.
 - **Say it right:** *"union by rank plus path compression, `O(α(n))` amortized — effectively constant, at most 4 for any real input."*
+
+---
+
+## Practice — where to drill this module
+
+Union-find is the highest ratio of "trivial to write" to "solves hard problems" in the whole book. These are the drills.
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| `CONNECTED-COMPONENTS`, verbatim | [547 · Number of Provinces](https://leetcode.com/problems/number-of-provinces/) | count components; the smallest possible DSU problem — `A1` as a submission |
+| Grid components | [200 · Number of Islands](https://leetcode.com/problems/number-of-islands/) | DFS is the usual answer; do it with DSU too and compare |
+| The **first** edge that closes a cycle | [684 · Redundant Connection](https://leetcode.com/problems/redundant-connection/) | `if FIND-SET(u) == FIND-SET(v)` is the entire solution — this is `A1` line 4 |
+| Components under a budget | [1319 · Number of Operations to Make Network Connected](https://leetcode.com/problems/number-of-operations-to-make-network-connected/) | components minus one, and a redundant-edge count |
+| Union-find over *names* | [721 · Accounts Merge](https://leetcode.com/problems/accounts-merge/) | the elements are strings, so you need an index map — the practical version of `MAKE-SET` |
+| Constraints as equalities | [990 · Satisfiability of Equality Equations](https://leetcode.com/problems/satisfiability-of-equality-equations/) | union all `==`, then check every `!=`; a two-pass DSU that reads like a proof |
+| DSU inside Kruskal | [1584 · Min Cost to Connect All Points](https://leetcode.com/problems/min-cost-to-connect-all-points/) · [1489 · Find Critical and Pseudo-Critical Edges in MST](https://leetcode.com/problems/find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree/) | the reason this module sits before [M14](M14-mst.md) |
+| Weighted / relational DSU | [399 · Evaluate Division](https://leetcode.com/problems/evaluate-division/) | store a ratio to the parent; the `A4` variant, and a favourite follow-up |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *Graph Algorithms*. [Codeforces `dsu` tag](https://codeforces.com/problemset?tags=dsu) — the single best tag on the site for this module, and where rollback/offline DSU actually appear.
+
+**The drill that matters here:** every time you reach for a DFS to answer "are these two things connected?", ask whether the connections *arrive over time*. If they do, DSU is `O(α)` per query and DFS is `O(V+E)` per query. Union-find is the **incremental** connectivity structure — that, and not the `α(n)` bound, is why it exists.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., ch. 8 and §1.5.*
+
+### 1. A forest in a `vector`, not in nodes
+
+The pseudocode says `x.p` and `x.rank`, which sounds like a node with pointers. **Do not write that.** For `n` elements identified by integers `0..n−1`, two `vector<int>`s hold the whole structure:
+
+```cpp
+vector<int> parent;   // parent[x] is x's parent; parent[x] == x means x is a root
+vector<int> rank_;    // an UPPER BOUND on the height of x's subtree
+```
+
+No allocation per element, perfect cache locality, and the "pointer" is an index. Weiss builds the disjoint-set class exactly this way, and it is one of the clearest cases in the book where the array representation beats the pointer one outright.
+
+### 2. `rank` is a reserved-ish name
+
+`std::rank` is a type trait in `<type_traits>`, which `<bits/stdc++.h>` pulls in. With `using namespace std;` a member named `rank` is fine (members are found first), but a *local variable* or *free function* named `rank` can become ambiguous. The trailing underscore in `rank_` is the conventional fix — the same name-lookup hazard as [M09](M09-amortized.md)'s `mergeRuns`.
+
+### 3. Recursive path compression and the stack
+
+```cpp
+int findRecursive(vector<int>& parent, int x) {
+    if (x != parent[x]) parent[x] = findRecursive(parent, parent[x]);
+    return parent[x];
+}
+```
+
+This is CLRS's `FIND-SET` verbatim and it is beautiful — three lines, and the assignment on the way *back up* is what does the compression. But **the recursion depth is the tree height**, and before any compression has happened that can be `Θ(n)` with union-by-rank disabled. At `n ≈ 10⁶` that is a stack overflow. `A2` gives the two-pass iterative form and the one-line path-halving form; **use one of those in real code.**
+
+### 4. `vector<int>` by reference, always
+
+`int find(vector<int>& parent, int x)` — a **non-const** reference, because path compression *writes* to `parent`. That is the surprise in this structure: `FIND-SET` is a query that mutates. If you wrap it in a class, `find` cannot be a `const` member (or `parent` must be `mutable`, per [M09](M09-amortized.md) toolkit §4).
+
+### 5. `iota` for the initial state
+
+```cpp
+void initDemo(vector<int>& parent, int n) {
+    parent.resize(n);
+    iota(parent.begin(), parent.end(), 0);   // <numeric>: fills 0, 1, 2, ..., n-1
+}
+```
+
+`iota(first, last, value)` fills a range with successively incremented values. It is exactly `MAKE-SET` applied to every element, in one line.
+
+### 6. Structured bindings for the rollback stack
+
+`A4`'s rollback DSU stores what each union changed so it can be undone. C++17 unpacks it cleanly:
+
+```cpp
+struct Change { int child, parentBefore, rankRoot, rankBefore; };
+void undoDemo(vector<Change>& history) {
+    auto [c, pb, rr, rb] = history.back();   // four named values, one line
+    (void)c; (void)pb; (void)rr; (void)rb;
+    history.pop_back();
+}
+```
+
+**Rollback DSU cannot use path compression**, because compression rewrites parent pointers all over the tree and there is no cheap record of what it touched. That is why the rollback variant is `O(lg n)` per operation rather than `O(α)` — union by rank alone.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+```cpp
+// The structure every entry below builds on. Two arrays, no nodes (toolkit 1).
+class DisjointSet {
+public:
+    explicit DisjointSet(int n) : parent_(n), rank_(n, 0), count_(n) {
+        iota(parent_.begin(), parent_.end(), 0);   // MAKE-SET for every element
+    }
+    int find(int x);                    // A2
+    bool unite(int x, int y);           // A3
+    bool sameSet(int x, int y) { return find(x) == find(y); }   // A1
+    int components() const { return count_; }
+private:
+    vector<int> parent_;
+    vector<int> rank_;      // trailing underscore: std::rank exists (toolkit 2)
+    int count_;             // number of disjoint sets, maintained by unite()
+};
+```
+
+### A1 CONNECTED-COMPONENTS and SAME-COMPONENT
+
+*Pseudocode: §1, "Application: connected components".*
+
+```cpp
+// CONNECTED-COMPONENTS(G): one MAKE-SET per vertex, one UNION per edge.
+// Returns the structure, so the caller can answer SAME-COMPONENT queries.
+DisjointSet connectedComponents(int n, const vector<pair<int,int>>& edges) {
+    DisjointSet ds(n);                        // 1-2  for each vertex v: MAKE-SET(v)
+                                              //      (the constructor's iota)
+    for (const auto& [u, v] : edges) {        // 3  for each edge (u,v)
+        // 4  if FIND-SET(u) != FIND-SET(v)
+        // 5      UNION(u, v)
+        // unite() performs both the test and the union and reports whether it
+        // actually merged -- so the explicit comparison on line 4 disappears.
+        // The RETURN VALUE is the useful part: `false` means u and v were
+        // ALREADY connected, i.e. this edge closes a CYCLE. That single bit is
+        // the whole solution to "Redundant Connection" and the whole cycle test
+        // inside Kruskal (M14).
+        ds.unite(u, v);
+    }
+    return ds;                                // return-by-value: moved, not copied
+}
+
+// SAME-COMPONENT(u, v)
+bool sameComponent(DisjointSet& ds, int u, int v) {
+    return ds.find(u) == ds.find(v);          // 1-3
+    // NOTE the non-const reference: find() COMPRESSES PATHS, so it writes.
+    // A query that mutates is unusual and is the reason this cannot be
+    // `const DisjointSet&` (toolkit 4).
+}
+```
+
+**Complexity.** `Θ(V)` to initialise, then `E` unions. With union by rank **and** path compression the whole thing is `O((V + E) α(V))` — **effectively linear**.
+
+**Why not just DFS?** For a *static* graph, DFS answers the same question in `Θ(V+E)` once. Union-find earns its place when the edges **arrive over time**: after each new edge you can answer connectivity queries in `O(α)`, where DFS would need a fresh `Θ(V+E)` traversal. **Union-find is the incremental connectivity structure.** Its one weakness is the mirror image: it supports no `DELETE`, because there is no cheap way to undo a merge (hence the rollback variant in `A4`).
+
+### A2 FIND-SET (with path compression)
+
+*Pseudocode: §2, "Heuristic 2 — path compression".*
+
+```cpp
+// LITERAL translation of CLRS's two-pass recursive FIND-SET:
+//
+//   FIND-SET(x)
+//   1  if x != x.p
+//   2      x.p = FIND-SET(x.p)
+//   3  return x.p
+//
+// The magic is on line 2: the assignment happens on the way BACK UP, so every
+// node on the path is re-pointed DIRECTLY at the root. The first find is
+// expensive; every later find from anywhere on that path is O(1).
+//
+// Do not ship this: the recursion depth is the tree height (toolkit 3).
+int findRecursive(vector<int>& parent, int x) {
+    if (x != parent[x]) parent[x] = findRecursive(parent, parent[x]);
+    return parent[x];
+}
+
+// The same algorithm, iteratively: pass 1 walks to the root, pass 2 re-points
+// everything on the path at it. Identical result, O(1) stack.
+int DisjointSet::find(int x) {
+    int root = x;
+    while (root != parent_[root]) root = parent_[root];   // pass 1: find the root
+    while (parent_[x] != root) {                          // pass 2: compress
+        int next = parent_[x];
+        parent_[x] = root;
+        x = next;
+    }
+    return root;
+}
+
+// PATH HALVING -- one pass, and what most competitive code actually uses.
+// It points every OTHER node at its grandparent, halving the path length as it
+// goes. It gives the same O(alpha) amortized bound as full compression, in one
+// loop with no second pass and no extra memory.
+int findHalving(vector<int>& parent, int x) {
+    while (x != parent[x]) {
+        parent[x] = parent[parent[x]];   // skip a generation
+        x = parent[x];
+    }
+    return x;
+}
+```
+
+**Complexity.** A single `FIND-SET` is `O(h)`, where `h` is the current tree height — **`Θ(lg n)` with union by rank alone, and `Θ(n)` with neither heuristic.** The amortized bounds are the point:
+
+| heuristics | `m` operations on `n` elements |
+|---|---|
+| neither | `Θ(m n)` worst case |
+| union by rank only | `O(m lg n)` |
+| path compression only | `Θ(n + f·(1 + log_{2+f/n} n))` |
+| **both** | **`O(m α(n))`** (Theorem 19.14) |
+
+**`α(n) ≤ 4` for every `n` you will ever meet** — it is the inverse of the Ackermann function, and `α(n) ≤ 4` holds up to `A₄(1)`, a number vastly larger than the number of atoms in the observable universe. So the structure is **effectively constant time**, and "effectively" is doing almost no work in that sentence.
+
+**Path compression does not update `rank`.** After compression a node's `rank` may badly overstate its height. That is fine and deliberate: `rank` is only ever used as an *upper bound* to decide which root to hang under, and the analysis (Lemma 19.4 onward) only needs it to be non-decreasing along a path to the root.
+
+### A3 MAKE-SET, UNION and LINK
+
+*Pseudocode: §2, "Full pseudocode".*
+
+```cpp
+// MAKE-SET(x): x.p = x; x.rank = 0.
+// Done for every element at once in the constructor -- the iota fills
+// parent_ with 0,1,2,...  and rank_ is already all zeros.
+
+// UNION(x, y) = LINK(FIND-SET(x), FIND-SET(y)), fused into one function.
+// Returns TRUE if a merge actually happened -- see the note in A1 on why that
+// return value is the useful part.
+bool DisjointSet::unite(int x, int y) {
+    int rootX = find(x), rootY = find(y);          // UNION line 1: FIND-SET both ends
+    if (rootX == rootY) return false;              // already together: nothing to do
+
+    // ---- LINK(rx, ry), union BY RANK ----
+    // Hang the SHORTER tree under the TALLER one, so the height only grows when
+    // the two are equal. This is what bounds the height at lg n and is half of
+    // the O(m alpha(n)) result.
+    if (rank_[rootX] > rank_[rootY]) {             // 1  if x.rank > y.rank
+        parent_[rootY] = rootX;                    // 2      y.p = x
+    } else {
+        parent_[rootX] = rootY;                    // 3  else x.p = y
+        if (rank_[rootX] == rank_[rootY])          // 4      if x.rank == y.rank
+            ++rank_[rootY];                     // 5          y.rank = y.rank + 1
+        // Height increases ONLY on a tie -- and a tie at rank r requires two
+        // trees of >= 2^r nodes each, so rank r implies >= 2^r nodes and rank
+        // is at most lg n. That is Lemma 19.1, in one sentence.
+    }
+    --count_;                                 // one fewer disjoint set
+    return true;
+}
+
+// UNION BY SIZE -- the common alternative. Same O(alpha) bound, and the size is
+// often wanted anyway ("how big is this component?"), which rank cannot tell you
+// because path compression makes rank an over-estimate of height.
+class DisjointSetBySize {
+public:
+    explicit DisjointSetBySize(int n) : parent_(n), size_(n, 1) {
+        iota(parent_.begin(), parent_.end(), 0);
+    }
+    int find(int x) {                        // path halving (A2)
+        while (x != parent_[x]) { parent_[x] = parent_[parent_[x]]; x = parent_[x]; }
+        return x;
+    }
+    bool unite(int x, int y) {
+        int rootX = find(x), rootY = find(y);
+        if (rootX == rootY) return false;
+        if (size_[rootX] < size_[rootY]) swap(rootX, rootY);   // rx is now the LARGER root
+        parent_[rootY] = rootX;
+        size_[rootX] += size_[rootY];
+        return true;
+    }
+    int setSize(int x) { return size_[find(x)]; }   // the reason to prefer size
+private:
+    vector<int> parent_, size_;
+};
+```
+
+**Complexity.** `MAKE-SET` `Θ(1)`; `UNION` and `FIND-SET` `O(α(n))` amortized with both heuristics.
+
+**Union by rank alone gives Theorem 19.1: `O(m + n lg n)`.** Neither heuristic alone is enough for `α`; the two together are, and that interaction is what makes the analysis (§4 of this module) so much harder than the code.
+
+### A4 Weighted and rollback DSU
+
+*These are not CLRS pseudocode — they are the two variants the practice problems above actually require, and both are one small change to `A3`.*
+
+```cpp
+// WEIGHTED (relational) DSU: alongside the parent pointer, store a value
+// relating each node to its parent -- a difference, a ratio, a parity. This
+// answers "what is x relative to y?" and not merely "are they related?".
+// LeetCode 399 (Evaluate Division) is exactly this, with ratios.
+class WeightedDSU {
+public:
+    explicit WeightedDSU(int n) : parent_(n), rank_(n, 0), diff_(n, 0) {
+        iota(parent_.begin(), parent_.end(), 0);
+    }
+    // Returns the root, and sets `weight` to (value[x] - value[root]).
+    int find(int x, long long& weight) {
+        if (x == parent_[x]) { weight = 0; return x; }
+        long long parentOffset = 0;
+        int root = find(parent_[x], parentOffset);
+        // Path compression must ALSO compose the weights: x's offset to the
+        // root is its offset to its parent PLUS the parent's offset to the root.
+        // Forgetting this composition is the bug that makes weighted DSU
+        // "mostly work" and then fail on deep trees.
+        diff_[x] += parentOffset;
+        parent_[x] = root;
+        weight = diff_[x];
+        return root;
+    }
+    // Assert value[y] - value[x] == d. Returns false if it contradicts what we
+    // already know -- which is how these structures detect inconsistency.
+    bool relate(int x, int y, long long wantedGap) {
+        long long offsetX = 0, offsetY = 0;
+        int rootX = find(x, offsetX), rootY = find(y, offsetY);
+        if (rootX == rootY) return (offsetY - offsetX) == wantedGap;
+        // Hang ry under rx and choose ry's offset so the equation holds.
+        parent_[rootY] = rootX;
+        diff_[rootY] = offsetX + wantedGap - offsetY;
+        return true;
+    }
+private:
+    vector<int> parent_, rank_;
+    vector<long long> diff_;
+};
+
+// ROLLBACK DSU: supports undoing the last k unions, which plain DSU cannot.
+// Needed for offline dynamic connectivity and for "try an edge, then take it
+// back" searches.
+//
+// NO PATH COMPRESSION -- compression rewrites pointers all over the tree with
+// no cheap record of what it touched (toolkit 6). Union by rank alone keeps the
+// height at O(lg n), so every operation is O(lg n) rather than O(alpha). That
+// is the price of being able to undo.
+class RollbackDSU {
+public:
+    explicit RollbackDSU(int n) : parent_(n), rank_(n, 0), count_(n) {
+        iota(parent_.begin(), parent_.end(), 0);
+    }
+    int find(int x) const {                      // const: it does NOT mutate
+        while (x != parent_[x]) x = parent_[x];
+        return x;
+    }
+    bool unite(int x, int y) {
+        int rootX = find(x), rootY = find(y);
+        if (rootX == rootY) { history_.push_back({-1, -1, -1, -1}); return false; }
+        if (rank_[rootX] > rank_[rootY]) swap(rootX, rootY);   // rx is the shorter one
+        history_.push_back({rootX, parent_[rootX], rootY, rank_[rootY]});
+        parent_[rootX] = rootY;
+        if (rank_[rootX] == rank_[rootY]) ++rank_[rootY];
+        --count_;
+        return true;
+    }
+    void rollback() {
+        if (history_.empty()) return;
+        auto [child, parentBefore, rankRoot, rankBefore] = history_.back();
+        history_.pop_back();
+        if (child == -1) return;                 // that call did not merge
+        parent_[child] = parentBefore;
+        rank_[rankRoot] = rankBefore;
+        ++count_;
+    }
+    int components() const { return count_; }
+private:
+    struct Change { int child, parentBefore, rankRoot, rankBefore; };
+    vector<int> parent_, rank_;
+    vector<Change> history_;
+    int count_;
+};
+```
+
+**Complexity.** Weighted DSU: `O(α(n))`, same as plain — the weights ride along for free. Rollback DSU: **`O(lg n)` per operation**, and `O(1)` per rollback.
+
+### A5 Tarjan's offline LCA
+
+*Pseudocode: §5, "Tarjan's offline LCA".*
+
+```cpp
+// Answer many "lowest common ancestor of u and v" queries in ONE DFS.
+// "Offline" means all queries are known in advance -- which is what lets a
+// single traversal answer them all.
+//
+// THE IDEA: when the DFS finishes node u, every node already coloured BLACK is
+// in a DSU set whose `ancestor` is the LCA of that node and u. So a query
+// {u, v} is answered the moment the SECOND of the two is finished.
+class OfflineLCA {
+public:
+    OfflineLCA(int n, const vector<vector<int>>& children)
+        : children_(children), dsu_(n), ancestor_(n, 0), black_(n, 0) {}
+
+    // queries[i] = {u, v}; returns answers[i] = LCA(u, v), or -1 if unrelated.
+    vector<int> solve(int root, const vector<pair<int,int>>& queries) {
+        // Bucket each query under BOTH endpoints, so whichever finishes second
+        // finds it. This is the "for each node v such that {u,v} in P" of line 8.
+        queriesAt_.assign(children_.size(), {});
+        for (int i = 0; i < (int)queries.size(); ++i) {
+            queriesAt_[queries[i].first].push_back({queries[i].second, i});
+            queriesAt_[queries[i].second].push_back({queries[i].first, i});
+        }
+        answers_.assign(queries.size(), -1);
+        lca(root);
+        return answers_;
+    }
+private:
+    void lca(int u) {
+        // MAKE-SET(u) is implicit: the constructor already did it for every node.
+        ancestor_[dsu_.find(u)] = u;              // 2  FIND-SET(u).ancestor = u
+        for (int v : children_[u]) {             // 3  for each child v of u
+            lca(v);                              // 4      LCA(v)
+            dsu_.unite(u, v);                     // 5      UNION(u, v)
+            // 6  FIND-SET(u).ancestor = u
+            // MUST come after the union: the union may have changed which node
+            // is the root, and the ancestor field lives ON THE ROOT.
+            ancestor_[dsu_.find(u)] = u;
+        }
+        black_[u] = 1;                           // 7  u.color = BLACK
+        for (const auto& [v, queryIndex] : queriesAt_[u]) {   // 8  for each query {u, v}
+            if (black_[v])                       // 9      if v.color == BLACK
+                answers_[queryIndex] = ancestor_[dsu_.find(v)];   // 10
+        }
+    }
+    vector<vector<int>> children_;
+    DisjointSet dsu_;
+    vector<int> ancestor_;
+    vector<char> black_;
+    vector<vector<pair<int,int>>> queriesAt_;
+    vector<int> answers_;
+};
+```
+
+**Complexity. `O((V + Q) α(V))` — effectively linear in the tree size plus the number of queries.** Compare the online alternatives: binary lifting is `O(V lg V)` preprocessing and `O(lg V)` per query; Euler tour + sparse table is `O(V lg V)` and `O(1)`. **Tarjan wins when you can see all the queries up front, and is useless when you cannot.**
+
+**Note the recursion:** `lca` recurses to the tree's depth, so on a path-shaped tree of `10⁶` nodes it overflows the stack (toolkit §3). An explicit stack is required for large inputs.
+
+### A6 OFFLINE-MINIMUM
+
+*Pseudocode: §5, "Offline minimum".*
+
+```cpp
+// Given a sequence of INSERT and EXTRACT-MIN operations on {1..n} known in
+// advance, report which key each EXTRACT-MIN returns -- WITHOUT ever building
+// a priority queue.
+//
+// `sequence` is the operation list: a positive value means INSERT that key,
+// 0 means EXTRACT-MIN.
+//
+// THE IDEA: process keys in INCREASING order. Key i must be returned by the
+// FIRST not-yet-used extraction that comes after i was inserted. Union-find
+// tracks "the first still-available extraction at or after position j" by
+// merging each used slot into the next one -- a classic "next free slot"
+// pattern that appears far beyond this problem.
+vector<int> offlineMinimum(const vector<int>& sequence, int n) {
+    // Split into m blocks K_1..K_{m+1}: K_j is the set of keys inserted before
+    // the j-th extraction. Block m+1 collects keys never extracted.
+    vector<int> blockOf(n + 1, 0);
+    int extractCount = 0;
+    {
+        int openBlock = 1;
+        for (int op : sequence) {
+            if (op == 0) ++openBlock, ++extractCount;        // an EXTRACT-MIN closes this block
+            else blockOf[op] = openBlock;         // this key belongs to the open block
+        }
+    }
+    const int last = extractCount + 1;
+
+    // DSU over blocks 1..m+2. find(j) = the smallest l >= j whose block still
+    // exists, i.e. the first extraction not yet assigned an answer.
+    vector<int> nextSurviving(last + 2);
+    iota(nextSurviving.begin(), nextSurviving.end(), 0);
+    function<int(int)> find = [&](int block) {
+        while (block != nextSurviving[block]) { nextSurviving[block] = nextSurviving[nextSurviving[block]]; block = nextSurviving[block]; }   // path halving
+        return block;
+    };
+
+    vector<int> extracted(last + 1, 0);      // extracted[j] = key returned by
+                                             // the j-th EXTRACT-MIN, 0 if none
+    for (int i = 1; i <= n; ++i) {           // 1  for i = 1 to n (INCREASING keys)
+        if (blockOf[i] == 0) continue;       //    key never inserted
+        int block = find(blockOf[i]);            // 2  determine j such that i in K_j
+        if (block != last) {                     // 3  if j != m+1
+            extracted[block] = i;                // 4      extracted[j] = i
+            // 5-6  merge K_j into the next surviving block: this extraction is
+            //      now used up, so future lookups skip past it.
+            nextSurviving[block] = find(block + 1);
+        }
+    }
+    extracted.resize(extractCount + 1);
+    return extracted;                        // 7  return extracted (1-indexed)
+}
+```
+
+**Complexity. `O((m + n) α(n))`** — effectively linear, against `O(n lg n)` for actually running a heap.
+
+**Why this is worth the page.** It is the cleanest example of union-find used for something that is **not connectivity at all**. The sets here are *blocks of an operation sequence*, and `UNION` means "this slot is used up; skip to the next one". Once you have seen this "point to the next free slot" pattern you start finding it everywhere — interval assignment, scheduling to the first free machine, and the offline version of half the problems that otherwise need a `set<int>` and `lower_bound`.
+
 
 ---
 

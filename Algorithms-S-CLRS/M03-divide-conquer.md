@@ -657,82 +657,82 @@ static constexpr int64_t kBase = 10000;
 
 namespace detail {
 
-void trim(BigNum& a) { while (a.size() > 1 && a.back() == 0) a.pop_back(); }
+void trim(BigNum& lhs) { while (lhs.size() > 1 && lhs.back() == 0) lhs.pop_back(); }
 
-BigNum add(const BigNum& a, const BigNum& b) {
-    BigNum r(max(a.size(), b.size()) + 1, 0);
-    for (size_t i = 0; i < r.size(); ++i) {
-        if (i < a.size()) r[i] += a[i];
-        if (i < b.size()) r[i] += b[i];
+BigNum add(const BigNum& lhs, const BigNum& rhs) {
+    BigNum product(max(lhs.size(), rhs.size()) + 1, 0);
+    for (size_t i = 0; i < product.size(); ++i) {
+        if (i < lhs.size()) product[i] += lhs[i];
+        if (i < rhs.size()) product[i] += rhs[i];
     }
-    trim(r);
-    return r;                                  // limbs may exceed kBase; normalized at the end
+    trim(product);
+    return product;                                  // limbs may exceed kBase; normalized at the end
 }
 
 // a - b, assuming a >= b (borrows resolved during normalization).
-BigNum sub(const BigNum& a, const BigNum& b) {
-    BigNum r = a;
-    r.resize(max(a.size(), b.size()), 0);
-    for (size_t i = 0; i < b.size(); ++i) r[i] -= b[i];
-    trim(r);
-    return r;
+BigNum sub(const BigNum& lhs, const BigNum& rhs) {
+    BigNum product = lhs;
+    product.resize(max(lhs.size(), rhs.size()), 0);
+    for (size_t i = 0; i < rhs.size(); ++i) product[i] -= rhs[i];
+    trim(product);
+    return product;
 }
 
 // Shift left by k limbs == multiply by kBase^k.
-BigNum shiftLimbs(const BigNum& a, size_t k) {
-    if (a.size() == 1 && a[0] == 0) return a;
-    BigNum r(k, 0);
-    r.insert(r.end(), a.begin(), a.end());
-    return r;
+BigNum shiftLimbs(const BigNum& lhs, size_t k) {
+    if (lhs.size() == 1 && lhs[0] == 0) return lhs;
+    BigNum product(k, 0);
+    product.insert(product.end(), lhs.begin(), lhs.end());
+    return product;
 }
 
-BigNum schoolbook(const BigNum& a, const BigNum& b) {
-    BigNum r(a.size() + b.size(), 0);
-    for (size_t i = 0; i < a.size(); ++i)
-        for (size_t j = 0; j < b.size(); ++j)
-            r[i + j] += a[i] * b[j];
-    trim(r);
-    return r;
+BigNum schoolbook(const BigNum& lhs, const BigNum& rhs) {
+    BigNum product(lhs.size() + rhs.size(), 0);
+    for (size_t i = 0; i < lhs.size(); ++i)
+        for (size_t j = 0; j < rhs.size(); ++j)
+            product[i + j] += lhs[i] * rhs[j];
+    trim(product);
+    return product;
 }
 
 }  // namespace detail
 
 // Karatsuba: Theta(n^log2(3)) limb multiplications.
-BigNum karatsuba(BigNum a, BigNum b) {
-    const size_t n = max(a.size(), b.size());
-    if (n <= 32) return detail::schoolbook(a, b);      // small-case cutoff
+BigNum karatsuba(BigNum lhs, BigNum rhs) {
+    const size_t digits = max(lhs.size(), rhs.size());
+    if (digits <= 32) return detail::schoolbook(lhs, rhs);      // small-case cutoff
 
-    const size_t m = n / 2;
-    a.resize(n, 0);
-    b.resize(n, 0);
+    const size_t m = digits / 2;
+    lhs.resize(digits, 0);
+    rhs.resize(digits, 0);
 
-    const BigNum a0(a.begin(), a.begin() + m), a1(a.begin() + m, a.end());
-    const BigNum b0(b.begin(), b.begin() + m), b1(b.begin() + m, b.end());
+    const BigNum lhsLow(lhs.begin(), lhs.begin() + m), lhsHigh(lhs.begin() + m, lhs.end());
+    const BigNum rhsLow(rhs.begin(), rhs.begin() + m), rhsHigh(rhs.begin() + m, rhs.end());
 
-    const BigNum q0 = karatsuba(a0, b0);                                  // low
-    const BigNum q2 = karatsuba(a1, b1);                                  // high
-    const BigNum q1 = karatsuba(detail::add(a0, a1), detail::add(b0, b1));
+    const BigNum lowProduct = karatsuba(lhsLow, rhsLow);                                  // low
+    const BigNum highProduct = karatsuba(lhsHigh, rhsHigh);                                  // high
+    const BigNum sumProduct = karatsuba(detail::add(lhsLow, lhsHigh), detail::add(rhsLow, rhsHigh));
 
     // mid = q1 - q0 - q2  ==  a0*b1 + a1*b0
-    const BigNum mid = detail::sub(detail::sub(q1, q0), q2);
+    const BigNum crossTerms = detail::sub(detail::sub(sumProduct, lowProduct), highProduct);
 
-    BigNum r = detail::add(q0, detail::shiftLimbs(mid, m));
-    r = detail::add(r, detail::shiftLimbs(q2, 2 * m));
-    detail::trim(r);
-    return r;
+    BigNum product = detail::add(lowProduct, detail::shiftLimbs(crossTerms, m));
+    product = detail::add(product, detail::shiftLimbs(highProduct, 2 * m));
+    detail::trim(product);
+    return product;
 }
 
 // Resolve carries/borrows so every limb lies in [0, kBase).
-void normalize(BigNum& a) {
+void normalize(BigNum& lhs) {
     int64_t carry = 0;
-    for (size_t i = 0; i < a.size(); ++i) {
-        a[i] += carry;
-        carry = a[i] / kBase;
-        a[i] %= kBase;
-        if (a[i] < 0) { a[i] += kBase; --carry; }
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        lhs[i] += carry;
+        carry = lhs[i] / kBase;
+        lhs[i] %= kBase;
+        if (lhs[i] < 0) { lhs[i] += kBase; --carry; }
     }
-    while (carry > 0) { a.push_back(carry % kBase); carry /= kBase; }
-    detail::trim(a);
+    while (carry > 0) { lhs.push_back(carry % kBase); carry /= kBase; }
+    detail::trim(lhs);
 }
 ```
 
@@ -1223,8 +1223,8 @@ This is Joshua Bloch's famous binary-search bug (`java.util.Arrays.binarySearch`
 ### 4. `std::min` / `std::max` with an initializer list
 
 ```cpp
-long long bestOfThree(long long left, long long right, long long cross) {
-    return max({left, right, cross});   // C++11: max over an initializer_list
+long long bestOfThree(long long bestLeft, long long bestRight, long long bestCrossing) {
+    return max({bestLeft, bestRight, bestCrossing});   // C++11: max over an initializer_list
 }
 ```
 
@@ -1253,12 +1253,12 @@ static double pdistDemo(const Point2& a, const Point2& b) {
 ### 7. `vector<vector<double>>` is not a matrix
 
 ```cpp
-void matrixLayoutDemo(size_t n) {
-    vector<vector<double>> C(n, vector<double>(n, 0.0));  // n separate heap allocations
-    vector<double> flat(n * n, 0.0);                      // ONE allocation, contiguous
+void matrixLayoutDemo(size_t size) {
+    vector<vector<double>> rows(size, vector<double>(size, 0.0));  // n separate heap allocations
+    vector<double> flat(size * size, 0.0);                      // ONE allocation, contiguous
     // C[i][j]  == two dereferences, rows scattered across the heap
     // flat[i*n + j] == one dereference, row-major and cache-friendly
-    (void)C; (void)flat;
+    (void)rows; (void)flat;
 }
 ```
 
@@ -1279,23 +1279,23 @@ const int NOT_FOUND = -1;
 //
 // `const vector<int>&` and integer bounds, NOT a sliced sub-vector: slicing
 // would copy Theta(n) elements per level and turn Theta(lg n) into Theta(n).
-int binarySearchRec(const vector<int>& S, int q, int lo, int hi) {
+int binarySearchRec(const vector<int>& sorted, int target, int lo, int hi) {
     if (lo > hi) return NOT_FOUND;            // empty range: q is not present
     int mid = lo + (hi - lo) / 2;             // NOT (lo+hi)/2 -- see toolkit 3
-    if (S[mid] == q) return mid;
-    if (S[mid] >  q) return binarySearchRec(S, q, lo, mid - 1);
-    else             return binarySearchRec(S, q, mid + 1, hi);
+    if (sorted[mid] == target) return mid;
+    if (sorted[mid] >  target) return binarySearchRec(sorted, target, lo, mid - 1);
+    else             return binarySearchRec(sorted, target, mid + 1, hi);
 }
 
 // The same algorithm as a loop. Both calls above are TAIL calls, so this is a
 // mechanical conversion -- and it is the version to write, because the standard
 // does not guarantee the compiler will do it for you (toolkit 2).
-int binarySearchIter(const vector<int>& S, int q) {
-    int lo = 0, hi = (int)S.size() - 1;       // hi is INCLUSIVE, so `<=` below
+int binarySearchIter(const vector<int>& sorted, int target) {
+    int lo = 0, hi = (int)sorted.size() - 1;       // hi is INCLUSIVE, so `<=` below
     while (lo <= hi) {
         int mid = lo + (hi - lo) / 2;
-        if (S[mid] == q) return mid;
-        if (S[mid] > q) hi = mid - 1;
+        if (sorted[mid] == target) return mid;
+        if (sorted[mid] > target) hi = mid - 1;
         else            lo = mid + 1;
     }
     return NOT_FOUND;
@@ -1308,21 +1308,21 @@ int binarySearchIter(const vector<int>& S, int q) {
 //   * the loop test is `<`, not `<=`
 //   * there is no early return on equality
 // Mixing up the two loops is the single most common binary-search bug.
-int lowerBoundIndex(const vector<int>& S, int q) {
-    int lo = 0, hi = (int)S.size();
+int lowerBoundIndex(const vector<int>& sorted, int target) {
+    int lo = 0, hi = (int)sorted.size();
     while (lo < hi) {
         int mid = lo + (hi - lo) / 2;
-        if (S[mid] < q) lo = mid + 1;
+        if (sorted[mid] < target) lo = mid + 1;
         else            hi = mid;
     }
     return lo;
 }
 
 // How many halvings until the range is empty: exactly ceil(lg(n+1)).
-int binarySearchDepth(int n) {
-    int d = 0;
-    while (n > 0) { n /= 2; ++d; }
-    return d;
+int binarySearchDepth(int size) {
+    int halvings = 0;
+    while (size > 0) { size /= 2; ++halvings; }
+    return halvings;
 }
 ```
 
@@ -1344,46 +1344,46 @@ int binarySearchDepth(int n) {
 // M starts at 0, not -infinity: the empty range is allowed, so the answer is
 // never negative. That convention has to match maxSubarrayDC's base case or the
 // two disagree on all-negative arrays -- a classic bug.
-long long leftMidMaxRange(const vector<long long>& A, int l, int m) {
-    long long S = 0, M = 0;
-    for (int i = m; i >= l; --i) {       // "for i = m downto l"
-        S = S + A[i];
-        if (S > M) M = S;
+long long leftMidMaxRange(const vector<long long>& arr, int lo, int mid) {
+    long long runningSum = 0, bestSoFar = 0;
+    for (int idx = mid; idx >= lo; --idx) {       // "for i = m downto l"
+        runningSum = runningSum + arr[idx];
+        if (runningSum > bestSoFar) bestSoFar = runningSum;
     }
-    return M;
+    return bestSoFar;
 }
 
 // The mirror image: best PREFIX of A[m+1..r], i.e. a range that STARTS at m+1.
-long long midRightMaxRange(const vector<long long>& A, int m, int r) {
-    long long S = 0, M = 0;
-    for (int i = m + 1; i <= r; ++i) {
-        S = S + A[i];
-        if (S > M) M = S;
+long long midRightMaxRange(const vector<long long>& arr, int mid, int hi) {
+    long long runningSum = 0, bestSoFar = 0;
+    for (int idx = mid + 1; idx <= hi; ++idx) {
+        runningSum = runningSum + arr[idx];
+        if (runningSum > bestSoFar) bestSoFar = runningSum;
     }
-    return M;
+    return bestSoFar;
 }
 
 // Three candidates: wholly left, wholly right, or straddling the midpoint.
-long long maxSubarrayDC(const vector<long long>& A, int l, int r) {
-    if (l > r) return 0;                          // empty range
-    if (l == r) return max(0LL, A[l]);            // 0LL, not 0: max needs both
+long long maxSubarrayDC(const vector<long long>& arr, int lo, int hi) {
+    if (lo > hi) return 0;                          // empty range
+    if (lo == hi) return max(0LL, arr[lo]);            // 0LL, not 0: max needs both
                                                   // arguments to be the SAME type
-    int m = l + (r - l) / 2;
-    long long left  = maxSubarrayDC(A, l, m);
-    long long right = maxSubarrayDC(A, m + 1, r);
+    int mid = lo + (hi - lo) / 2;
+    long long bestLeft  = maxSubarrayDC(arr, lo, mid);
+    long long bestRight = maxSubarrayDC(arr, mid + 1, hi);
     // The straddling case is the best suffix of the left plus the best prefix
     // of the right. It cannot be computed recursively -- it needs the sweep.
-    long long cross = leftMidMaxRange(A, l, m) + midRightMaxRange(A, m, r);
-    return max({left, right, cross});             // braces: initializer_list form
+    long long bestCrossing = leftMidMaxRange(arr, lo, mid) + midRightMaxRange(arr, mid, hi);
+    return max({bestLeft, bestRight, bestCrossing});             // braces: initializer_list form
 }
 
 // Kadane's algorithm: the Theta(n) DP that makes the above obsolete in practice.
 // `cur` = best sum of a range ending exactly here; reset to 0 when it goes
 // negative, because a negative prefix can never help a later range.
-long long kadane(const vector<long long>& A) {
-    long long best = 0, cur = 0;
-    for (long long x : A) { cur = max(0LL, cur + x); best = max(best, cur); }
-    return best;
+long long kadane(const vector<long long>& arr) {
+    long long bestSoFar = 0, endingHere = 0;
+    for (long long value : arr) { endingHere = max(0LL, endingHere + value); bestSoFar = max(bestSoFar, endingHere); }
+    return bestSoFar;
 }
 ```
 
@@ -1401,12 +1401,12 @@ long long kadane(const vector<long long>& A) {
 // the single comparison A[mid+1] - A[mid]. That O(1) combine is why the
 // recurrence is T(n) = 2T(n/2) + O(1) -- master CASE 1 -- and the answer is
 // Theta(n), not Theta(n lg n).
-long long closestPair1D(const vector<long long>& A, int l, int r) {
-    if (r - l < 1) return LLONG_MAX;        // fewer than 2 points: no pair exists
-    int mid = l + (r - l) / 2;
-    long long lmin = closestPair1D(A, l, mid);
-    long long rmin = closestPair1D(A, mid + 1, r);
-    return min({lmin, rmin, A[mid + 1] - A[mid]});
+long long closestPair1D(const vector<long long>& sortedX, int lo, int hi) {
+    if (hi - lo < 1) return LLONG_MAX;        // fewer than 2 points: no pair exists
+    int mid = lo + (hi - lo) / 2;
+    long long bestLeft = closestPair1D(sortedX, lo, mid);
+    long long bestRight = closestPair1D(sortedX, mid + 1, hi);
+    return min({bestLeft, bestRight, sortedX[mid + 1] - sortedX[mid]});
 }
 
 struct Pt { double x, y; };
@@ -1415,24 +1415,24 @@ struct Pt { double x, y; };
 static double pdist(const Pt& a, const Pt& b) { return hypot(a.x - b.x, a.y - b.y); }
 
 // 2-D. px is sorted by x; we recurse on index ranges of it.
-static double closestRec(vector<Pt>& px, int l, int r) {
-    const int n = r - l + 1;
-    if (n <= 3) {                            // base case: brute force on <= 3 points
+static double closestRec(vector<Pt>& byX, int lo, int hi) {
+    const int count = hi - lo + 1;
+    if (count <= 3) {                            // base case: brute force on <= 3 points
         double best = numeric_limits<double>::infinity();
-        for (int i = l; i <= r; ++i)
-            for (int j = i + 1; j <= r; ++j) best = min(best, pdist(px[i], px[j]));
+        for (int i = lo; i <= hi; ++i)
+            for (int j = i + 1; j <= hi; ++j) best = min(best, pdist(byX[i], byX[j]));
         return best;
     }
-    const int mid = l + (r - l) / 2;
-    const double midX = px[mid].x;
-    double d = min(closestRec(px, l, mid), closestRec(px, mid + 1, r));
+    const int mid = lo + (hi - lo) / 2;
+    const double divideX = byX[mid].x;
+    double best = min(closestRec(byX, lo, mid), closestRec(byX, mid + 1, hi));
 
     // THE KEY INSIGHT: a straddling pair closer than d must lie inside a
     // vertical strip of width 2d about the dividing line.
-    vector<Pt> strip;
-    for (int i = l; i <= r; ++i)
-        if (fabs(px[i].x - midX) < d) strip.push_back(px[i]);
-    sort(strip.begin(), strip.end(), [](const Pt& a, const Pt& b) { return a.y < b.y; });
+    vector<Pt> band;
+    for (int i = lo; i <= hi; ++i)
+        if (fabs(byX[i].x - divideX) < best) band.push_back(byX[i]);
+    sort(band.begin(), band.end(), [](const Pt& a, const Pt& b) { return a.y < b.y; });
 
     // AND: within the strip, sorted by y, each point can only be closer than d
     // to the next FEW points. A d-by-2d box cannot hold more than 8 points that
@@ -1440,24 +1440,24 @@ static double closestRec(vector<Pt>& px, int l, int r) {
     // -- which is why this double loop is O(|strip|), not O(|strip|^2).
     // The `(strip[j].y - strip[i].y) < d` test in the loop condition is what
     // enforces that; deleting it turns the algorithm quadratic.
-    for (size_t i = 0; i < strip.size(); ++i)
-        for (size_t j = i + 1; j < strip.size() && (strip[j].y - strip[i].y) < d; ++j)
-            d = min(d, pdist(strip[i], strip[j]));
-    return d;
+    for (size_t i = 0; i < band.size(); ++i)
+        for (size_t j = i + 1; j < band.size() && (band[j].y - band[i].y) < best; ++j)
+            best = min(best, pdist(band[i], band[j]));
+    return best;
 }
 
 // Takes P BY VALUE because it must sort it; the caller's vector is untouched.
-double closestPair2D(vector<Pt> P) {
-    if (P.size() < 2) return numeric_limits<double>::infinity();
-    sort(P.begin(), P.end(), [](const Pt& a, const Pt& b) {
+double closestPair2D(vector<Pt> points) {
+    if (points.size() < 2) return numeric_limits<double>::infinity();
+    sort(points.begin(), points.end(), [](const Pt& a, const Pt& b) {
         return a.x != b.x ? a.x < b.x : a.y < b.y; });   // tie-break on y for determinism
-    return closestRec(P, 0, (int)P.size() - 1);
+    return closestRec(points, 0, (int)points.size() - 1);
 }
 
-double closestPairBrute(const vector<Pt>& P) {
+double closestPairBrute(const vector<Pt>& points) {
     double best = numeric_limits<double>::infinity();
-    for (size_t i = 0; i < P.size(); ++i)
-        for (size_t j = i + 1; j < P.size(); ++j) best = min(best, pdist(P[i], P[j]));
+    for (size_t i = 0; i < points.size(); ++i)
+        for (size_t j = i + 1; j < points.size(); ++j) best = min(best, pdist(points[i], points[j]));
     return best;
 }
 ```
@@ -1477,116 +1477,116 @@ double closestPairBrute(const vector<Pt>& P) {
 // exactly the w^i of the pseudocode.
 using BigNum = vector<int>;
 
-static void trim(BigNum& a) { while (a.size() > 1 && a.back() == 0) a.pop_back(); }
+static void trim(BigNum& lhs) { while (lhs.size() > 1 && lhs.back() == 0) lhs.pop_back(); }
 
-BigNum addBig(const BigNum& a, const BigNum& b) {
-    BigNum r(max(a.size(), b.size()) + 1, 0);       // +1 for the final carry
-    for (size_t i = 0; i < r.size(); ++i) {
-        int s = r[i];                                // carry deposited by the previous step
-        if (i < a.size()) s += a[i];
-        if (i < b.size()) s += b[i];
-        r[i] = s % 10;
-        if (i + 1 < r.size()) r[i + 1] += s / 10;
+BigNum addBig(const BigNum& lhs, const BigNum& rhs) {
+    BigNum sum(max(lhs.size(), rhs.size()) + 1, 0);       // +1 for the final carry
+    for (size_t i = 0; i < sum.size(); ++i) {
+        int digitSum = sum[i];                                // carry deposited by the previous step
+        if (i < lhs.size()) digitSum += lhs[i];
+        if (i < rhs.size()) digitSum += rhs[i];
+        sum[i] = digitSum % 10;
+        if (i + 1 < sum.size()) sum[i + 1] += digitSum / 10;
     }
-    trim(r);
-    return r;
+    trim(sum);
+    return sum;
 }
 
-// Precondition: a >= b. Karatsuba's q1 - q0 - q2 is always non-negative, so
-// this never needs to represent a negative number.
-BigNum subBig(const BigNum& a, const BigNum& b) {
-    BigNum r = a;
+// Precondition: lhs >= rhs. Karatsuba's sumProduct - lowProduct - highProduct
+// is always non-negative, so this never needs to represent a negative number.
+BigNum subBig(const BigNum& lhs, const BigNum& rhs) {
+    BigNum difference = lhs;
     int borrow = 0;
-    for (size_t i = 0; i < r.size(); ++i) {
-        int s = r[i] - borrow - (i < b.size() ? b[i] : 0);
+    for (size_t i = 0; i < difference.size(); ++i) {
+        int digitDiff = difference[i] - borrow - (i < rhs.size() ? rhs[i] : 0);
         borrow = 0;
-        if (s < 0) { s += 10; borrow = 1; }
-        r[i] = s;
+        if (digitDiff < 0) { digitDiff += 10; borrow = 1; }
+        difference[i] = digitDiff;
     }
-    trim(r);
-    return r;
+    trim(difference);
+    return difference;
 }
 
 // Multiply by 10^k: prepend k zeros. This is the "* w^k" of the pseudocode and
 // it costs NOTHING in multiplications -- which is the point.
-BigNum shiftBig(const BigNum& a, int k) {
-    if (a.size() == 1 && a[0] == 0) return a;       // 0 shifted is still 0
-    BigNum r;
-    r.reserve(a.size() + (size_t)k);
-    r.assign((size_t)k, 0);
-    for (int d : a) r.push_back(d);
-    return r;
+BigNum shiftBig(const BigNum& lhs, int zeros) {
+    if (lhs.size() == 1 && lhs[0] == 0) return lhs;       // 0 shifted is still 0
+    BigNum sum;
+    sum.reserve(lhs.size() + (size_t)zeros);
+    sum.assign((size_t)zeros, 0);
+    for (int digit : lhs) sum.push_back(digit);
+    return sum;
 }
 
 long long karatsubaMults = 0;      // instrumentation: counts DIGIT multiplications
 
-BigNum karatsuba(const BigNum& A, const BigNum& B) {
-    if (A.size() == 1 || B.size() == 1) {           // base case: single digit times n digits
-        BigNum r;
-        const BigNum& big = (A.size() == 1) ? B : A;
-        int d = (A.size() == 1) ? A[0] : B[0];
-        r.assign(big.size() + 1, 0);
-        for (size_t i = 0; i < big.size(); ++i) {
+BigNum karatsuba(const BigNum& lhs, const BigNum& rhs) {
+    if (lhs.size() == 1 || rhs.size() == 1) {           // base case: single digit times n digits
+        BigNum product;
+        const BigNum& wide = (lhs.size() == 1) ? rhs : lhs;
+        int digit = (lhs.size() == 1) ? lhs[0] : rhs[0];
+        product.assign(wide.size() + 1, 0);
+        for (size_t i = 0; i < wide.size(); ++i) {
             ++karatsubaMults;
-            long long p = 1LL * d * big[i] + r[i];  // 1LL* forces 64-bit arithmetic
-            r[i] = (int)(p % 10);
-            r[i + 1] += (int)(p / 10);
+            long long carryAcc = 1LL * digit * wide[i] + product[i];  // 1LL* forces 64-bit
+            product[i] = (int)(carryAcc % 10);
+            product[i + 1] += (int)(carryAcc / 10);
         }
-        trim(r);
-        return r;
+        trim(product);
+        return product;
     }
-    size_t n = max(A.size(), B.size());
-    size_t h = n / 2;                                // split point: A = a1*10^h + a0
-    BigNum a0(A.begin(), A.begin() + min(h, A.size()));
-    BigNum a1(A.size() > h ? BigNum(A.begin() + h, A.end()) : BigNum{0});
-    BigNum b0(B.begin(), B.begin() + min(h, B.size()));
-    BigNum b1(B.size() > h ? BigNum(B.begin() + h, B.end()) : BigNum{0});
-    if (a0.empty()) a0 = {0};
-    if (b0.empty()) b0 = {0};
-    trim(a0); trim(a1); trim(b0); trim(b1);
+    size_t digits = max(lhs.size(), rhs.size());
+    size_t half = digits / 2;                                // split point: A = a1*10^h + a0
+    BigNum lhsLow(lhs.begin(), lhs.begin() + min(half, lhs.size()));
+    BigNum lhsHigh(lhs.size() > half ? BigNum(lhs.begin() + half, lhs.end()) : BigNum{0});
+    BigNum rhsLow(rhs.begin(), rhs.begin() + min(half, rhs.size()));
+    BigNum rhsHigh(rhs.size() > half ? BigNum(rhs.begin() + half, rhs.end()) : BigNum{0});
+    if (lhsLow.empty()) lhsLow = {0};
+    if (rhsLow.empty()) rhsLow = {0};
+    trim(lhsLow); trim(lhsHigh); trim(rhsLow); trim(rhsHigh);
 
-    BigNum q0 = karatsuba(a0, b0);                              // q0 = a0*b0
-    BigNum q2 = karatsuba(a1, b1);                              // q2 = a1*b1
-    BigNum q1 = karatsuba(addBig(a0, a1), addBig(b0, b1));      // q1 = (a0+a1)(b0+b1)
+    BigNum lowProduct = karatsuba(lhsLow, rhsLow);                              // q0 = a0*b0
+    BigNum highProduct = karatsuba(lhsHigh, rhsHigh);                              // q2 = a1*b1
+    BigNum sumProduct = karatsuba(addBig(lhsLow, lhsHigh), addBig(rhsLow, rhsHigh));      // q1 = (a0+a1)(b0+b1)
     // THREE recursive multiplications, not four. The middle coefficient
     // a0*b1 + a1*b0 is RECOVERED by subtraction, never computed:
-    BigNum mid = subBig(subBig(q1, q0), q2);
+    BigNum crossTerms = subBig(subBig(sumProduct, lowProduct), highProduct);
 
-    BigNum res = addBig(q0, shiftBig(mid, (int)h));             // q0 + mid*w
-    res = addBig(res, shiftBig(q2, (int)(2 * h)));              //    + q2*w^2
-    trim(res);
-    return res;
+    BigNum result = addBig(lowProduct, shiftBig(crossTerms, (int)half));             // q0 + mid*w
+    result = addBig(result, shiftBig(highProduct, (int)(2 * half)));              //    + q2*w^2
+    trim(result);
+    return result;
 }
 
-BigNum fromString(const string& s) {
-    BigNum a;
+BigNum fromString(const string& digitSum) {
+    BigNum lhs;
     // rbegin()/rend() are REVERSE iterators: they walk the string backwards, so
     // the last character (the ones digit) lands at index 0. Little-endian, free.
-    for (auto it = s.rbegin(); it != s.rend(); ++it) a.push_back(*it - '0');
-    trim(a);
-    return a;
+    for (auto ch = digitSum.rbegin(); ch != digitSum.rend(); ++ch) lhs.push_back(*ch - '0');
+    trim(lhs);
+    return lhs;
 }
 
-string toString(const BigNum& a) {
-    string s;
-    for (auto it = a.rbegin(); it != a.rend(); ++it) s += char('0' + *it);
-    return s;
+string toString(const BigNum& lhs) {
+    string digitSum;
+    for (auto ch = lhs.rbegin(); ch != lhs.rend(); ++ch) digitSum += char('0' + *ch);
+    return digitSum;
 }
 
 // The Theta(n^2) baseline, for comparison.
-BigNum schoolbook(const BigNum& a, const BigNum& b, long long* mults) {
-    BigNum r(a.size() + b.size() + 1, 0);
-    for (size_t i = 0; i < a.size(); ++i)
-        for (size_t j = 0; j < b.size(); ++j) {
-            if (mults) ++*mults;
-            int cur = r[i + j] + a[i] * b[j];
-            r[i + j] = cur % 10;
-            r[i + j + 1] += cur / 10;
+BigNum schoolbook(const BigNum& lhs, const BigNum& rhs, long long* digitMults) {
+    BigNum sum(lhs.size() + rhs.size() + 1, 0);
+    for (size_t i = 0; i < lhs.size(); ++i)
+        for (size_t j = 0; j < rhs.size(); ++j) {
+            if (digitMults) ++*digitMults;
+            int acc = sum[i + j] + lhs[i] * rhs[j];
+            sum[i + j] = acc % 10;
+            sum[i + j + 1] += acc / 10;
         }
-    for (size_t i = 0; i + 1 < r.size(); ++i)
-        if (r[i] >= 10) { r[i + 1] += r[i] / 10; r[i] %= 10; }
-    trim(r);
-    return r;
+    for (size_t i = 0; i + 1 < sum.size(); ++i)
+        if (sum[i] >= 10) { sum[i + 1] += sum[i] / 10; sum[i] %= 10; }
+    trim(sum);
+    return sum;
 }
 ```
 
@@ -1611,39 +1611,39 @@ BigNum schoolbook(const BigNum& a, const BigNum& b, long long* mults) {
 ```cpp
 using Matrix = vector<vector<double>>;      // see toolkit 7 for why this is slow
 
-static Matrix addM(const Matrix& A, const Matrix& B) {
-    size_t n = A.size();
-    Matrix C(n, vector<double>(n));
-    for (size_t i = 0; i < n; ++i) for (size_t j = 0; j < n; ++j) C[i][j] = A[i][j] + B[i][j];
+static Matrix addM(const Matrix& source, const Matrix& B) {
+    size_t size = source.size();
+    Matrix C(size, vector<double>(size));
+    for (size_t i = 0; i < size; ++i) for (size_t j = 0; j < size; ++j) C[i][j] = source[i][j] + B[i][j];
     return C;
 }
-static Matrix subM(const Matrix& A, const Matrix& B) {
-    size_t n = A.size();
-    Matrix C(n, vector<double>(n));
-    for (size_t i = 0; i < n; ++i) for (size_t j = 0; j < n; ++j) C[i][j] = A[i][j] - B[i][j];
+static Matrix subM(const Matrix& source, const Matrix& B) {
+    size_t size = source.size();
+    Matrix C(size, vector<double>(size));
+    for (size_t i = 0; i < size; ++i) for (size_t j = 0; j < size; ++j) C[i][j] = source[i][j] - B[i][j];
     return C;
 }
 // Copy out the n-by-n block whose top-left corner is (r, c).
 // Copying is Theta(n^2) per block, which is asymptotically free next to the
 // Theta(n^2) additions -- but it is a large constant, and a production
 // implementation would pass (matrix, row, col, size) views instead.
-static Matrix sub(const Matrix& A, size_t r, size_t c, size_t n) {
-    Matrix S(n, vector<double>(n));
-    for (size_t i = 0; i < n; ++i) for (size_t j = 0; j < n; ++j) S[i][j] = A[r + i][c + j];
-    return S;
+static Matrix sub(const Matrix& source, size_t topRow, size_t leftCol, size_t size) {
+    Matrix block(size, vector<double>(size));
+    for (size_t i = 0; i < size; ++i) for (size_t j = 0; j < size; ++j) block[i][j] = source[topRow + i][leftCol + j];
+    return block;
 }
 
 long long strassenMults = 0;       // instrumentation: SCALAR multiplications
 
 // Assumes n is a power of two. (General n: pad up to the next power of two --
 // at most quadrupling the work, which does not change the exponent.)
-Matrix strassen(const Matrix& A, const Matrix& B) {
-    size_t n = A.size();
-    if (n == 1) { ++strassenMults; return {{A[0][0] * B[0][0]}}; }
-    size_t h = n / 2;
+Matrix strassen(const Matrix& source, const Matrix& B) {
+    size_t size = source.size();
+    if (size == 1) { ++strassenMults; return {{source[0][0] * B[0][0]}}; }
+    size_t half = size / 2;
 
-    Matrix A11 = sub(A,0,0,h), A12 = sub(A,0,h,h), A21 = sub(A,h,0,h), A22 = sub(A,h,h,h);
-    Matrix B11 = sub(B,0,0,h), B12 = sub(B,0,h,h), B21 = sub(B,h,0,h), B22 = sub(B,h,h,h);
+    Matrix A11 = sub(source,0,0,half), A12 = sub(source,0,half,half), A21 = sub(source,half,0,half), A22 = sub(source,half,half,half);
+    Matrix B11 = sub(B,0,0,half), B12 = sub(B,0,half,half), B21 = sub(B,half,0,half), B22 = sub(B,half,half,half);
 
     // Step 2: the ten sums. Theta(n^2) work, no multiplications.
     Matrix S1 = subM(B12, B22), S2 = addM(A11, A12), S3 = addM(A21, A22), S4 = subM(B21, B11);
@@ -1662,21 +1662,21 @@ Matrix strassen(const Matrix& A, const Matrix& B) {
     Matrix C21 = addM(P3, P4);
     Matrix C22 = subM(subM(addM(P5, P1), P3), P7);
 
-    Matrix C(n, vector<double>(n));
-    for (size_t i = 0; i < h; ++i)
-        for (size_t j = 0; j < h; ++j) {
-            C[i][j]     = C11[i][j]; C[i][j+h]   = C12[i][j];
-            C[i+h][j]   = C21[i][j]; C[i+h][j+h] = C22[i][j];
+    Matrix C(size, vector<double>(size));
+    for (size_t i = 0; i < half; ++i)
+        for (size_t j = 0; j < half; ++j) {
+            C[i][j]     = C11[i][j]; C[i][j+half]   = C12[i][j];
+            C[i+half][j]   = C21[i][j]; C[i+half][j+half] = C22[i][j];
         }
     return C;
 }
 
-Matrix naiveMultiply(const Matrix& A, const Matrix& B, long long* mults) {
-    size_t n = A.size();
-    Matrix C(n, vector<double>(n, 0.0));
-    for (size_t i = 0; i < n; ++i)
-        for (size_t j = 0; j < n; ++j)
-            for (size_t k = 0; k < n; ++k) { if (mults) ++*mults; C[i][j] += A[i][k] * B[k][j]; }
+Matrix naiveMultiply(const Matrix& source, const Matrix& B, long long* scalarMults) {
+    size_t size = source.size();
+    Matrix C(size, vector<double>(size, 0.0));
+    for (size_t i = 0; i < size; ++i)
+        for (size_t j = 0; j < size; ++j)
+            for (size_t k = 0; k < size; ++k) { if (scalarMults) ++*scalarMults; C[i][j] += source[i][k] * B[k][j]; }
     return C;
 }
 ```

@@ -102,6 +102,8 @@ RECURSIVE-ACTIVITY-SELECTOR(s, f, k, n)      GREEDY-ACTIVITY-SELECTOR(s, f, n)
                                               7  return A
 ```
 
+→ **C++ implementation:** [A1 RECURSIVE-ACTIVITY-SELECTOR and GREEDY-ACTIVITY-SELECTOR](#a1-recursive-activity-selector-and-greedy-activity-selector)
+
 Start with a fictitious `a₀` with `f₀ = 0`, so `S₀` is everything; the initial call is `RECURSIVE-ACTIVITY-SELECTOR(s, f, 0, n)`.
 
 **Both run in `Θ(n)` after sorting.** For the recursive version: *"over all recursive calls, each activity is examined exactly once in the while loop test of line 2."* The recursive version is *almost* tail-recursive (a recursive call followed by a union), which is why the conversion to a loop is mechanical.
@@ -149,13 +151,13 @@ struct Activity {
 };
 
 // GREEDY-ACTIVITY-SELECTOR: always take the compatible activity that finishes first.
-std::vector<int> activitySelect(std::vector<Activity> a) {
+vector<int> activitySelect(vector<Activity> a) {
     const int n = (int)a.size();
-    std::vector<int> idx(n);
-    std::iota(idx.begin(), idx.end(), 0);
-    std::sort(idx.begin(), idx.end(),
+    vector<int> idx(n);
+    iota(idx.begin(), idx.end(), 0);
+    sort(idx.begin(), idx.end(),
               [&](int i, int j) { return a[i].finish < a[j].finish; });
-    std::vector<int> chosen;
+    vector<int> chosen;
     int lastFinish = INT_MIN;
     for (int i : idx)
         if (a[i].start >= lastFinish) { chosen.push_back(i); lastFinish = a[i].finish; }
@@ -163,12 +165,12 @@ std::vector<int> activitySelect(std::vector<Activity> a) {
 }
 
 // Interval-graph colouring (Exercise 15.1-4): fewest lecture halls = max overlap.
-int minLectureHalls(const std::vector<Activity>& a) {
-    std::vector<std::pair<int, int>> events;               // (time, +1 start / -1 finish)
+int minLectureHalls(const vector<Activity>& a) {
+    vector<pair<int, int>> events;               // (time, +1 start / -1 finish)
     for (const auto& x : a) { events.push_back({x.start, +1}); events.push_back({x.finish, -1}); }
-    std::sort(events.begin(), events.end());               // finishes (-1) sort before starts at equal time
+    sort(events.begin(), events.end());               // finishes (-1) sort before starts at equal time
     int cur = 0, best = 0;
-    for (const auto& e : events) { cur += e.second; best = std::max(best, cur); }
+    for (const auto& e : events) { cur += e.second; best = max(best, cur); }
     return best;
 }
 ```
@@ -249,16 +251,16 @@ Capacity 50. **Greedy takes item 1** (highest density) and then can fit only ite
 #include <numeric>
 #include <vector>
 
-double fractionalKnapsack(std::vector<int> w, std::vector<double> v, double cap) {
+double fractionalKnapsack(vector<int> w, vector<double> v, double cap) {
     const int n = (int)w.size();
-    std::vector<int> idx(n);
-    std::iota(idx.begin(), idx.end(), 0);
-    std::sort(idx.begin(), idx.end(),                      // greedy: best value per pound first
+    vector<int> idx(n);
+    iota(idx.begin(), idx.end(), 0);
+    sort(idx.begin(), idx.end(),                      // greedy: best value per pound first
               [&](int i, int j) { return v[i] / w[i] > v[j] / w[j]; });
     double total = 0;
     for (int i : idx) {
         if (cap <= 0) break;
-        const double take = std::min((double)w[i], cap);
+        const double take = min((double)w[i], cap);
         total += v[i] * take / w[i];
         cap -= take;
     }
@@ -323,6 +325,8 @@ HUFFMAN(C)
 11  return EXTRACT-MIN(Q)              // the root is the only node left
 ```
 
+→ **C++ implementation:** [A2 HUFFMAN](#a2-huffman)
+
 **Bottom-up:** start with `|C|` leaves, perform `|C| − 1` merges. **Each merge combines the two least frequent objects.** Skiena's one-paragraph version says exactly the same thing: *"Sort the symbols in increasing order by frequency. We merge the two least-frequently used symbols `x` and `y` into a new symbol `xy`, whose frequency is the sum of its two child symbols… We now repeat this operation `n − 1` times until all symbols have been merged together."*
 
 **Running time.** `BUILD-MIN-HEAP` is `O(n)`; the loop runs `n − 1` times with `O(lg n)` heap operations ⟹ **`O(n lg n)`.**
@@ -378,17 +382,17 @@ struct HuffNode {
 
 struct HuffmanResult {
     long long cost;                                        // total encoded bits
-    std::map<char, std::string> code;
-    std::vector<HuffNode> nodes;
+    map<char, string> code;
+    vector<HuffNode> nodes;
     int root = -1;
 };
 
-HuffmanResult huffman(const std::map<char, long long>& freq) {
+HuffmanResult huffman(const map<char, long long>& freq) {
     HuffmanResult out{0, {}, {}, -1};
     if (freq.empty()) return out;
 
-    using Item = std::pair<long long, int>;                // (frequency, node index)
-    std::priority_queue<Item, std::vector<Item>, std::greater<Item>> q;
+    using Item = pair<long long, int>;                // (frequency, node index)
+    priority_queue<Item, vector<Item>, greater<Item>> q;
     for (const auto& kv : freq) {
         out.nodes.push_back({kv.second, kv.first, -1, -1});
         q.push({kv.second, (int)out.nodes.size() - 1});
@@ -407,8 +411,8 @@ HuffmanResult huffman(const std::map<char, long long>& freq) {
     }
     out.root = q.top().second;
 
-    std::string path;
-    std::function<void(int)> walk = [&](int u) {
+    string path;
+    function<void(int)> walk = [&](int u) {
         if (out.nodes[u].left < 0) {                       // leaf
             out.code[out.nodes[u].ch] = path;
             out.cost += out.nodes[u].freq * (long long)path.size();
@@ -421,17 +425,17 @@ HuffmanResult huffman(const std::map<char, long long>& freq) {
     return out;
 }
 
-std::string huffmanEncode(const HuffmanResult& h, const std::string& text) {
-    std::string bits;
+string huffmanEncode(const HuffmanResult& h, const string& text) {
+    string bits;
     for (char c : text) bits += h.code.at(c);
     return bits;
 }
 
-std::string huffmanDecode(const HuffmanResult& h, const std::string& bits) {
-    std::string out;
+string huffmanDecode(const HuffmanResult& h, const string& bits) {
+    string out;
     int u = h.root;
     if (h.nodes[u].left < 0) {                             // single-symbol alphabet
-        for (std::size_t i = 0; i < bits.size(); ++i) out += h.nodes[u].ch;
+        for (size_t i = 0; i < bits.size(); ++i) out += h.nodes[u].ch;
         return out;
     }
     for (char b : bits) {
@@ -517,18 +521,18 @@ At request `b_m = z` the two caches become identical, and from then on `S′` co
 #include <vector>
 
 // furthest-in-future: evict the cached block whose next use is latest (or never).
-int furthestInFutureMisses(const std::vector<int>& req, int k) {
-    std::set<int> cache;
+int furthestInFutureMisses(const vector<int>& req, int k) {
+    set<int> cache;
     int misses = 0;
-    for (std::size_t i = 0; i < req.size(); ++i) {
+    for (size_t i = 0; i < req.size(); ++i) {
         if (cache.count(req[i])) continue;                 // hit
         ++misses;
         if ((int)cache.size() < k) { cache.insert(req[i]); continue; }
         int victim = -1;
-        std::size_t victimNext = 0;
+        size_t victimNext = 0;
         for (int b : cache) {
-            std::size_t next = req.size();                 // "never used again"
-            for (std::size_t j = i + 1; j < req.size(); ++j)
+            size_t next = req.size();                 // "never used again"
+            for (size_t j = i + 1; j < req.size(); ++j)
                 if (req[j] == b) { next = j; break; }
             if (victim < 0 || next > victimNext) { victim = b; victimNext = next; }
         }
@@ -538,11 +542,11 @@ int furthestInFutureMisses(const std::vector<int>& req, int k) {
     return misses;
 }
 
-int lruMisses(const std::vector<int>& req, int k) {
-    std::vector<int> order;                                // front = least recent
+int lruMisses(const vector<int>& req, int k) {
+    vector<int> order;                                // front = least recent
     int misses = 0;
     for (int b : req) {
-        auto it = std::find(order.begin(), order.end(), b);
+        auto it = find(order.begin(), order.end(), b);
         if (it != order.end()) { order.erase(it); order.push_back(b); continue; }
         ++misses;
         if ((int)order.size() == k) order.erase(order.begin());
@@ -583,16 +587,16 @@ int lruMisses(const std::vector<int>& req, int k) {
 #include <algorithm>
 #include <vector>
 
-int coinChangeGreedy(std::vector<int> coins, int n) {
-    std::sort(coins.rbegin(), coins.rend());
+int coinChangeGreedy(vector<int> coins, int n) {
+    sort(coins.rbegin(), coins.rend());
     int used = 0;
     for (int c : coins) { used += n / c; n %= c; }
     return n == 0 ? used : -1;
 }
 
-int coinChangeDP(const std::vector<int>& coins, int n) {
+int coinChangeDP(const vector<int>& coins, int n) {
     const int INF = 1000000;
-    std::vector<int> best(n + 1, INF);
+    vector<int> best(n + 1, INF);
     best[0] = 0;
     for (int j = 1; j <= n; ++j)
         for (int c : coins)
@@ -622,8 +626,8 @@ int coinChangeDP(const std::vector<int>& coins, int n) {
 #include <vector>
 
 // Shortest-processing-time-first minimizes total (hence average) completion time.
-long long totalCompletionTime(std::vector<long long> p) {
-    std::sort(p.begin(), p.end());
+long long totalCompletionTime(vector<long long> p) {
+    sort(p.begin(), p.end());
     long long clock = 0, total = 0;
     for (long long x : p) { clock += x; total += clock; }
     return total;
@@ -723,6 +727,273 @@ long long totalCompletionTime(std::vector<long long> p) {
 - **Minimize average completion time:** shortest job first, by rearrangement/exchange.
 - **The one-line test:** *can I state the exchange argument in two sentences?* If not, look for a counterexample; if you find none but still can't prove it, use DP.
 - **And CLRS's warning:** *beneath every greedy algorithm, there is almost always a more cumbersome dynamic-programming solution.* If greedy is failing you, that DP is where to go.
+
+---
+
+## Practice — where to drill this module
+
+| Idea in this module | Problem | Why it's the right drill |
+|---|---|---|
+| Activity selection, verbatim | [435 · Non-overlapping Intervals](https://leetcode.com/problems/non-overlapping-intervals/) · [646 · Maximum Length of Pair Chain](https://leetcode.com/problems/maximum-length-of-pair-chain/) | sort by **finish** time and sweep — `A1` as a submission, twice |
+| The same greedy, disguised | [452 · Minimum Number of Arrows to Burst Balloons](https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/) | "minimum arrows" is "maximum non-overlapping" with the words changed; spotting that **is** the skill |
+| Interval bookkeeping | [57 · Insert Interval](https://leetcode.com/problems/insert-interval/) | greedy merge; the edge cases are the problem |
+| Huffman, exactly | [1167 · Minimum Cost to Connect Sticks](https://leetcode.com/problems/minimum-cost-to-connect-sticks/) | repeatedly merge the two smallest — this **is** `HUFFMAN`, with the tree thrown away |
+| Greedy with an exchange proof | [45 · Jump Game II](https://leetcode.com/problems/jump-game-ii/) · [55 · Jump Game](https://leetcode.com/problems/jump-game/) | the greedy is two lines and the proof is the interview |
+| Greedy that **fails** | [322 · Coin Change](https://leetcode.com/problems/coin-change/) | take the largest coin first and watch it break on `{1,3,4}`, target 6 — then write the DP ([M11](M11-dynamic-programming.md)) |
+| Greedy + heap | [253? use instead] [621 · Task Scheduler](https://leetcode.com/problems/task-scheduler/) *(if available)* · [1046 · Last Stone Weight](https://leetcode.com/problems/last-stone-weight/) | 1046 is Huffman's loop with `max` instead of `min` |
+| Greedy inside a graph algorithm | [1584 · Min Cost to Connect All Points](https://leetcode.com/problems/min-cost-to-connect-all-points/) | Kruskal and Prim are both greedy with a cut-property proof ([M14](M14-mst.md)) |
+
+**Beyond LeetCode.** [CSES Problem Set](https://cses.fi/problemset/) — *Sorting and Searching* is largely greedy. [Codeforces `greedy` tag](https://codeforces.com/problemset?tags=greedy) — the largest tag on the site, and the one where "I have a hunch" most often meets a counterexample.
+
+**The drill that matters here is not coding — it is the two-minute counterexample hunt from [M01](M01-foundations.md).** Before writing a greedy, try to break it with: ties, one huge element, one tiny element, and an instance where the locally best choice consumes a resource two later choices needed. If you cannot break it in two minutes, *then* look for the exchange argument.
+
+---
+
+## C++ Toolkit for This Module
+
+*Language material from Weiss, **Data Structures and Algorithm Analysis in C++**, 4th ed., §1.6.4 (function objects) and ch. 6 (priority queues).*
+
+### 1. Sorting by the right key is usually the whole algorithm
+
+Greedy algorithms are overwhelmingly "sort, then sweep". The comparator carries the algorithm:
+
+```cpp
+struct Job { int start, finish; int id; };
+
+void sortForActivitySelection(vector<Job>& a) {
+    // Sort by FINISH time. Sorting by start time, by duration, or by
+    // "fewest conflicts" all give WRONG answers on the counterexamples in
+    // section 1 of this module -- the comparator IS the algorithmic choice.
+    sort(a.begin(), a.end(),
+         [](const Job& x, const Job& y) { return x.finish < y.finish; });
+}
+```
+
+The comparator must be a **strict weak ordering** ([M05](M05-sorting.md) toolkit §1): `cmp(a,a)` must be `false`. `return x.finish <= y.finish;` is undefined behaviour and really does crash `std::sort` on large inputs.
+
+### 2. `priority_queue` is a MAX-heap; Huffman needs a MIN-heap
+
+```cpp
+void heapDirections() {
+    priority_queue<int> maxq;                                    // top() = largest
+    priority_queue<int, vector<int>, greater<int>> minq;         // top() = smallest
+    (void)maxq; (void)minq;
+}
+```
+
+The comparator is the **third** template argument, so you must spell out the container (`vector<int>`) even though you did not want to change it. `HUFFMAN` extracts the two **smallest** frequencies, so it needs the second form — and getting this backwards produces a valid-looking tree with the *worst* possible cost.
+
+### 3. Comparing pointers in a priority queue
+
+Huffman's queue holds tree **nodes**, not numbers. A `priority_queue<DemoNode*>` would order by *pointer address* — arbitrary, and different on every run:
+
+```cpp
+struct DemoNode { long long freq; char ch; DemoNode *left = nullptr, *right = nullptr; };
+
+struct ByFreq {                       // a function object [Weiss 1.6.4, p.42]
+    bool operator()(const DemoNode* a, const DemoNode* b) const {
+        return a->freq > b->freq;     // `>` because priority_queue is a MAX-heap
+    }                                 // and we want the MINIMUM on top
+};
+using DemoQueue = priority_queue<DemoNode*, vector<DemoNode*>, ByFreq>;
+```
+
+**Note the inversion:** to get a min-heap out of a max-heap you supply a comparator that reports the *reverse* order. This is the single most confusing line in C++ heap code, and writing it out as a named functor rather than an inline lambda makes it legible.
+
+### 4. Deterministic tie-breaking
+
+When two nodes have equal frequency, the order is arbitrary — and different orders give different (equally optimal) trees. That is fine mathematically and a nuisance in tests. Add a tiebreak field if you need reproducible output:
+
+```cpp
+struct ByFreqThenId {
+    bool operator()(const pair<long long,int>& a, const pair<long long,int>& b) const {
+        if (a.first != b.first) return a.first > b.first;
+        return a.second > b.second;    // stable, reproducible across runs
+    }
+};
+```
+
+### 5. Owning a tree built inside a function
+
+`HUFFMAN` allocates `n−1` internal nodes with `new`. Returning a raw `HuffNode*` makes ownership ambiguous — who calls `delete`? Two honest options:
+
+```cpp
+// (a) an arena: all nodes live in one vector, freed together; children are INDICES
+struct ArenaNode { long long freq; int ch; int left = -1, right = -1; };
+// (b) unique_ptr, so the tree is destroyed automatically when the root dies
+struct OwnedNode { long long freq; int ch; unique_ptr<OwnedNode> left, right; };
+```
+
+The appendix uses the **arena** form: it is the one that survives contact with a competitive-programming judge, has no allocation churn, and makes the whole tree trivially copyable and destroyable. It also sidesteps the Big-Five entirely ([M06](M06-elementary-ds.md) toolkit §2).
+
+### 6. `long long` for accumulated cost
+
+`B(T) = Σ c.freq · d_T(c)` sums frequencies times depths. With realistic file frequencies this overflows 32 bits quickly. Same reflex as everywhere else in these notes.
+
+---
+
+## Appendix — C++ for Every Pseudocode Block
+
+### A1 RECURSIVE-ACTIVITY-SELECTOR and GREEDY-ACTIVITY-SELECTOR
+
+*Pseudocode: §1, "Steps 3–4: the algorithms".*
+
+```cpp
+struct Activity {
+    int start = 0, finish = 0;
+    int id = 0;              // to report WHICH activities were chosen
+};
+
+// RECURSIVE-ACTIVITY-SELECTOR(s, f, k, n)
+// PRECONDITION: activities are sorted by finish time, and a "virtual" activity
+// a_0 with f[0] = 0 sits at index 0 so the first call k = 0 works uniformly.
+//
+// The recursion is TAIL recursive -- the recursive call's result is returned
+// with only a prepend -- which is precisely why the iterative version below
+// exists and why CLRS presents both.
+void recursiveActivitySelector(const vector<Activity>& a, int k, int n,
+                               vector<int>& chosen) {
+    int m = k + 1;                                   // 1  m = k + 1
+    while (m <= n && a[m].start < a[k].finish)       // 2  find the first activity in S_k
+        m = m + 1;                                   // 3
+    if (m <= n) {                                    // 4
+        chosen.push_back(a[m].id);                   // 5  {a_m} union RECURSIVE-...
+        recursiveActivitySelector(a, m, n, chosen);
+    }
+    // 6  else return empty -- nothing left that starts after a_k finishes
+}
+
+// GREEDY-ACTIVITY-SELECTOR(s, f, n): the same algorithm as a loop.
+// Note that `m` never moves backwards across the whole run, so the total work
+// is Theta(n) -- the while loop of the recursive version and the for loop here
+// scan the SAME sequence exactly once. This is an amortized argument
+// (M09): the inner scan looks nested but is bounded globally.
+vector<int> greedyActivitySelector(vector<Activity> a) {
+    if (a.empty()) return {};
+    // Sort by FINISH time. This is the greedy choice, and it is the only sort
+    // key that works (toolkit 1).
+    sort(a.begin(), a.end(),
+         [](const Activity& x, const Activity& y) { return x.finish < y.finish; });
+
+    vector<int> chosen;
+    chosen.push_back(a[0].id);                       // 1  A = {a_1}
+    int k = 0;                                       // 2  k = 1
+    for (int m = 1; m < (int)a.size(); ++m) {        // 3  for m = 2 to n
+        if (a[m].start >= a[k].finish) {             // 4      is a_m compatible?
+            chosen.push_back(a[m].id);               // 5      A = A union {a_m}
+            k = m;                                   // 6      k = m
+        }
+    }
+    return chosen;                                   // 7  return A
+}
+```
+
+**Complexity. `Θ(n)` after sorting, `Θ(n lg n)` including the sort.** Space `Θ(1)` beyond the output.
+
+**Theorem 15.1 — why it is optimal.** Let `S_k` be the activities that start after `a_k` finishes, and let `a_m` be the one in `S_k` with the **earliest finish time**. Then `a_m` is in *some* maximum-size subset of `S_k`.
+
+*Proof (exchange argument).* Let `A_k` be any maximum-size compatible subset of `S_k`, and let `a_j` be its earliest-finishing member. If `a_j = a_m`, done. Otherwise replace `a_j` by `a_m` in `A_k`. The activities in `A_k − {a_j}` all start at or after `f_j ≥ f_m`, so they remain compatible with `a_m`. The new set has the same size and contains `a_m`. ∎
+
+**The shape of that proof is the whole module:** take an arbitrary optimal solution, *exchange* one element for the greedy choice, show the result is still feasible and no worse. If you can do that, the greedy is correct.
+
+**Why the other three rules fail** (§1's table): *earliest start* lets one very long activity block everything; *shortest duration* lets a short activity wedged between two others kill both; *fewest conflicts* fails on a specific 11-activity instance. Only "earliest finish" is provably safe, because finishing soonest leaves the maximum possible room for everything after it.
+
+### A2 HUFFMAN
+
+*Pseudocode: §3, "The algorithm".*
+
+```cpp
+// ARENA representation (toolkit 5): every node lives in one vector, children
+// are INDICES rather than pointers. No new/delete, no Big-Five, no leaks, and
+// the whole tree is copyable and destructible for free.
+struct HuffTree {
+    struct Node {
+        long long freq = 0;
+        int ch = -1;                 // -1 for an internal node; else the character
+        int left = -1, right = -1;   // indices into `nodes`, -1 = none
+    };
+    vector<Node> nodes;
+    int root = -1;
+};
+
+// HUFFMAN(C): C is a map from character to frequency.
+HuffTree huffman(const vector<pair<char,long long>>& C) {
+    HuffTree t;
+    if (C.empty()) return t;
+
+    // The priority queue holds (freq, nodeIndex). `greater<>` makes it a
+    // MIN-heap (toolkit 2); the nodeIndex breaks ties deterministically
+    // (toolkit 4), so the same input always yields the same tree.
+    using Item = pair<long long,int>;
+    priority_queue<Item, vector<Item>, greater<Item>> Q;
+
+    for (const auto& [ch, f] : C) {                  // 2  Q = C
+        t.nodes.push_back({f, (int)(unsigned char)ch, -1, -1});
+        Q.push({f, (int)t.nodes.size() - 1});
+    }
+
+    // A single character is a special case the pseudocode glosses over: the
+    // loop runs zero times and the "tree" is one leaf with no code at all.
+    // Real encoders assign it the single bit 0.
+    if (Q.size() == 1) { t.root = Q.top().second; return t; }
+
+    for (size_t i = 1; i + 1 <= C.size() - 1 + 1 && Q.size() > 1; ++i) {   // 3  n-1 times
+        auto [fx, x] = Q.top(); Q.pop();             // 5  x = EXTRACT-MIN(Q)
+        auto [fy, y] = Q.top(); Q.pop();             // 6  y = EXTRACT-MIN(Q)
+        t.nodes.push_back({fx + fy, -1, x, y});      // 4,7,8,9  z.left=x, z.right=y,
+        //                                           //          z.freq = x.freq + y.freq
+        Q.push({fx + fy, (int)t.nodes.size() - 1});  // 10 INSERT(Q, z)
+        // NOTE: push_back may REALLOCATE t.nodes, invalidating any pointer into
+        // it (M09 toolkit 2). Storing INDICES rather than pointers is what makes
+        // that harmless -- an index survives reallocation, a pointer does not.
+    }
+    t.root = Q.top().second;                         // 11 the last node is the root
+    return t;
+}
+
+// Walk the tree to read off the codes: left = 0, right = 1.
+void huffmanCodes(const HuffTree& t, int node, string prefix,
+                  map<char,string>& out) {
+    if (node < 0) return;
+    const auto& nd = t.nodes[node];
+    if (nd.ch >= 0) { out[(char)nd.ch] = prefix.empty() ? "0" : prefix; return; }
+    huffmanCodes(t, nd.left,  prefix + '0', out);
+    huffmanCodes(t, nd.right, prefix + '1', out);
+}
+
+// B(T) = sum over characters of freq(c) * depth(c) -- the cost in BITS.
+long long huffmanCost(const HuffTree& t, int node, int depth = 0) {
+    if (node < 0) return 0;
+    const auto& nd = t.nodes[node];
+    if (nd.ch >= 0) return nd.freq * depth;          // a leaf contributes freq * depth
+    return huffmanCost(t, nd.left, depth + 1) + huffmanCost(t, nd.right, depth + 1);
+}
+
+// The same total, computed a completely different way: the sum of the MERGE
+// COSTS. Every merge of x and y adds (x.freq + y.freq), and each character's
+// frequency is counted once per merge it participates in -- which is exactly
+// its depth. B(T) = sum of the internal nodes' frequencies.
+long long huffmanCostByMerges(const HuffTree& t) {
+    long long total = 0;
+    for (const auto& nd : t.nodes)
+        if (nd.ch < 0) total += nd.freq;             // internal nodes only
+    return total;
+}
+```
+
+**Complexity. `O(n lg n)`** — `n` inserts and `2(n−1)` extract-mins, each `O(lg n)`. With the frequencies already sorted it drops to `O(n)` using two queues instead of a heap.
+
+**Why it is optimal — the two lemmas.**
+
+- **Lemma 15.2 (the greedy choice is safe).** Let `x` and `y` be the two characters of lowest frequency. There exists an optimal prefix code in which `x` and `y` have the same (maximum) depth and differ only in the last bit. *Proof:* take any optimal tree, let `a` and `b` be two sibling leaves of maximum depth, and **exchange** `x` with `a` and `y` with `b`. The cost change is `(a.freq − x.freq)(d_a − d_x) ≥ 0` in the right direction, so the new tree is no worse. ∎
+- **Lemma 15.3 (optimal substructure).** If `T` is optimal for the alphabet with `x` and `y` replaced by a merged character `z` of frequency `x.freq + y.freq`, then expanding `z` back into `x` and `y` gives an optimal tree for the original alphabet.
+
+**Theorem 15.4** is the two together: greedy choice + optimal substructure = HUFFMAN is optimal.
+
+**`B(T) = Σ merge costs` is worth internalising** — it is why "Minimum Cost to Connect Sticks" is Huffman, and why you can compute the answer without ever building the tree.
+
+**What Huffman does not do:** it is optimal *among prefix-free codes that assign a whole number of bits per symbol*. Arithmetic coding beats it whenever the ideal code length is fractional (a symbol with probability 0.9 wants 0.15 bits and Huffman must give it 1). And Huffman assumes the frequencies are known in advance — adaptive Huffman and LZ-family coders exist for streams.
+
 
 ---
 
