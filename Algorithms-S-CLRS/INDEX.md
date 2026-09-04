@@ -24,7 +24,7 @@ using namespace std;        // no std:: prefixes anywhere in these notes
 - **Third book used only for the C++ teaching**, not for algorithms: Mark Allen Weiss, *Data Structures and Algorithm Analysis in C++*, 4th ed. Cited as `[Weiss §1.5.3, p.25]`.
 - **Every module also ends with a `Practice` section** — specific problems by number and title on LeetCode, plus [CSES](https://cses.fi/problemset/) and Codeforces tag pages.
 
-**Verified state of the code and links:** 30 translation units (a body and an appendix per module) all compile under `g++ -std=c++17 -Wall -Wextra`; 435 internal links resolve with 0 broken; 95 `→ C++ implementation:` links cover all 71 procedure-pseudocode blocks plus 24 algorithmic recurrences and formulas.
+**Verified state of the code and links:** 40 translation units (a body and an appendix per module) all compile under `g++ -std=c++17 -Wall -Wextra`; 703 internal links resolve with 0 broken; 149 `→ C++ implementation:` links connect every pseudocode block in the notes to a runnable translation. Every algorithm is additionally checked by randomized differential testing against a brute-force oracle, and the results are recorded in the `*Verified:*` line under each implementation.
 
 ---
 
@@ -84,16 +84,16 @@ Page references look like `[CLRS §2.1, p.17]` and `[Skiena §1.3, p.11]` so you
 | [M13](M13-graphs-traversal.md) | Graph Representation & Traversal | CLRS 20 · Skiena 7 | ✅ |
 | [M14](M14-mst.md) | Minimum Spanning Trees | CLRS 21 · Skiena 8.1 | ✅ |
 | [M15](M15-shortest-paths.md) | Shortest Paths | CLRS 22–23 · Skiena 8.3–8.4 | ✅ |
-| M16 | Network Flow & Matching | CLRS 24–25 · Skiena 8.5 | ⏳ |
+| [M16](M16-network-flow.md) | Network Flow and Matching | CLRS 24–25 · Skiena 8.5–8.7 | ✅ |
 
 ### Part V — Search, Strings, Intractability
 
 | # | Module | Primary sources | Status |
 |---|---|---|---|
-| M17 | Combinatorial Search & Backtracking | Skiena 9 | ⏳ |
-| M18 | String Matching & Suffix Structures | CLRS 32 · Skiena 3.9, 21 | ⏳ |
-| M19 | NP-Completeness & Reductions | CLRS 34 · Skiena 11 | ⏳ |
-| M20 | Coping With Hard Problems | CLRS 35 · Skiena 12 | ⏳ |
+| [M17](M17-backtracking.md) | Combinatorial Search and Backtracking | Skiena 9 | ✅ |
+| [M18](M18-strings.md) | String Matching and Suffix Structures | CLRS 32 · Skiena 3.9, 15.3, 21 | ✅ |
+| [M19](M19-np-completeness.md) | NP-Completeness and Reductions | CLRS 34 · Skiena 11 | ✅ |
+| [M20](M20-heuristics.md) | Coping With Hard Problems | CLRS 35 · Skiena 12 | ✅ |
 
 ### Part VI — Specialized Topics
 
@@ -176,9 +176,9 @@ Use this when you want to read the *books* rather than the notes, and want the m
 3. M11 → M12 (DP and greedy — the highest-yield technique modules)
 4. M13 → M14 → M15 (graphs)
 5. M18 (strings), M17 (backtracking)
-6. M16 (flow), M19 (NP-completeness) — appear in senior interviews as "is this even tractable?"
+6. M16 (flow), M19 (NP-completeness), M20 (approximation) — appear in senior interviews as "is this even tractable, and what do I ship if it isn't?"
 7. M27 (cheat sheet) — revise weekly from here once modules are done
-8. M01, M04, M20–M26 as depth/breadth passes
+8. M01, M04, M21–M26 as depth/breadth passes
 
 **If you are studying for mastery:** front to back.
 

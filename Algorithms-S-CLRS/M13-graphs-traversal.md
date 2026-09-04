@@ -144,16 +144,16 @@ public:
     const vector<int>& adj(int u) const { return adj_[u]; }
 
     Graph transpose() const {                       // G^T: all edges reversed
-        Graph t(n(), true);
+        Graph reversed(n(), true);
         for (int u = 0; u < n(); ++u)
-            for (int v : adj_[u]) t.addEdge(v, u);
-        return t;
+            for (int v : adj_[u]) reversed.addEdge(v, u);
+        return reversed;
     }
 
     vector<vector<char>> toMatrix() const {
-        vector<vector<char>> a(n(), vector<char>(n(), 0));
-        for (int u = 0; u < n(); ++u) for (int v : adj_[u]) a[u][v] = 1;
-        return a;
+        vector<vector<char>> matrix(n(), vector<char>(n(), 0));
+        for (int u = 0; u < n(); ++u) for (int v : adj_[u]) matrix[u][v] = 1;
+        return matrix;
     }
 
 private:
@@ -269,44 +269,44 @@ struct BfsResult {
     vector<int> parent;                        // -1 == none
 };
 
-BfsResult bfs(const Graph& g, int s) {
-    BfsResult r{vector<int>(g.n(), -1), vector<int>(g.n(), -1)};
-    queue<int> q;
-    r.dist[s] = 0;
-    q.push(s);
-    while (!q.empty()) {
-        const int u = q.front(); q.pop();
-        for (int v : g.adj(u))
-            if (r.dist[v] < 0) {                    // v is WHITE: discover it
-                r.dist[v] = r.dist[u] + 1;
-                r.parent[v] = u;
-                q.push(v);
+BfsResult bfs(const Graph& graph, int source) {
+    BfsResult result{vector<int>(graph.n(), -1), vector<int>(graph.n(), -1)};
+    queue<int> frontier;
+    result.dist[source] = 0;
+    frontier.push(source);
+    while (!frontier.empty()) {
+        const int u = frontier.front(); frontier.pop();
+        for (int v : graph.adj(u))
+            if (result.dist[v] < 0) {                    // v is WHITE: discover it
+                result.dist[v] = result.dist[u] + 1;
+                result.parent[v] = u;
+                frontier.push(v);
             }
     }
-    return r;
+    return result;
 }
 
 // PRINT-PATH: the tree path from s to v is a shortest path in G.
-vector<int> bfsPath(const BfsResult& r, int s, int v) {
-    if (r.dist[v] < 0) return {};
+vector<int> bfsPath(const BfsResult& result, int source, int v) {
+    if (result.dist[v] < 0) return {};
     vector<int> path;
-    for (int x = v; x != -1; x = r.parent[x]) path.push_back(x);
+    for (int at = v; at != -1; at = result.parent[at]) path.push_back(at);
     reverse(path.begin(), path.end());
-    return path.front() == s ? path : vector<int>{};
+    return path.front() == source ? path : vector<int>{};
 }
 
 // Connected components of an undirected graph, one BFS per component.
-vector<int> connectedComponents(const Graph& g, int& count) {
-    vector<int> comp(g.n(), -1);
+vector<int> connectedComponents(const Graph& graph, int& count) {
+    vector<int> comp(graph.n(), -1);
     count = 0;
-    for (int s = 0; s < g.n(); ++s) {
-        if (comp[s] >= 0) continue;
-        queue<int> q;
-        comp[s] = count;
-        q.push(s);
-        while (!q.empty()) {
-            const int u = q.front(); q.pop();
-            for (int v : g.adj(u)) if (comp[v] < 0) { comp[v] = count; q.push(v); }
+    for (int source = 0; source < graph.n(); ++source) {
+        if (comp[source] >= 0) continue;
+        queue<int> frontier;
+        comp[source] = count;
+        frontier.push(source);
+        while (!frontier.empty()) {
+            const int u = frontier.front(); frontier.pop();
+            for (int v : graph.adj(u)) if (comp[v] < 0) { comp[v] = count; frontier.push(v); }
         }
         ++count;
     }
@@ -314,17 +314,17 @@ vector<int> connectedComponents(const Graph& g, int& count) {
 }
 
 // Two-colouring: colour each discovered vertex the opposite of its parent.
-bool twoColor(const Graph& g, vector<int>& color) {
-    color.assign(g.n(), -1);
-    for (int s = 0; s < g.n(); ++s) {
-        if (color[s] >= 0) continue;
-        color[s] = 0;
-        queue<int> q;
-        q.push(s);
-        while (!q.empty()) {
-            const int u = q.front(); q.pop();
-            for (int v : g.adj(u)) {
-                if (color[v] < 0) { color[v] = 1 - color[u]; q.push(v); }
+bool twoColor(const Graph& graph, vector<int>& color) {
+    color.assign(graph.n(), -1);
+    for (int source = 0; source < graph.n(); ++source) {
+        if (color[source] >= 0) continue;
+        color[source] = 0;
+        queue<int> frontier;
+        frontier.push(source);
+        while (!frontier.empty()) {
+            const int u = frontier.front(); frontier.pop();
+            for (int v : graph.adj(u)) {
+                if (color[v] < 0) { color[v] = 1 - color[u]; frontier.push(v); }
                 else if (color[v] == color[u]) return false;    // conflicting non-tree edge
             }
         }
@@ -434,57 +434,57 @@ struct DfsResult {
     bool hasBackEdge = false;
 };
 
-DfsResult dfs(const Graph& g) {
-    const int n = g.n();
-    DfsResult r{vector<int>(n, 0), vector<int>(n, 0), vector<int>(n, -1), {}, {}, false};
+DfsResult dfs(const Graph& graph) {
+    const int n = graph.n();
+    DfsResult result{vector<int>(n, 0), vector<int>(n, 0), vector<int>(n, -1), {}, {}, false};
     vector<int> color(n, 0);                   // 0 = white, 1 = gray, 2 = black
     int time = 0;
 
     function<void(int)> visit = [&](int u) {
-        r.disc[u] = ++time;
+        result.disc[u] = ++time;
         color[u] = 1;
-        for (int v : g.adj(u)) {
+        for (int v : graph.adj(u)) {
             if (color[v] == 0) {                    // WHITE -> tree edge
-                r.edges.push_back({{u, v}, TREE});
-                r.parent[v] = u;
+                result.edges.push_back({{u, v}, TREE});
+                result.parent[v] = u;
                 visit(v);
             } else if (color[v] == 1) {             // GRAY -> back edge
                 // for undirected graphs skip the edge back to the immediate parent
-                if (g.directed() || r.parent[u] != v) {
-                    r.edges.push_back({{u, v}, BACK});
-                    r.hasBackEdge = true;
+                if (graph.directed() || result.parent[u] != v) {
+                    result.edges.push_back({{u, v}, BACK});
+                    result.hasBackEdge = true;
                 }
             } else {                                // BLACK -> forward or cross
-                if (g.directed())
-                    r.edges.push_back({{u, v}, r.disc[u] < r.disc[v] ? FORWARD : CROSS});
+                if (graph.directed())
+                    result.edges.push_back({{u, v}, result.disc[u] < result.disc[v] ? FORWARD : CROSS});
             }
         }
-        r.fin[u] = ++time;
+        result.fin[u] = ++time;
         color[u] = 2;
-        r.order.push_back(u);
+        result.order.push_back(u);
     };
     for (int u = 0; u < n; ++u) if (color[u] == 0) visit(u);
-    return r;
+    return result;
 }
 
 // Exercise 20.3-6: DFS with an explicit stack instead of recursion.
-vector<int> dfsIterativeOrder(const Graph& g) {
-    const int n = g.n();
+vector<int> dfsIterativeOrder(const Graph& graph) {
+    const int n = graph.n();
     vector<int> color(n, 0), it(n, 0), finishOrder;
-    vector<int> stk;
-    for (int s = 0; s < n; ++s) {
-        if (color[s] != 0) continue;
-        color[s] = 1;
-        stk.push_back(s);
-        while (!stk.empty()) {
-            const int u = stk.back();
-            if (it[u] < (int)g.adj(u).size()) {
-                const int v = g.adj(u)[it[u]++];
-                if (color[v] == 0) { color[v] = 1; stk.push_back(v); }
+    vector<int> pending;
+    for (int source = 0; source < n; ++source) {
+        if (color[source] != 0) continue;
+        color[source] = 1;
+        pending.push_back(source);
+        while (!pending.empty()) {
+            const int u = pending.back();
+            if (it[u] < (int)graph.adj(u).size()) {
+                const int v = graph.adj(u)[it[u]++];
+                if (color[v] == 0) { color[v] = 1; pending.push_back(v); }
             } else {
                 color[u] = 2;
                 finishOrder.push_back(u);
-                stk.pop_back();
+                pending.pop_back();
             }
         }
     }
@@ -540,24 +540,24 @@ struct CutResult {
     vector<pair<int, int>> bridges;
 };
 
-CutResult articulationAndBridges(const Graph& g) {
-    const int n = g.n();
+CutResult articulationAndBridges(const Graph& graph) {
+    const int n = graph.n();
     vector<int> disc(n, 0), low(n, 0), parent(n, -1);
     vector<char> isArt(n, 0);
-    CutResult out;
+    CutResult result;
     int time = 0;
 
     function<void(int)> visit = [&](int u) {
         disc[u] = low[u] = ++time;
         int children = 0;
-        for (int v : g.adj(u)) {
+        for (int v : graph.adj(u)) {
             if (disc[v] == 0) {                     // tree edge
                 ++children;
                 parent[v] = u;
                 visit(v);
                 low[u] = min(low[u], low[v]);
                 if (parent[u] != -1 && low[v] >= disc[u]) isArt[u] = 1;
-                if (low[v] > disc[u]) out.bridges.push_back({min(u, v), max(u, v)});
+                if (low[v] > disc[u]) result.bridges.push_back({min(u, v), max(u, v)});
             } else if (v != parent[u]) {            // back edge (not to the immediate parent)
                 low[u] = min(low[u], disc[v]);
             }
@@ -565,9 +565,9 @@ CutResult articulationAndBridges(const Graph& g) {
         if (parent[u] == -1 && children > 1) isArt[u] = 1;    // root with 2+ children
     };
     for (int u = 0; u < n; ++u) if (disc[u] == 0) visit(u);
-    for (int u = 0; u < n; ++u) if (isArt[u]) out.articulation.push_back(u);
-    sort(out.bridges.begin(), out.bridges.end());
-    return out;
+    for (int u = 0; u < n; ++u) if (isArt[u]) result.articulation.push_back(u);
+    sort(result.bridges.begin(), result.bridges.end());
+    return result;
 }
 ```
 
@@ -647,53 +647,53 @@ Skiena adds a useful connection: *"DAGs are directed graphs where each vertex fo
 #include <vector>
 
 // DFS version: reverse of the finish order. Returns {} if a cycle exists.
-vector<int> topoSortDFS(const Graph& g) {
-    const auto r = dfs(g);
-    if (r.hasBackEdge) return {};
-    vector<int> out(r.order.rbegin(), r.order.rend());
-    return out;
+vector<int> topoSortDFS(const Graph& graph) {
+    const auto finished = dfs(graph);
+    if (finished.hasBackEdge) return {};
+    vector<int> sorted(finished.order.rbegin(), finished.order.rend());
+    return sorted;
 }
 
 // Exercise 20.4-5, Kahn's algorithm: repeatedly remove a vertex of in-degree 0.
-vector<int> topoSortKahn(const Graph& g) {
-    const int n = g.n();
+vector<int> topoSortKahn(const Graph& graph) {
+    const int n = graph.n();
     vector<int> indeg(n, 0);
-    for (int u = 0; u < n; ++u) for (int v : g.adj(u)) ++indeg[v];
-    vector<int> ready, out;
+    for (int u = 0; u < n; ++u) for (int v : graph.adj(u)) ++indeg[v];
+    vector<int> ready, sorted;
     for (int u = 0; u < n; ++u) if (indeg[u] == 0) ready.push_back(u);
     while (!ready.empty()) {
         const int u = ready.back(); ready.pop_back();
-        out.push_back(u);
-        for (int v : g.adj(u)) if (--indeg[v] == 0) ready.push_back(v);
+        sorted.push_back(u);
+        for (int v : graph.adj(u)) if (--indeg[v] == 0) ready.push_back(v);
     }
-    return (int)out.size() == n ? out : vector<int>{};
+    return (int)sorted.size() == n ? sorted : vector<int>{};
 }
 
 // Exercise 20.4-2: count simple paths a -> b in a DAG, in topological order.
-long long countPathsDAG(const Graph& g, int a, int b) {
-    const auto order = topoSortDFS(g);
-    if (order.empty() && g.n() > 0) return -1;                 // not a DAG
-    vector<long long> ways(g.n(), 0);
-    ways[a] = 1;
+long long countPathsDAG(const Graph& graph, int from, int to) {
+    const auto order = topoSortDFS(graph);
+    if (order.empty() && graph.n() > 0) return -1;                 // not a DAG
+    vector<long long> ways(graph.n(), 0);
+    ways[from] = 1;
     for (int u : order)
         if (ways[u] > 0)
-            for (int v : g.adj(u)) ways[v] += ways[u];
-    return ways[b];
+            for (int v : graph.adj(u)) ways[v] += ways[u];
+    return ways[to];
 }
 
 // Kosaraju / CLRS: DFS on G for finish times, then DFS on G^T in decreasing order.
-vector<int> sccKosaraju(const Graph& g, int& count) {
-    const auto first = dfs(g);                                  // first.order is by finish time
-    const Graph gt = g.transpose();
-    vector<int> comp(g.n(), -1);
+vector<int> sccKosaraju(const Graph& graph, int& count) {
+    const auto first = dfs(graph);                                  // first.order is by finish time
+    const Graph gt = graph.transpose();
+    vector<int> comp(graph.n(), -1);
     count = 0;
     for (auto it = first.order.rbegin(); it != first.order.rend(); ++it) {
         if (comp[*it] >= 0) continue;
-        vector<int> stk{*it};
+        vector<int> pending{*it};
         comp[*it] = count;
-        while (!stk.empty()) {
-            const int u = stk.back(); stk.pop_back();
-            for (int v : gt.adj(u)) if (comp[v] < 0) { comp[v] = count; stk.push_back(v); }
+        while (!pending.empty()) {
+            const int u = pending.back(); pending.pop_back();
+            for (int v : gt.adj(u)) if (comp[v] < 0) { comp[v] = count; pending.push_back(v); }
         }
         ++count;
     }
@@ -701,24 +701,24 @@ vector<int> sccKosaraju(const Graph& g, int& count) {
 }
 
 // Tarjan: one pass, using low-link values and a stack of "open" vertices.
-vector<int> sccTarjan(const Graph& g, int& count) {
-    const int n = g.n();
-    vector<int> disc(n, 0), low(n, 0), comp(n, -1), stk;
+vector<int> sccTarjan(const Graph& graph, int& count) {
+    const int n = graph.n();
+    vector<int> disc(n, 0), low(n, 0), comp(n, -1), pending;
     vector<char> onStack(n, 0);
     int time = 0;
     count = 0;
 
     function<void(int)> visit = [&](int u) {
         disc[u] = low[u] = ++time;
-        stk.push_back(u);
+        pending.push_back(u);
         onStack[u] = 1;
-        for (int v : g.adj(u)) {
+        for (int v : graph.adj(u)) {
             if (disc[v] == 0) { visit(v); low[u] = min(low[u], low[v]); }
             else if (onStack[v])  low[u] = min(low[u], disc[v]);
         }
         if (low[u] == disc[u]) {                                // u roots an SCC
             for (;;) {
-                const int w = stk.back(); stk.pop_back();
+                const int w = pending.back(); pending.pop_back();
                 onStack[w] = 0;
                 comp[w] = count;
                 if (w == u) break;
@@ -731,14 +731,14 @@ vector<int> sccTarjan(const Graph& g, int& count) {
 }
 
 // Exercise 20.5-5: the component (condensation) graph, with no duplicate edges.
-Graph condensation(const Graph& g, const vector<int>& comp, int count) {
-    Graph c(count, true);
+Graph condensation(const Graph& graph, const vector<int>& comp, int count) {
+    Graph componentCount(count, true);
     set<pair<int, int>> seen;
-    for (int u = 0; u < g.n(); ++u)
-        for (int v : g.adj(u))
+    for (int u = 0; u < graph.n(); ++u)
+        for (int v : graph.adj(u))
             if (comp[u] != comp[v] && seen.insert({comp[u], comp[v]}).second)
-                c.addEdge(comp[u], comp[v]);
-    return c;
+                componentCount.addEdge(comp[u], comp[v]);
+    return componentCount;
 }
 ```
 
@@ -870,11 +870,11 @@ Graph condensation(const Graph& g, const vector<int>& comp, int count) {
 
 ```cpp
 void traversalContainers() {
-    queue<int> q;      // FIFO -- push()/front()/pop(). BFS.
-    stack<int> s;      // LIFO -- push()/top()/pop().   DFS.
+    queue<int> fifo;      // FIFO -- push()/front()/pop(). BFS.
+    stack<int> lifo;      // LIFO -- push()/top()/pop().   DFS.
     // Note the asymmetry that trips everyone up: queue has front(), stack has
     // top(). And NEITHER pop() returns the element -- you must read it first.
-    (void)q; (void)s;
+    (void)fifo; (void)lifo;
 }
 ```
 
@@ -959,29 +959,29 @@ enum class VColor { White, Gray, Black };
 
 ```cpp
 struct BfsOutput {
-    vector<int> d;      // d[v] = number of edges on a shortest path s -> v, -1 if unreachable
-    vector<int> pi;     // pi[v] = predecessor in the BFS tree, -1 = NIL
+    vector<int> distance;      // d[v] = number of edges on a shortest path s -> v, -1 if unreachable
+    vector<int> parent;     // pi[v] = predecessor in the BFS tree, -1 = NIL
 };
 
-BfsOutput bfs(const AdjGraph& g, int s) {
-    BfsOutput r;
-    r.d.assign(g.n, -1);                             // 1-2  u.d = infinity (encoded as -1)
-    r.pi.assign(g.n, -1);                            //      u.pi = NIL
-    vector<VColor> color(g.n, VColor::White);        //      u.color = WHITE
+BfsOutput bfs(const AdjGraph& graph, int source) {
+    BfsOutput result;
+    result.distance.assign(graph.n, -1);                             // 1-2  u.d = infinity (encoded as -1)
+    result.parent.assign(graph.n, -1);                            //      u.pi = NIL
+    vector<VColor> color(graph.n, VColor::White);        //      u.color = WHITE
 
-    color[s] = VColor::Gray;                         // 5  s.color = GRAY
-    r.d[s] = 0;                                      //    s.d = 0
-    queue<int> Q;                                    // 8  Q = empty
-    Q.push(s);                                       //    ENQUEUE(Q, s)
+    color[source] = VColor::Gray;                         // 5  s.color = GRAY
+    result.distance[source] = 0;                                      //    s.d = 0
+    queue<int> frontier;                                    // 8  Q = empty
+    frontier.push(source);                                       //    ENQUEUE(Q, s)
 
-    while (!Q.empty()) {                             // 10
-        int u = Q.front(); Q.pop();                  // 11 u = DEQUEUE(Q)
-        for (int v : g.adj[u]) {                     // 12 for each v in Adj[u]
+    while (!frontier.empty()) {                             // 10
+        int u = frontier.front(); frontier.pop();                  // 11 u = DEQUEUE(Q)
+        for (int v : graph.adj[u]) {                     // 12 for each v in Adj[u]
             if (color[v] == VColor::White) {         // 13
                 color[v] = VColor::Gray;             // 14
-                r.d[v] = r.d[u] + 1;
-                r.pi[v] = u;
-                Q.push(v);                           // 17 ENQUEUE(Q, v)
+                result.distance[v] = result.distance[u] + 1;
+                result.parent[v] = u;
+                frontier.push(v);                           // 17 ENQUEUE(Q, v)
                 // MARK ON ENQUEUE, not on dequeue. If you mark when you dequeue,
                 // a vertex reachable from two frontier vertices is enqueued
                 // twice, and the queue can grow to Theta(E). Correctness
@@ -990,16 +990,16 @@ BfsOutput bfs(const AdjGraph& g, int s) {
         }
         color[u] = VColor::Black;                    // 18 u.color = BLACK
     }
-    return r;
+    return result;
 }
 
 // Recover a shortest path by walking pi backwards, then reversing.
-vector<int> bfsPath(const BfsOutput& r, int s, int v) {
-    if (r.d[v] < 0) return {};                       // unreachable
+vector<int> bfsPath(const BfsOutput& result, int source, int v) {
+    if (result.distance[v] < 0) return {};                       // unreachable
     vector<int> path;
-    for (int x = v; x != -1; x = r.pi[x]) path.push_back(x);
+    for (int at = v; at != -1; at = result.parent[at]) path.push_back(at);
     reverse(path.begin(), path.end());
-    return path.front() == s ? path : vector<int>{};
+    return path.front() == source ? path : vector<int>{};
 }
 ```
 
@@ -1020,43 +1020,43 @@ vector<int> bfsPath(const BfsOutput& r, int s, int v) {
 
 ```cpp
 struct DfsOutput {
-    vector<int> d, f;       // discovery and finish times, 1..2V
-    vector<int> pi;
+    vector<int> discovery, finish;       // discovery and finish times, 1..2V
+    vector<int> parent;
     vector<int> finishOrder;   // vertices in increasing finish time
 };
 
 // The recursive form -- CLRS's, line for line. Depth is O(V) (toolkit 2).
 class DfsRunner {
 public:
-    explicit DfsRunner(const AdjGraph& g) : g_(g) {}
+    explicit DfsRunner(const AdjGraph& graph) : graph_(graph) {}
 
     DfsOutput run() {
-        out_.d.assign(g_.n, 0);
-        out_.f.assign(g_.n, 0);
-        out_.pi.assign(g_.n, -1);                    // 1-3  u.color = WHITE, u.pi = NIL
-        color_.assign(g_.n, VColor::White);
+        result_.discovery.assign(graph_.n, 0);
+        result_.finish.assign(graph_.n, 0);
+        result_.parent.assign(graph_.n, -1);                    // 1-3  u.color = WHITE, u.pi = NIL
+        color_.assign(graph_.n, VColor::White);
         time_ = 0;                                   // 4  time = 0
-        for (int u = 0; u < g_.n; ++u)               // 5  for each u in G.V
+        for (int u = 0; u < graph_.n; ++u)               // 5  for each u in G.V
             if (color_[u] == VColor::White)          // 6      if u.color == WHITE
                 visit(u);                            // 7          DFS-VISIT(G, u)
-        return out_;
+        return result_;
     }
 private:
     void visit(int u) {
-        out_.d[u] = ++time_;                         // 1-2  time = time+1; u.d = time
+        result_.discovery[u] = ++time_;                         // 1-2  time = time+1; u.d = time
         color_[u] = VColor::Gray;                    // 3  u.color = GRAY
-        for (int v : g_.adj[u]) {                    // 4  for each v in Adj[u]
+        for (int v : graph_.adj[u]) {                    // 4  for each v in Adj[u]
             if (color_[v] == VColor::White) {        // 5
-                out_.pi[v] = u;                      // 6
+                result_.parent[v] = u;                      // 6
                 visit(v);                            // 7
             }
         }
-        out_.f[u] = ++time_;                         // 8-9  time = time+1; u.f = time
+        result_.finish[u] = ++time_;                         // 8-9  time = time+1; u.f = time
         color_[u] = VColor::Black;                   // 10
-        out_.finishOrder.push_back(u);               // the order topological sort wants
+        result_.finishOrder.push_back(u);               // the order topological sort wants
     }
-    const AdjGraph& g_;
-    DfsOutput out_;
+    const AdjGraph& graph_;
+    DfsOutput result_;
     vector<VColor> color_;
     int time_ = 0;
 };
@@ -1067,39 +1067,39 @@ private:
 // ENDS, so an explicit stack must remember HOW FAR THROUGH that loop each frame
 // is. `iter[u]` is that per-frame iterator; without it you cannot compute
 // correct finish times, and finish times are the whole point of DFS.
-DfsOutput dfsIterative(const AdjGraph& g) {
-    DfsOutput out;
-    out.d.assign(g.n, 0);
-    out.f.assign(g.n, 0);
-    out.pi.assign(g.n, -1);
-    vector<VColor> color(g.n, VColor::White);
-    vector<size_t> iter(g.n, 0);                     // next neighbour index per vertex
+DfsOutput dfsIterative(const AdjGraph& graph) {
+    DfsOutput result;
+    result.discovery.assign(graph.n, 0);
+    result.finish.assign(graph.n, 0);
+    result.parent.assign(graph.n, -1);
+    vector<VColor> color(graph.n, VColor::White);
+    vector<size_t> iter(graph.n, 0);                     // next neighbour index per vertex
     int time = 0;
 
-    for (int s = 0; s < g.n; ++s) {
-        if (color[s] != VColor::White) continue;
-        vector<int> stk{s};
-        color[s] = VColor::Gray;
-        out.d[s] = ++time;
-        while (!stk.empty()) {
-            int u = stk.back();
-            if (iter[u] < g.adj[u].size()) {
-                int v = g.adj[u][iter[u]++];         // advance THIS frame's iterator
+    for (int source = 0; source < graph.n; ++source) {
+        if (color[source] != VColor::White) continue;
+        vector<int> pending{source};
+        color[source] = VColor::Gray;
+        result.discovery[source] = ++time;
+        while (!pending.empty()) {
+            int u = pending.back();
+            if (iter[u] < graph.adj[u].size()) {
+                int v = graph.adj[u][iter[u]++];         // advance THIS frame's iterator
                 if (color[v] == VColor::White) {
                     color[v] = VColor::Gray;
-                    out.d[v] = ++time;
-                    out.pi[v] = u;
-                    stk.push_back(v);
+                    result.discovery[v] = ++time;
+                    result.parent[v] = u;
+                    pending.push_back(v);
                 }
             } else {                                  // neighbours exhausted: finish u
-                out.f[u] = ++time;
+                result.finish[u] = ++time;
                 color[u] = VColor::Black;
-                out.finishOrder.push_back(u);
-                stk.pop_back();
+                result.finishOrder.push_back(u);
+                pending.pop_back();
             }
         }
     }
-    return out;
+    return result;
 }
 ```
 
@@ -1128,19 +1128,19 @@ DfsOutput dfsIterative(const AdjGraph& g) {
 ```cpp
 // DFS-based: run DFS, then reverse the finish order.
 // Returns {} if the graph has a cycle (no topological order exists).
-vector<int> topologicalSortDFS(const AdjGraph& g) {
-    DfsOutput r = dfsIterative(g);
+vector<int> topologicalSortDFS(const AdjGraph& graph) {
+    DfsOutput finished = dfsIterative(graph);
     // 2  "as each vertex is finished, insert it onto the FRONT of a list"
     //    -- which is the same as collecting finishes and reversing.
-    vector<int> order(r.finishOrder.rbegin(), r.finishOrder.rend());
+    vector<int> order(finished.finishOrder.rbegin(), finished.finishOrder.rend());
 
     // The pseudocode assumes a DAG. Verify it, because a "topological order" of
     // a cyclic graph is silently meaningless: check that every edge goes
     // forwards in the order produced.
-    vector<int> pos(g.n);
-    for (int i = 0; i < g.n; ++i) pos[order[i]] = i;
-    for (int u = 0; u < g.n; ++u)
-        for (int v : g.adj[u])
+    vector<int> pos(graph.n);
+    for (int i = 0; i < graph.n; ++i) pos[order[i]] = i;
+    for (int u = 0; u < graph.n; ++u)
+        for (int v : graph.adj[u])
             if (pos[u] > pos[v]) return {};          // a back edge: cycle
     return order;
 }
@@ -1149,23 +1149,23 @@ vector<int> topologicalSortDFS(const AdjGraph& g) {
 // Same Theta(V+E), no recursion, and it DETECTS the cycle for free -- if fewer
 // than n vertices are emitted, the rest are stuck in a cycle. This is the one
 // to write in an interview.
-vector<int> topologicalSortKahn(const AdjGraph& g) {
-    vector<int> indeg(g.n, 0);
-    for (int u = 0; u < g.n; ++u)
-        for (int v : g.adj[u]) ++indeg[v];
+vector<int> topologicalSortKahn(const AdjGraph& graph) {
+    vector<int> indeg(graph.n, 0);
+    for (int u = 0; u < graph.n; ++u)
+        for (int v : graph.adj[u]) ++indeg[v];
 
-    queue<int> q;
-    for (int v = 0; v < g.n; ++v) if (indeg[v] == 0) q.push(v);
+    queue<int> ready;
+    for (int v = 0; v < graph.n; ++v) if (indeg[v] == 0) ready.push(v);
 
     vector<int> order;
-    order.reserve(g.n);
-    while (!q.empty()) {
-        int u = q.front(); q.pop();
+    order.reserve(graph.n);
+    while (!ready.empty()) {
+        int u = ready.front(); ready.pop();
         order.push_back(u);
-        for (int v : g.adj[u])
-            if (--indeg[v] == 0) q.push(v);          // u was v's last prerequisite
+        for (int v : graph.adj[u])
+            if (--indeg[v] == 0) ready.push(v);          // u was v's last prerequisite
     }
-    return (int)order.size() == g.n ? order : vector<int>{};   // short = cycle
+    return (int)order.size() == graph.n ? order : vector<int>{};   // short = cycle
 }
 ```
 
@@ -1184,29 +1184,29 @@ vector<int> topologicalSortKahn(const AdjGraph& g) {
 // Returns comp[v] = component id, numbered in reverse topological order of the
 // condensation (so every edge between components goes from a LOWER id to a
 // HIGHER one -- a property worth having, and free).
-vector<int> sccKosaraju(const AdjGraph& g) {
+vector<int> sccKosaraju(const AdjGraph& graph) {
     // 1  DFS on G to compute finish times
-    DfsOutput first = dfsIterative(g);
+    DfsOutput first = dfsIterative(graph);
 
     // 2  create G^T
-    AdjGraph gt(g.n);
-    for (int u = 0; u < g.n; ++u)
-        for (int v : g.adj[u]) gt.addDirected(v, u);
+    AdjGraph gt(graph.n);
+    for (int u = 0; u < graph.n; ++u)
+        for (int v : graph.adj[u]) gt.addDirected(v, u);
 
     // 3  DFS on G^T, considering vertices in order of DECREASING finish time
-    vector<int> comp(g.n, -1);
-    int c = 0;
+    vector<int> comp(graph.n, -1);
+    int componentId = 0;
     for (auto it = first.finishOrder.rbegin(); it != first.finishOrder.rend(); ++it) {
         if (comp[*it] != -1) continue;
         // Iterative flood fill: each tree of this second forest is one SCC.
-        vector<int> stk{*it};
-        comp[*it] = c;
-        while (!stk.empty()) {
-            int u = stk.back(); stk.pop_back();
+        vector<int> pending{*it};
+        comp[*it] = componentId;
+        while (!pending.empty()) {
+            int u = pending.back(); pending.pop_back();
             for (int v : gt.adj[u])
-                if (comp[v] == -1) { comp[v] = c; stk.push_back(v); }
+                if (comp[v] == -1) { comp[v] = componentId; pending.push_back(v); }
         }
-        ++c;                                          // 4  one tree = one SCC
+        ++componentId;                                          // 4  one tree = one SCC
     }
     return comp;
 }
@@ -1216,24 +1216,24 @@ vector<int> sccKosaraju(const AdjGraph& g) {
 // low[u] = the smallest index reachable from u's subtree using tree edges plus
 // AT MOST ONE back edge. When low[u] == index[u], u is the ROOT of an SCC, and
 // everything above u on the stack is that component.
-vector<int> sccTarjan(const AdjGraph& g) {
-    vector<int> index(g.n, -1), low(g.n, 0), comp(g.n, -1), stk;
-    vector<char> onStack(g.n, 0);
-    vector<size_t> iter(g.n, 0);
-    int counter = 0, c = 0;
+vector<int> sccTarjan(const AdjGraph& graph) {
+    vector<int> index(graph.n, -1), low(graph.n, 0), comp(graph.n, -1), pending;
+    vector<char> onStack(graph.n, 0);
+    vector<size_t> iter(graph.n, 0);
+    int counter = 0, componentId = 0;
 
-    for (int s = 0; s < g.n; ++s) {
-        if (index[s] != -1) continue;
-        vector<int> call{s};                          // explicit call stack (toolkit 2)
-        index[s] = low[s] = counter++;
-        stk.push_back(s); onStack[s] = 1;
+    for (int source = 0; source < graph.n; ++source) {
+        if (index[source] != -1) continue;
+        vector<int> call{source};                          // explicit call stack (toolkit 2)
+        index[source] = low[source] = counter++;
+        pending.push_back(source); onStack[source] = 1;
         while (!call.empty()) {
             int u = call.back();
-            if (iter[u] < g.adj[u].size()) {
-                int v = g.adj[u][iter[u]++];
+            if (iter[u] < graph.adj[u].size()) {
+                int v = graph.adj[u][iter[u]++];
                 if (index[v] == -1) {                 // tree edge: descend
                     index[v] = low[v] = counter++;
-                    stk.push_back(v); onStack[v] = 1;
+                    pending.push_back(v); onStack[v] = 1;
                     call.push_back(v);
                 } else if (onStack[v]) {              // back/cross edge INSIDE the
                     low[u] = min(low[u], index[v]);   // current component
@@ -1246,31 +1246,31 @@ vector<int> sccTarjan(const AdjGraph& g) {
                 if (!call.empty()) low[call.back()] = min(low[call.back()], low[u]);
                 if (low[u] == index[u]) {             // u roots an SCC
                     for (;;) {
-                        int w = stk.back(); stk.pop_back(); onStack[w] = 0;
-                        comp[w] = c;
-                        if (w == u) break;
+                        int popped = pending.back(); pending.pop_back(); onStack[popped] = 0;
+                        comp[popped] = componentId;
+                        if (popped == u) break;
                     }
-                    ++c;
+                    ++componentId;
                 }
             }
         }
     }
     // Tarjan emits components in REVERSE topological order; flip the ids so the
     // convention matches Kosaraju's above.
-    for (int& x : comp) x = c - 1 - x;
+    for (int& x : comp) x = componentId - 1 - x;
     return comp;
 }
 
 // The CONDENSATION: contract each SCC to a single vertex. The result is ALWAYS
 // a DAG -- if it had a cycle, all the components on that cycle would be
 // mutually reachable and would therefore be one component, a contradiction.
-AdjGraph condensation(const AdjGraph& g, const vector<int>& comp) {
-    int c = 0;
-    for (int x : comp) c = max(c, x + 1);
-    AdjGraph dag(c);
+AdjGraph condensation(const AdjGraph& graph, const vector<int>& comp) {
+    int componentId = 0;
+    for (int x : comp) componentId = max(componentId, x + 1);
+    AdjGraph dag(componentId);
     set<pair<int,int>> seen;                          // de-duplicate parallel edges
-    for (int u = 0; u < g.n; ++u)
-        for (int v : g.adj[u])
+    for (int u = 0; u < graph.n; ++u)
+        for (int v : graph.adj[u])
             if (comp[u] != comp[v] && seen.insert({comp[u], comp[v]}).second)
                 dag.addDirected(comp[u], comp[v]);
     return dag;

@@ -183,6 +183,16 @@
   },
   "active": "d82e221421c41906",
   "lastOpenFiles": [
+    "Algorithms-S-CLRS/M20-heuristics.md",
+    "Algorithms-S-CLRS/M19-np-completeness.md",
+    "Algorithms-S-CLRS/M18-strings.md",
+    "Algorithms-S-CLRS/M17-backtracking.md",
+    "Algorithms-S-CLRS/M16-network-flow.md",
+    "00.DONE/01-SlidingWindowAlgorithm/archive/sliding_window_AV_notes.md",
+    "00.DONE/01-SlidingWindowAlgorithm/Sliding_Window_Notes_CPP.md",
+    "Algorithms-S-CLRS/pdfs/using/Archive.zip",
+    "Algorithms-S-CLRS/pdfs/using/README.pdf",
+    "Algorithms-S-CLRS/pdfs/using/INDEX.pdf",
     "Algorithms-S-CLRS/pdfs/using/M11-dynamic-programming.pdf",
     "Algorithms-S-CLRS/pdfs/using/M10-union-find.pdf",
     "Algorithms-S-CLRS/pdfs/using/M09-amortized.pdf",
@@ -190,10 +200,6 @@
     "Algorithms-S-CLRS/pdfs/using/M07-hashing.pdf",
     "Algorithms-S-CLRS/pdfs/using/M06-elementary-ds.pdf",
     "Algorithms-S-CLRS/pdfs/using/M05-sorting.pdf",
-    "Algorithms-S-CLRS/pdfs/using/M04-randomization.pdf",
-    "Algorithms-S-CLRS/pdfs/using/M03-divide-conquer.pdf",
-    "Algorithms-S-CLRS/pdfs/using/M02-asymptotics.pdf",
-    "Algorithms-S-CLRS/pdfs/using/M01-foundations.pdf",
     "Algorithms-S-CLRS/RENAME-PASS-STATUS.md",
     "Algorithms-S-CLRS/M15-shortest-paths.md",
     "Algorithms-S-CLRS/M14-mst.md",
@@ -212,12 +218,6 @@
     "Algorithms-S-CLRS/M02-asymptotics.md",
     "Algorithms-S-CLRS/M01-foundations.md",
     "Algorithms-S-CLRS/INDEX.md",
-    "Algorithms-S-CLRS/M08-searchtrees.md",
-    "Algorithms-S-CLRS/M06-elementaryds.md",
-    "Algorithms-S-CLRS/M03divideconquer.md",
-    "Algorithms-S-CLRS/M03-divideconquer.md",
-    "Algorithms-S-CLRS/M15shortestpaths.md",
-    "Algorithms-S-CLRS/M14mst.md",
-    "Algorithms-S-CLRS/M13graphstraversal.md"
+    "Algorithms-S-CLRS/M08-searchtrees.md"
   ]
 }

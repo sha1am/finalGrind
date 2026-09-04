@@ -177,36 +177,36 @@ struct Graph {                          // directed, weighted
 };
 
 struct SSSP {
-    vector<long long> d;    // d[v] = shortest-path estimate
-    vector<int> pi;         // pi[v] = predecessor, -1 = NIL
+    vector<long long> dist;    // d[v] = shortest-path estimate
+    vector<int> parent;         // pi[v] = predecessor, -1 = NIL
 };
 
-void initializeSingleSource(const Graph& g, int s, SSSP& r) {
-    r.d.assign(g.n, INF);
-    r.pi.assign(g.n, -1);
-    r.d[s] = 0;
+void initializeSingleSource(const Graph& graph, int source, SSSP& result) {
+    result.dist.assign(graph.n, INF);
+    result.parent.assign(graph.n, -1);
+    result.dist[source] = 0;
 }
 
 // The one operation every algorithm in this module is built from.
-bool relax(int u, int v, long long w, SSSP& r) {
-    if (r.d[u] == INF) return false;             // never relax out of "unreachable"
-    if (r.d[v] > r.d[u] + w) {
-        r.d[v] = r.d[u] + w;
-        r.pi[v] = u;
+bool relax(int u, int v, long long w, SSSP& result) {
+    if (result.dist[u] == INF) return false;             // never relax out of "unreachable"
+    if (result.dist[v] > result.dist[u] + w) {
+        result.dist[v] = result.dist[u] + w;
+        result.parent[v] = u;
         return true;
     }
     return false;
 }
 
 // Walk the predecessor chain backwards, then reverse.  Empty ⟹ v unreachable.
-vector<int> extractPath(const SSSP& r, int s, int v) {
-    if (r.d[v] == INF) return {};
+vector<int> extractPath(const SSSP& result, int source, int v) {
+    if (result.dist[v] == INF) return {};
     vector<int> path;
-    for (int x = v; x != -1; x = r.pi[x]) {
-        path.push_back(x);
-        if (x == s) break;
+    for (int at = v; at != -1; at = result.parent[at]) {
+        path.push_back(at);
+        if (at == source) break;
     }
-    if (path.back() != s) return {};
+    if (path.back() != source) return {};
     reverse(path.begin(), path.end());
     return path;
 }
@@ -293,64 +293,64 @@ That's it. The algorithm is a brute-force way to guarantee the hypothesis of Lem
 ```cpp
 struct BellmanFordResult {
     bool ok;        // false ⟺ a negative-weight cycle is reachable from s
-    SSSP r;
+    SSSP result;
 };
 
-BellmanFordResult bellmanFord(const Graph& g, int s) {
-    BellmanFordResult res;
-    initializeSingleSource(g, s, res.r);
+BellmanFordResult bellmanFord(const Graph& graph, int source) {
+    BellmanFordResult output;
+    initializeSingleSource(graph, source, output.result);
 
-    for (int i = 1; i < g.n; ++i) {              // |V| - 1 passes
+    for (int i = 1; i < graph.n; ++i) {              // |V| - 1 passes
         bool changed = false;
-        for (const Edge& e : g.edges)
-            if (relax(e.u, e.v, e.w, res.r)) changed = true;
+        for (const Edge& edge : graph.edges)
+            if (relax(edge.u, edge.v, edge.w, output.result)) changed = true;
         if (!changed) break;                     // early exit: already converged
     }
 
-    res.ok = true;                               // the |V|-th pass is the test
-    for (const Edge& e : g.edges)
-        if (res.r.d[e.u] != INF && res.r.d[e.v] > res.r.d[e.u] + e.w) { res.ok = false; break; }
-    return res;
+    output.ok = true;                               // the |V|-th pass is the test
+    for (const Edge& edge : graph.edges)
+        if (output.result.dist[edge.u] != INF && output.result.dist[edge.v] > output.result.dist[edge.u] + edge.w) { output.ok = false; break; }
+    return output;
 }
 
 const long long NEG_INF = LLONG_MIN / 4;
 
 // Exercise 22.1-4: after bellmanFord, set d[v] = -inf for every v whose true
 // shortest-path weight is -inf (reachable from a reachable negative cycle).
-void markNegativeInfinity(const Graph& g, SSSP& r) {
-    vector<char> bad(g.n, 0);
+void markNegativeInfinity(const Graph& graph, SSSP& result) {
+    vector<char> bad(graph.n, 0);
     vector<int> stack;
-    for (const Edge& e : g.edges)                // still-relaxable ⟹ downstream of a neg. cycle
-        if (r.d[e.u] != INF && r.d[e.v] > r.d[e.u] + e.w && !bad[e.v]) {
-            bad[e.v] = 1; stack.push_back(e.v);
+    for (const Edge& edge : graph.edges)                // still-relaxable ⟹ downstream of a neg. cycle
+        if (result.dist[edge.u] != INF && result.dist[edge.v] > result.dist[edge.u] + edge.w && !bad[edge.v]) {
+            bad[edge.v] = 1; stack.push_back(edge.v);
         }
     while (!stack.empty()) {                     // ...and everything reachable from those
         int u = stack.back(); stack.pop_back();
-        for (const auto& [v, w] : g.adj[u]) {
+        for (const auto& [v, w] : graph.adj[u]) {
             (void)w;
             if (!bad[v]) { bad[v] = 1; stack.push_back(v); }
         }
     }
-    for (int v = 0; v < g.n; ++v) if (bad[v]) r.d[v] = NEG_INF;
+    for (int v = 0; v < graph.n; ++v) if (bad[v]) result.dist[v] = NEG_INF;
 }
 
 // Exercise 22.1-7: recover an actual negative-weight cycle reachable from s.
 // Returns v0 ... vk with v0 == vk, or {} if none exists.
-vector<int> findNegativeCycle(const Graph& g, int s) {
-    SSSP r;
-    initializeSingleSource(g, s, r);
-    int x = -1;
-    for (int i = 0; i < g.n; ++i) {              // |V| passes, remembering the last change
-        x = -1;
-        for (const Edge& e : g.edges)
-            if (relax(e.u, e.v, e.w, r)) x = e.v;
+vector<int> findNegativeCycle(const Graph& graph, int source) {
+    SSSP result;
+    initializeSingleSource(graph, source, result);
+    int at = -1;
+    for (int i = 0; i < graph.n; ++i) {              // |V| passes, remembering the last change
+        at = -1;
+        for (const Edge& edge : graph.edges)
+            if (relax(edge.u, edge.v, edge.w, result)) at = edge.v;
     }
-    if (x == -1) return {};                      // nothing relaxed on pass |V|
-    for (int i = 0; i < g.n; ++i) x = r.pi[x];   // walk |V| steps back: guaranteed onto the cycle
+    if (at == -1) return {};                      // nothing relaxed on pass |V|
+    for (int i = 0; i < graph.n; ++i) at = result.parent[at];   // walk |V| steps back: guaranteed onto the cycle
     vector<int> cycle;
-    for (int v = x;; v = r.pi[v]) {
+    for (int v = at;; v = result.parent[v]) {
         cycle.push_back(v);
-        if (v == x && cycle.size() > 1) break;
+        if (v == at && cycle.size() > 1) break;
     }
     reverse(cycle.begin(), cycle.end());
     return cycle;
@@ -418,35 +418,35 @@ Skiena's version of the same idea, from the war story below: the Viterbi algorit
 
 ```cpp
 // Kahn topological order; empty result ⟹ the graph has a cycle.
-vector<int> topoOrder(const Graph& g) {
-    vector<int> indeg(g.n, 0), order;
-    for (const Edge& e : g.edges) ++indeg[e.v];
-    vector<int> q;
-    for (int v = 0; v < g.n; ++v) if (indeg[v] == 0) q.push_back(v);
-    while (!q.empty()) {
-        int u = q.back(); q.pop_back();
+vector<int> topoOrder(const Graph& graph) {
+    vector<int> indeg(graph.n, 0), order;
+    for (const Edge& edge : graph.edges) ++indeg[edge.v];
+    vector<int> ready;
+    for (int v = 0; v < graph.n; ++v) if (indeg[v] == 0) ready.push_back(v);
+    while (!ready.empty()) {
+        int u = ready.back(); ready.pop_back();
         order.push_back(u);
-        for (const auto& [v, w] : g.adj[u]) { (void)w; if (--indeg[v] == 0) q.push_back(v); }
+        for (const auto& [v, w] : graph.adj[u]) { (void)w; if (--indeg[v] == 0) ready.push_back(v); }
     }
-    return (int)order.size() == g.n ? order : vector<int>{};
+    return (int)order.size() == graph.n ? order : vector<int>{};
 }
 
-SSSP dagShortestPaths(const Graph& g, int s) {
-    SSSP r;
-    initializeSingleSource(g, s, r);
-    for (int u : topoOrder(g))                   // one pass, in topological order
-        if (r.d[u] != INF)
-            for (const auto& [v, w] : g.adj[u]) relax(u, v, w, r);
-    return r;
+SSSP dagShortestPaths(const Graph& graph, int source) {
+    SSSP result;
+    initializeSingleSource(graph, source, result);
+    for (int u : topoOrder(graph))                   // one pass, in topological order
+        if (result.dist[u] != INF)
+            for (const auto& [v, w] : graph.adj[u]) relax(u, v, w, result);
+    return result;
 }
 
 // PERT / critical path: longest path in a DAG = shortest path with negated weights.
-SSSP dagLongestPaths(const Graph& g, int s) {
-    Graph h(g.n);
-    for (const Edge& e : g.edges) h.addEdge(e.u, e.v, -e.w);
-    SSSP r = dagShortestPaths(h, s);
-    for (long long& x : r.d) if (x != INF) x = -x;
-    return r;
+SSSP dagLongestPaths(const Graph& graph, int source) {
+    Graph headCount(graph.n);
+    for (const Edge& edge : graph.edges) headCount.addEdge(edge.u, edge.v, -edge.w);
+    SSSP result = dagShortestPaths(headCount, source);
+    for (long long& at : result.dist) if (at != INF) at = -at;
+    return result;
 }
 ```
 
@@ -554,48 +554,48 @@ The queue can hold up to `E` entries instead of `V`, so the bound becomes `O(E l
 ### C++ Implementation
 
 ```cpp
-SSSP dijkstra(const Graph& g, int s) {
-    SSSP r;
-    initializeSingleSource(g, s, r);
-    using P = pair<long long, int>;                        // (d[v], v)
-    priority_queue<P, vector<P>, greater<P>> pq;
-    pq.push({0, s});
-    while (!pq.empty()) {
-        auto [du, u] = pq.top(); pq.pop();
-        if (du > r.d[u]) continue;                         // stale entry: lazy decrease-key
-        for (const auto& [v, w] : g.adj[u])
-            if (relax(u, v, w, r)) pq.push({r.d[v], v});
+SSSP dijkstra(const Graph& graph, int source) {
+    SSSP result;
+    initializeSingleSource(graph, source, result);
+    using parentOf = pair<long long, int>;                        // (d[v], v)
+    priority_queue<parentOf, vector<parentOf>, greater<parentOf>> frontier;
+    frontier.push({0, source});
+    while (!frontier.empty()) {
+        auto [knownDist, u] = frontier.top(); frontier.pop();
+        if (knownDist > result.dist[u]) continue;                         // stale entry: lazy decrease-key
+        for (const auto& [v, w] : graph.adj[u])
+            if (relax(u, v, w, result)) frontier.push({result.dist[v], v});
     }
-    return r;
+    return result;
 }
 
 // Θ(V²) Dijkstra: no heap, linear scan for the minimum.  Wins on dense graphs.
-SSSP dijkstraDense(const Graph& g, int s) {
-    SSSP r;
-    initializeSingleSource(g, s, r);
-    vector<char> done(g.n, 0);
-    for (int iter = 0; iter < g.n; ++iter) {
+SSSP dijkstraDense(const Graph& graph, int source) {
+    SSSP result;
+    initializeSingleSource(graph, source, result);
+    vector<char> done(graph.n, 0);
+    for (int iter = 0; iter < graph.n; ++iter) {
         int u = -1;
         long long best = INF;
-        for (int i = 0; i < g.n; ++i)
-            if (!done[i] && r.d[i] < best) { best = r.d[i]; u = i; }
+        for (int i = 0; i < graph.n; ++i)
+            if (!done[i] && result.dist[i] < best) { best = result.dist[i]; u = i; }
         if (u == -1) break;                                // rest is unreachable
         done[u] = 1;
-        for (const auto& [v, w] : g.adj[u]) relax(u, v, w, r);
+        for (const auto& [v, w] : graph.adj[u]) relax(u, v, w, result);
     }
-    return r;
+    return result;
 }
 
 // Skiena's "design graphs, not algorithms": vertex costs become edge weights.
 SSSP vertexWeightedShortestPaths(int n, const vector<vector<int>>& out,
-                                 const vector<long long>& cost, int s) {
-    Graph g(n);
+                                 const vector<long long>& cost, int source) {
+    Graph graph(n);
     for (int u = 0; u < n; ++u)
-        for (int v : out[u]) g.addEdge(u, v, cost[v]);     // pay for the vertex you enter
-    SSSP r = dijkstra(g, s);
-    if (r.d[s] != INF) r.d[s] = cost[s];                   // plus the source's own cost
-    for (int v = 0; v < n; ++v) if (v != s && r.d[v] != INF) r.d[v] += cost[s];
-    return r;
+        for (int v : out[u]) graph.addEdge(u, v, cost[v]);     // pay for the vertex you enter
+    SSSP result = dijkstra(graph, source);
+    if (result.dist[source] != INF) result.dist[source] = cost[source];                   // plus the source's own cost
+    for (int v = 0; v < n; ++v) if (v != source && result.dist[v] != INF) result.dist[v] += cost[source];
+    return result;
 }
 ```
 
@@ -718,15 +718,15 @@ Two exercises worth knowing as facts, because they turn a feasibility solver int
 ```cpp
 struct Constraint { int i, j; long long b; };               // means  x[j] - x[i] <= b
 
-bool solveDifferenceConstraints(int n, const vector<Constraint>& cs, vector<long long>& x) {
-    Graph g(n + 1);
-    const int v0 = n;                                       // the extra super-source
-    for (const Constraint& c : cs) g.addEdge(c.i, c.j, c.b);
-    for (int i = 0; i < n; ++i) g.addEdge(v0, i, 0);
-    BellmanFordResult res = bellmanFord(g, v0);
-    if (!res.ok) return false;                              // negative cycle ⟹ infeasible
-    x.assign(n, 0);
-    for (int i = 0; i < n; ++i) x[i] = res.r.d[i];          // x_i = δ(v0, v_i)
+bool solveDifferenceConstraints(int n, const vector<Constraint>& constraints, vector<long long>& at) {
+    Graph graph(n + 1);
+    const int superSource = n;                                       // the extra super-source
+    for (const Constraint& c : constraints) graph.addEdge(c.i, c.j, c.b);
+    for (int i = 0; i < n; ++i) graph.addEdge(superSource, i, 0);
+    BellmanFordResult output = bellmanFord(graph, superSource);
+    if (!output.ok) return false;                              // negative cycle ⟹ infeasible
+    at.assign(n, 0);
+    for (int i = 0; i < n; ++i) at[i] = output.result.dist[i];          // x_i = δ(v0, v_i)
     return true;
 }
 ```
@@ -910,62 +910,62 @@ Still `Θ(V³)` time but with **boolean** values, so it uses `Θ(V²)` bits inst
 
 ```cpp
 struct APSP {
-    vector<vector<long long>> d;
-    vector<vector<int>> pi;                                 // -1 = NIL
+    vector<vector<long long>> dist;
+    vector<vector<int>> parent;                                 // -1 = NIL
 };
 
-APSP floydWarshall(const vector<vector<long long>>& W) {
-    int n = (int)W.size();
-    APSP a;
-    a.d = W;
-    a.pi.assign(n, vector<int>(n, -1));
+APSP floydWarshall(const vector<vector<long long>>& weight) {
+    int n = (int)weight.size();
+    APSP table;
+    table.dist = weight;
+    table.parent.assign(n, vector<int>(n, -1));
     for (int i = 0; i < n; ++i)                             // (23.7)
         for (int j = 0; j < n; ++j)
-            if (i != j && W[i][j] < INF) a.pi[i][j] = i;
+            if (i != j && weight[i][j] < INF) table.parent[i][j] = i;
 
-    for (int k = 0; k < n; ++k)                             // (23.6) — k outermost!
+    for (int via = 0; via < n; ++via)                             // (23.6) — k outermost!
         for (int i = 0; i < n; ++i) {
-            if (a.d[i][k] == INF) continue;                 // prune: nothing through k
+            if (table.dist[i][via] == INF) continue;                 // prune: nothing through k
             for (int j = 0; j < n; ++j) {
-                if (a.d[k][j] == INF) continue;
-                long long through = a.d[i][k] + a.d[k][j];
-                if (through < a.d[i][j]) {
-                    a.d[i][j] = through;
-                    a.pi[i][j] = a.pi[k][j];                // (23.8)
+                if (table.dist[via][j] == INF) continue;
+                long long through = table.dist[i][via] + table.dist[via][j];
+                if (through < table.dist[i][j]) {
+                    table.dist[i][j] = through;
+                    table.parent[i][j] = table.parent[via][j];                // (23.8)
                 }
             }
         }
-    return a;
+    return table;
 }
 
 // Exercise 23.2-4: the superscripts are unnecessary — update in place.
-vector<vector<long long>> floydWarshallInPlace(vector<vector<long long>> d) {
-    int n = (int)d.size();
-    for (int k = 0; k < n; ++k)
+vector<vector<long long>> floydWarshallInPlace(vector<vector<long long>> dist) {
+    int n = (int)dist.size();
+    for (int via = 0; via < n; ++via)
         for (int i = 0; i < n; ++i)
             for (int j = 0; j < n; ++j)
-                if (d[i][k] != INF && d[k][j] != INF && d[i][k] + d[k][j] < d[i][j])
-                    d[i][j] = d[i][k] + d[k][j];
-    return d;
+                if (dist[i][via] != INF && dist[via][j] != INF && dist[i][via] + dist[via][j] < dist[i][j])
+                    dist[i][j] = dist[i][via] + dist[via][j];
+    return dist;
 }
 
-void printAllPairsPath(const APSP& a, int i, int j, vector<int>& out) {
+void printAllPairsPath(const APSP& table, int i, int j, vector<int>& out) {
     if (i == j) out.push_back(i);
-    else if (a.pi[i][j] == -1) out.clear();                 // no path
-    else { printAllPairsPath(a, i, a.pi[i][j], out); out.push_back(j); }
+    else if (table.parent[i][j] == -1) out.clear();                 // no path
+    else { printAllPairsPath(table, i, table.parent[i][j], out); out.push_back(j); }
 }
 
 // (23.9): the same recurrence over (∨, ∧) instead of (min, +).
 vector<vector<char>> transitiveClosure(const vector<vector<char>>& adj) {
     int n = (int)adj.size();
-    vector<vector<char>> t = adj;
-    for (int i = 0; i < n; ++i) t[i][i] = 1;
-    for (int k = 0; k < n; ++k)
+    vector<vector<char>> trace = adj;
+    for (int i = 0; i < n; ++i) trace[i][i] = 1;
+    for (int via = 0; via < n; ++via)
         for (int i = 0; i < n; ++i)
-            if (t[i][k])
+            if (trace[i][via])
                 for (int j = 0; j < n; ++j)
-                    if (t[k][j]) t[i][j] = 1;
-    return t;
+                    if (trace[via][j]) trace[i][j] = 1;
+    return trace;
 }
 ```
 
@@ -1067,25 +1067,25 @@ JOHNSON(G, w)
 ### C++ Implementation
 
 ```cpp
-bool johnson(const Graph& g, vector<vector<long long>>& D) {
-    const int n = g.n;
-    Graph gp(n + 1);                                        // G′ = G + super-source s
-    for (const Edge& e : g.edges) gp.addEdge(e.u, e.v, e.w);
-    for (int v = 0; v < n; ++v) gp.addEdge(n, v, 0);
+bool johnson(const Graph& graph, vector<vector<long long>>& distance) {
+    const int n = graph.n;
+    Graph augmented(n + 1);                                        // G′ = G + super-source s
+    for (const Edge& edge : graph.edges) augmented.addEdge(edge.u, edge.v, edge.w);
+    for (int v = 0; v < n; ++v) augmented.addEdge(n, v, 0);
 
-    BellmanFordResult bf = bellmanFord(gp, n);
-    if (!bf.ok) return false;                               // negative-weight cycle
+    BellmanFordResult bellman = bellmanFord(augmented, n);
+    if (!bellman.ok) return false;                               // negative-weight cycle
 
-    vector<long long> h(bf.r.d.begin(), bf.r.d.begin() + n);   // h(v) = δ(s, v) ≤ 0
+    vector<long long> potential(bellman.result.dist.begin(), bellman.result.dist.begin() + n);   // h(v) = δ(s, v) ≤ 0
 
-    Graph gh(n);                                            // ŵ(u,v) = w(u,v) + h(u) − h(v) ≥ 0
-    for (const Edge& e : g.edges) gh.addEdge(e.u, e.v, e.w + h[e.u] - h[e.v]);
+    Graph reweighted(n);                                            // ŵ(u,v) = w(u,v) + h(u) − h(v) ≥ 0
+    for (const Edge& edge : graph.edges) reweighted.addEdge(edge.u, edge.v, edge.w + potential[edge.u] - potential[edge.v]);
 
-    D.assign(n, vector<long long>(n, INF));
+    distance.assign(n, vector<long long>(n, INF));
     for (int u = 0; u < n; ++u) {
-        SSSP r = dijkstra(gh, u);
+        SSSP result = dijkstra(reweighted, u);
         for (int v = 0; v < n; ++v)
-            if (r.d[v] != INF) D[u][v] = r.d[v] + h[v] - h[u];   // undo the reweighting
+            if (result.dist[v] != INF) distance[u][v] = result.dist[v] + potential[v] - potential[u];   // undo the reweighting
     }
     return true;
 }
@@ -1298,8 +1298,8 @@ Two separate hazards, and they need two separate defences:
 ```cpp
 void dijkstraQueueShape() {
     using Item = pair<long long,int>;                       // (distance, vertex)
-    priority_queue<Item, vector<Item>, greater<Item>> pq;   // greater<> => MIN-heap
-    (void)pq;
+    priority_queue<Item, vector<Item>, greater<Item>> frontier;   // greater<> => MIN-heap
+    (void)frontier;
 }
 ```
 
@@ -1326,7 +1326,7 @@ Path weights accumulate over up to `V−1` edges. `V = 10⁵` with weights to `1
 ### 6. Returning a struct, not a pair
 
 ```cpp
-struct PathResult { vector<long long> d; vector<int> pi; };
+struct PathResult { vector<long long> dist; vector<int> parent; };
 ```
 
 Every single-source algorithm produces **two** arrays — distances and predecessors — and they are meaningless apart. `.d` and `.pi` beat `.first` and `.second`, and adding a `bool ok` for the negative-cycle case later does not break existing call sites.
@@ -1368,8 +1368,8 @@ struct WGraph {
 
 // Every single-source algorithm returns these two arrays together (toolkit 6).
 struct PathResult {
-    vector<long long> d;    // d[v] = shortest-path estimate
-    vector<int> pi;         // pi[v] = predecessor, -1 = NIL
+    vector<long long> dist;    // d[v] = shortest-path estimate
+    vector<int> parent;         // pi[v] = predecessor, -1 = NIL
 };
 ```
 
@@ -1379,10 +1379,10 @@ struct PathResult {
 
 ```cpp
 // INITIALIZE-SINGLE-SOURCE(G, s)
-void initSingleSource(const WGraph& g, int s, PathResult& r) {
-    r.d.assign(g.n, PATH_INF);      // v.d = infinity
-    r.pi.assign(g.n, -1);           // v.pi = NIL
-    r.d[s] = 0;                     // s.d = 0
+void initSingleSource(const WGraph& graph, int source, PathResult& result) {
+    result.dist.assign(graph.n, PATH_INF);      // v.d = infinity
+    result.parent.assign(graph.n, -1);           // v.pi = NIL
+    result.dist[source] = 0;                     // s.d = 0
 }
 
 // RELAX(u, v, w) -- the ONE operation every algorithm in this module is built
@@ -1391,28 +1391,28 @@ void initSingleSource(const WGraph& g, int s, PathResult& r) {
 // Returns whether the estimate actually improved. That single bool is what
 // makes Bellman-Ford's early exit, Dijkstra's push, and the negative-cycle
 // test each a one-liner.
-bool relax(int u, int v, long long w, PathResult& r) {
+bool relax(int u, int v, long long w, PathResult& result) {
     // THE GUARD (toolkit 1). Without it, an unreachable u with a negative w
     // gives PATH_INF + w < PATH_INF, and the algorithm confidently computes
     // distances to vertices it cannot reach. Silent, and always wrong.
-    if (r.d[u] == PATH_INF) return false;
-    if (r.d[v] > r.d[u] + w) {          // 1  if v.d > u.d + w(u,v)
-        r.d[v] = r.d[u] + w;            // 2      v.d = u.d + w(u,v)
-        r.pi[v] = u;                    // 3      v.pi = u
+    if (result.dist[u] == PATH_INF) return false;
+    if (result.dist[v] > result.dist[u] + w) {          // 1  if v.d > u.d + w(u,v)
+        result.dist[v] = result.dist[u] + w;            // 2      v.d = u.d + w(u,v)
+        result.parent[v] = u;                    // 3      v.pi = u
         return true;
     }
     return false;
 }
 
 // Walk pi backwards from v to s, then reverse (toolkit 7).
-vector<int> extractPath(const PathResult& r, int s, int v) {
-    if (r.d[v] == PATH_INF) return {};              // unreachable: check FIRST
+vector<int> extractPath(const PathResult& result, int source, int v) {
+    if (result.dist[v] == PATH_INF) return {};              // unreachable: check FIRST
     vector<int> path;
-    for (int x = v; x != -1; x = r.pi[x]) {
-        path.push_back(x);
-        if (x == s) break;
+    for (int at = v; at != -1; at = result.parent[at]) {
+        path.push_back(at);
+        if (at == source) break;
     }
-    if (path.back() != s) return {};                // pi chain did not reach s
+    if (path.back() != source) return {};                // pi chain did not reach s
     reverse(path.begin(), path.end());
     return path;
 }
@@ -1431,17 +1431,17 @@ vector<int> extractPath(const PathResult& r, int s, int v) {
 ```cpp
 struct BellmanFordOutput {
     bool ok = true;      // false <=> a negative-weight cycle is REACHABLE from s
-    PathResult r;
+    PathResult result;
 };
 
-BellmanFordOutput bellmanFord(const WGraph& g, int s) {
+BellmanFordOutput bellmanFord(const WGraph& graph, int source) {
     BellmanFordOutput out;
-    initSingleSource(g, s, out.r);                       // 1
+    initSingleSource(graph, source, out.result);                       // 1
 
-    for (int i = 1; i < g.n; ++i) {                      // 2  |V| - 1 passes
+    for (int i = 1; i < graph.n; ++i) {                      // 2  |V| - 1 passes
         bool changed = false;
-        for (const WEdge& e : g.edges)                   // 3  for each edge
-            if (relax(e.u, e.v, e.w, out.r)) changed = true;   // 4  RELAX
+        for (const WEdge& edge : graph.edges)                   // 3  for each edge
+            if (relax(edge.u, edge.v, edge.w, out.result)) changed = true;   // 4  RELAX
         // EARLY EXIT -- not in the pseudocode, always worth writing. If a whole
         // pass changes nothing, no later pass will either. This turns Theta(VE)
         // into Theta(hE) where h is the largest hop-count of any shortest path,
@@ -1452,8 +1452,8 @@ BellmanFordOutput bellmanFord(const WGraph& g, int s) {
     // 5-7  The |V|-th pass IS the test: if anything can still be relaxed after
     // |V|-1 passes, some shortest "path" uses >= |V| edges, which means it
     // repeats a vertex, which means there is a negative-weight cycle.
-    for (const WEdge& e : g.edges)
-        if (out.r.d[e.u] != PATH_INF && out.r.d[e.v] > out.r.d[e.u] + e.w) {
+    for (const WEdge& edge : graph.edges)
+        if (out.result.dist[edge.u] != PATH_INF && out.result.dist[edge.v] > out.result.dist[edge.u] + edge.w) {
             out.ok = false;                              // 7  return FALSE
             break;
         }
@@ -1466,44 +1466,44 @@ const long long PATH_NEG_INF = LLONG_MIN / 4;
 // Run AFTER bellmanFord. A vertex is -infinity iff it is reachable from a
 // negative cycle that is itself reachable from s -- so: find the still-relaxable
 // endpoints, then flood forward from them.
-void markNegativeInfinity(const WGraph& g, PathResult& r) {
-    vector<char> bad(g.n, 0);
+void markNegativeInfinity(const WGraph& graph, PathResult& result) {
+    vector<char> bad(graph.n, 0);
     vector<int> stack;
-    for (const WEdge& e : g.edges)
-        if (r.d[e.u] != PATH_INF && r.d[e.v] > r.d[e.u] + e.w && !bad[e.v]) {
-            bad[e.v] = 1; stack.push_back(e.v);
+    for (const WEdge& edge : graph.edges)
+        if (result.dist[edge.u] != PATH_INF && result.dist[edge.v] > result.dist[edge.u] + edge.w && !bad[edge.v]) {
+            bad[edge.v] = 1; stack.push_back(edge.v);
         }
     while (!stack.empty()) {                             // everything downstream
         int u = stack.back(); stack.pop_back();
-        for (const auto& [v, w] : g.adj[u]) {
+        for (const auto& [v, w] : graph.adj[u]) {
             (void)w;
             if (!bad[v]) { bad[v] = 1; stack.push_back(v); }
         }
     }
-    for (int v = 0; v < g.n; ++v) if (bad[v]) r.d[v] = PATH_NEG_INF;
+    for (int v = 0; v < graph.n; ++v) if (bad[v]) result.dist[v] = PATH_NEG_INF;
 }
 
 // Exercise 22.1-7: PRINT an actual negative cycle, not merely detect one.
-vector<int> findNegativeCycle(const WGraph& g, int s) {
-    PathResult r;
-    initSingleSource(g, s, r);
-    int x = -1;
-    for (int i = 0; i < g.n; ++i) {                      // |V| passes, not |V|-1
-        x = -1;
-        for (const WEdge& e : g.edges)
-            if (relax(e.u, e.v, e.w, r)) x = e.v;        // remember the LAST change
+vector<int> findNegativeCycle(const WGraph& graph, int source) {
+    PathResult result;
+    initSingleSource(graph, source, result);
+    int at = -1;
+    for (int i = 0; i < graph.n; ++i) {                      // |V| passes, not |V|-1
+        at = -1;
+        for (const WEdge& edge : graph.edges)
+            if (relax(edge.u, edge.v, edge.w, result)) at = edge.v;        // remember the LAST change
     }
-    if (x == -1) return {};                              // nothing relaxed: no cycle
+    if (at == -1) return {};                              // nothing relaxed: no cycle
 
     // x is reachable from a cycle via pi pointers, but may not be ON it. The
     // pi-chain's prefix before the cycle has fewer than |V| vertices, so
     // walking back |V| steps lands INSIDE the cycle for certain.
-    for (int i = 0; i < g.n; ++i) x = r.pi[x];
+    for (int i = 0; i < graph.n; ++i) at = result.parent[at];
 
     vector<int> cycle;
-    for (int v = x;; v = r.pi[v]) {
+    for (int v = at;; v = result.parent[v]) {
         cycle.push_back(v);
-        if (v == x && cycle.size() > 1) break;
+        if (v == at && cycle.size() > 1) break;
     }
     reverse(cycle.begin(), cycle.end());
     return cycle;                                        // v0 == vk
@@ -1524,39 +1524,39 @@ vector<int> findNegativeCycle(const WGraph& g, int s) {
 
 ```cpp
 // Kahn topological order; empty result means the graph has a cycle.
-vector<int> topoOrder(const WGraph& g) {
-    vector<int> indeg(g.n, 0), order, q;
-    for (const WEdge& e : g.edges) ++indeg[e.v];
-    for (int v = 0; v < g.n; ++v) if (indeg[v] == 0) q.push_back(v);
-    while (!q.empty()) {
-        int u = q.back(); q.pop_back();
+vector<int> topoOrder(const WGraph& graph) {
+    vector<int> indeg(graph.n, 0), order, ready;
+    for (const WEdge& edge : graph.edges) ++indeg[edge.v];
+    for (int v = 0; v < graph.n; ++v) if (indeg[v] == 0) ready.push_back(v);
+    while (!ready.empty()) {
+        int u = ready.back(); ready.pop_back();
         order.push_back(u);
-        for (const auto& [v, w] : g.adj[u]) { (void)w; if (--indeg[v] == 0) q.push_back(v); }
+        for (const auto& [v, w] : graph.adj[u]) { (void)w; if (--indeg[v] == 0) ready.push_back(v); }
     }
-    return (int)order.size() == g.n ? order : vector<int>{};
+    return (int)order.size() == graph.n ? order : vector<int>{};
 }
 
-PathResult dagShortestPaths(const WGraph& g, int s) {
-    PathResult r;
-    initSingleSource(g, s, r);                    // 2
-    for (int u : topoOrder(g))                    // 1,3  in TOPOLOGICAL order
-        if (r.d[u] != PATH_INF)                   //      skip unreachable vertices
-            for (const auto& [v, w] : g.adj[u])   // 4
-                relax(u, v, w, r);                // 5
+PathResult dagShortestPaths(const WGraph& graph, int source) {
+    PathResult result;
+    initSingleSource(graph, source, result);                    // 2
+    for (int u : topoOrder(graph))                    // 1,3  in TOPOLOGICAL order
+        if (result.dist[u] != PATH_INF)                   //      skip unreachable vertices
+            for (const auto& [v, w] : graph.adj[u])   // 4
+                relax(u, v, w, result);                // 5
     // ONE pass. Every edge relaxed EXACTLY ONCE.
-    return r;
+    return result;
 }
 
 // LONGEST path in a DAG -- the critical path / PERT computation.
 // Negate every weight, run the same algorithm, negate the answers back.
 // This is legal ONLY because there are no cycles: negation in a general graph
 // manufactures negative cycles and destroys the problem.
-PathResult dagLongestPaths(const WGraph& g, int s) {
-    WGraph h(g.n);
-    for (const WEdge& e : g.edges) h.addEdge(e.u, e.v, -e.w);
-    PathResult r = dagShortestPaths(h, s);
-    for (long long& x : r.d) if (x != PATH_INF) x = -x;
-    return r;
+PathResult dagLongestPaths(const WGraph& graph, int source) {
+    WGraph headCount(graph.n);
+    for (const WEdge& edge : graph.edges) headCount.addEdge(edge.u, edge.v, -edge.w);
+    PathResult result = dagShortestPaths(headCount, source);
+    for (long long& at : result.dist) if (at != PATH_INF) at = -at;
+    return result;
 }
 ```
 
@@ -1572,45 +1572,45 @@ PathResult dagLongestPaths(const WGraph& g, int s) {
 
 ```cpp
 // REQUIRES w(u,v) >= 0 for every edge.
-PathResult dijkstra(const WGraph& g, int s) {
-    PathResult r;
-    initSingleSource(g, s, r);                              // 1
+PathResult dijkstra(const WGraph& graph, int source) {
+    PathResult result;
+    initSingleSource(graph, source, result);                              // 1
 
     using Item = pair<long long,int>;                       // (d[v], v) -- distance
     priority_queue<Item, vector<Item>, greater<Item>> Q;    // FIRST (toolkit 2)
-    Q.push({0, s});                                         // 4-5  INSERT all vertices
+    Q.push({0, source});                                         // 4-5  INSERT all vertices
     // (only s is pushed: a vertex enters the queue the first time its estimate
     //  becomes finite, which is equivalent and avoids V pointless entries)
 
     while (!Q.empty()) {                                    // 6
-        auto [du, u] = Q.top(); Q.pop();                    // 7  u = EXTRACT-MIN(Q)
-        if (du > r.d[u]) continue;                          //    STALE entry (toolkit 3)
+        auto [knownDist, u] = Q.top(); Q.pop();                    // 7  u = EXTRACT-MIN(Q)
+        if (knownDist > result.dist[u]) continue;                          //    STALE entry (toolkit 3)
         // 8  S = S union {u}. There is no explicit S: the stale check does its
         //    job, because once d[u] is final no later entry can beat it.
-        for (const auto& [v, w] : g.adj[u])                 // 9
-            if (relax(u, v, w, r))                          // 10
-                Q.push({r.d[v], v});                        // 11 DECREASE-KEY, lazily
+        for (const auto& [v, w] : graph.adj[u])                 // 9
+            if (relax(u, v, w, result))                          // 10
+                Q.push({result.dist[v], v});                        // 11 DECREASE-KEY, lazily
     }
-    return r;
+    return result;
 }
 
 // Theta(V^2) Dijkstra: no heap, linear scan for the minimum. The RIGHT choice
 // on a dense graph, and Skiena's implementation ([M14] toolkit 4 makes the same
 // point for Prim).
-PathResult dijkstraDense(const WGraph& g, int s) {
-    PathResult r;
-    initSingleSource(g, s, r);
-    vector<char> done(g.n, 0);                              // the explicit set S
-    for (int iter = 0; iter < g.n; ++iter) {
+PathResult dijkstraDense(const WGraph& graph, int source) {
+    PathResult result;
+    initSingleSource(graph, source, result);
+    vector<char> done(graph.n, 0);                              // the explicit set S
+    for (int iter = 0; iter < graph.n; ++iter) {
         int u = -1;
         long long best = PATH_INF;
-        for (int i = 0; i < g.n; ++i)                       // EXTRACT-MIN by scan
-            if (!done[i] && r.d[i] < best) { best = r.d[i]; u = i; }
+        for (int i = 0; i < graph.n; ++i)                       // EXTRACT-MIN by scan
+            if (!done[i] && result.dist[i] < best) { best = result.dist[i]; u = i; }
         if (u == -1) break;                                 // the rest is unreachable
         done[u] = 1;
-        for (const auto& [v, w] : g.adj[u]) relax(u, v, w, r);
+        for (const auto& [v, w] : graph.adj[u]) relax(u, v, w, result);
     }
-    return r;
+    return result;
 }
 ```
 
@@ -1642,56 +1642,56 @@ PathResult dijkstraDense(const WGraph& g, int s) {
 
 ```cpp
 struct AllPairs {
-    vector<vector<long long>> d;
-    vector<vector<int>> pi;      // -1 = NIL
+    vector<vector<long long>> dist;
+    vector<vector<int>> parent;      // -1 = NIL
 };
 
 // W is the weight matrix: W[i][i] = 0, W[i][j] = w(i,j) or PATH_INF.
-AllPairs floydWarshall(const vector<vector<long long>>& W) {
-    const int n = (int)W.size();
-    AllPairs a;
-    a.d = W;
-    a.pi.assign(n, vector<int>(n, -1));
+AllPairs floydWarshall(const vector<vector<long long>>& weight) {
+    const int n = (int)weight.size();
+    AllPairs table;
+    table.dist = weight;
+    table.parent.assign(n, vector<int>(n, -1));
     for (int i = 0; i < n; ++i)                        // (23.7) predecessor init
         for (int j = 0; j < n; ++j)
-            if (i != j && W[i][j] < PATH_INF) a.pi[i][j] = i;
+            if (i != j && weight[i][j] < PATH_INF) table.parent[i][j] = i;
 
     // k IS THE OUTERMOST LOOP. This is the one thing never to get wrong.
     // d^(k)[i][j] depends on ALL of stage k-1, so only "for each k, fill the
     // whole table" establishes the invariant "every path through {0..k} found".
     // Writing for i / for j / for k compiles, runs in the same time, and
     // silently returns wrong answers on some graphs.
-    for (int k = 0; k < n; ++k)
+    for (int via = 0; via < n; ++via)
         for (int i = 0; i < n; ++i) {
-            if (a.d[i][k] == PATH_INF) continue;       // nothing routes through k
+            if (table.dist[i][via] == PATH_INF) continue;       // nothing routes through k
             // Hoisting this test out of the inner loop is the single most
             // valuable micro-optimisation here, and it removes the
             // PATH_INF + PATH_INF overflow risk as a bonus.
             for (int j = 0; j < n; ++j) {
-                if (a.d[k][j] == PATH_INF) continue;
-                long long through = a.d[i][k] + a.d[k][j];
-                if (through < a.d[i][j]) {
-                    a.d[i][j] = through;               // (23.6)
-                    a.pi[i][j] = a.pi[k][j];           // (23.8) -- pi[k][j], NOT k
+                if (table.dist[via][j] == PATH_INF) continue;
+                long long through = table.dist[i][via] + table.dist[via][j];
+                if (through < table.dist[i][j]) {
+                    table.dist[i][j] = through;               // (23.6)
+                    table.parent[i][j] = table.parent[via][j];           // (23.8) -- pi[k][j], NOT k
                 }                                      // and not pi[i][k]
             }
         }
-    return a;
+    return table;
 }
 
 // Exercise 23.2-4: the superscripts are unnecessary -- update in place.
 // During iteration k, d[i][k] and d[k][j] cannot change (d[k][k] == 0 given no
 // negative cycles), so reading a partially-updated row is harmless.
 // Theta(n^3) space becomes Theta(n^2).
-vector<vector<long long>> floydWarshallInPlace(vector<vector<long long>> d) {
-    const int n = (int)d.size();
-    for (int k = 0; k < n; ++k)
+vector<vector<long long>> floydWarshallInPlace(vector<vector<long long>> dist) {
+    const int n = (int)dist.size();
+    for (int via = 0; via < n; ++via)
         for (int i = 0; i < n; ++i)
             for (int j = 0; j < n; ++j)
-                if (d[i][k] != PATH_INF && d[k][j] != PATH_INF &&
-                    d[i][k] + d[k][j] < d[i][j])
-                    d[i][j] = d[i][k] + d[k][j];
-    return d;
+                if (dist[i][via] != PATH_INF && dist[via][j] != PATH_INF &&
+                    dist[i][via] + dist[via][j] < dist[i][j])
+                    dist[i][j] = dist[i][via] + dist[via][j];
+    return dist;
 }
 
 // TRANSITIVE CLOSURE (23.9): the SAME recurrence with (min,+) replaced by
@@ -1700,20 +1700,20 @@ vector<vector<long long>> floydWarshallInPlace(vector<vector<long long>> d) {
 // giving Theta(V^3 / 64).
 vector<vector<char>> transitiveClosure(const vector<vector<char>>& adj) {
     const int n = (int)adj.size();
-    vector<vector<char>> t = adj;
-    for (int i = 0; i < n; ++i) t[i][i] = 1;           // reflexive
-    for (int k = 0; k < n; ++k)
+    vector<vector<char>> trace = adj;
+    for (int i = 0; i < n; ++i) trace[i][i] = 1;           // reflexive
+    for (int via = 0; via < n; ++via)
         for (int i = 0; i < n; ++i)
-            if (t[i][k])
+            if (trace[i][via])
                 for (int j = 0; j < n; ++j)
-                    if (t[k][j]) t[i][j] = 1;
-    return t;
+                    if (trace[via][j]) trace[i][j] = 1;
+    return trace;
 }
 
-void printAllPairsPath(const AllPairs& a, int i, int j, vector<int>& out) {
+void printAllPairsPath(const AllPairs& table, int i, int j, vector<int>& out) {
     if (i == j) out.push_back(i);
-    else if (a.pi[i][j] == -1) out.clear();            // no path
-    else { printAllPairsPath(a, i, a.pi[i][j], out); out.push_back(j); }
+    else if (table.parent[i][j] == -1) out.clear();            // no path
+    else { printAllPairsPath(table, i, table.parent[i][j], out); out.push_back(j); }
 }
 ```
 
@@ -1736,23 +1736,23 @@ void printAllPairsPath(const AllPairs& a, int i, int j, vector<int>& out) {
 ```cpp
 // All-pairs shortest paths on a SPARSE graph that may have negative edges.
 // Fills D[u][v]; returns false if a negative-weight cycle exists.
-bool johnson(const WGraph& g, vector<vector<long long>>& D) {
-    const int n = g.n;
+bool johnson(const WGraph& graph, vector<vector<long long>>& distance) {
+    const int n = graph.n;
 
     // 1  G' = G plus a new source s with a 0-weight edge to EVERY vertex.
     // Why the new vertex: it guarantees every vertex is reachable, so h is
     // finite everywhere and Bellman-Ford sees every negative cycle. It cannot
     // change any delta(u,v) for u,v in V, because s has NO INCOMING EDGES and
     // therefore lies on no u -> v path.
-    WGraph gp(n + 1);
-    for (const WEdge& e : g.edges) gp.addEdge(e.u, e.v, e.w);
-    for (int v = 0; v < n; ++v) gp.addEdge(n, v, 0);
+    WGraph augmented(n + 1);
+    for (const WEdge& edge : graph.edges) augmented.addEdge(edge.u, edge.v, edge.w);
+    for (int v = 0; v < n; ++v) augmented.addEdge(n, v, 0);
 
-    BellmanFordOutput bf = bellmanFord(gp, n);         // 2  one Bellman-Ford run
-    if (!bf.ok) return false;                          // 3  negative-weight cycle
+    BellmanFordOutput bellman = bellmanFord(augmented, n);         // 2  one Bellman-Ford run
+    if (!bellman.ok) return false;                          // 3  negative-weight cycle
 
     // 4-5  h(v) = delta(s, v). Always <= 0, since the 0-edge s->v is one option.
-    vector<long long> h(bf.r.d.begin(), bf.r.d.begin() + n);
+    vector<long long> potential(bellman.result.dist.begin(), bellman.result.dist.begin() + n);
 
     // 6-7  w-hat(u,v) = w(u,v) + h(u) - h(v).
     //
@@ -1771,15 +1771,15 @@ bool johnson(const WGraph& g, vector<vector<long long>>& D) {
     // NOT to be confused with the WRONG fix (Exercise 23.3-4): subtracting the
     // minimum weight from every edge penalises paths with MORE edges, so it
     // changes which path is shortest.
-    WGraph gh(n);
-    for (const WEdge& e : g.edges) gh.addEdge(e.u, e.v, e.w + h[e.u] - h[e.v]);
+    WGraph reweighted(n);
+    for (const WEdge& edge : graph.edges) reweighted.addEdge(edge.u, edge.v, edge.w + potential[edge.u] - potential[edge.v]);
 
-    D.assign(n, vector<long long>(n, PATH_INF));
+    distance.assign(n, vector<long long>(n, PATH_INF));
     for (int u = 0; u < n; ++u) {                      // 9  for each u in V
-        PathResult r = dijkstra(gh, u);                // 10 DIJKSTRA on w-hat
+        PathResult result = dijkstra(reweighted, u);                // 10 DIJKSTRA on w-hat
         for (int v = 0; v < n; ++v)
-            if (r.d[v] != PATH_INF)
-                D[u][v] = r.d[v] + h[v] - h[u];        // 12 (23.11) undo the shift
+            if (result.dist[v] != PATH_INF)
+                distance[u][v] = result.dist[v] + potential[v] - potential[u];        // 12 (23.11) undo the shift
                 // NOTE THE SIGN FLIP: edges use +h(u) - h(v); distances use
                 // +h(v) - h(u). Getting this backwards is the classic Johnson
                 // bug, and it produces plausible wrong numbers.
@@ -1802,4 +1802,4 @@ bool johnson(const WGraph& g, vector<vector<long long>>& D) {
 
 ---
 
-*Next: [M16 — Network Flow & Matching *(planned)*](INDEX.md#module-map) (CLRS 24–25 + Skiena 8.5) — max-flow min-cut, Ford-Fulkerson and Edmonds-Karp, Dinic, and matching as a flow problem.*
+*Next: [M16 — Network Flow and Matching](M16-network-flow.md) (CLRS 24–25 + Skiena 8.5) — max-flow min-cut, Ford–Fulkerson and Edmonds–Karp, Dinic, and matching as a flow problem.*

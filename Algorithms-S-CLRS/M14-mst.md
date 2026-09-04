@@ -172,23 +172,27 @@ private:
 // ---------------- disjoint sets (M10), union by rank + path compression
 class DisjointSet {
 public:
-    explicit DisjointSet(int n) : p_(n), rank_(n, 0) { iota(p_.begin(), p_.end(), 0); }
-    int find(int x) {
-        int root = x;
-        while (p_[root] != root) root = p_[root];
-        while (p_[x] != root) { const int next = p_[x]; p_[x] = root; x = next; }
+    explicit DisjointSet(int n) : parent_(n), rank_(n, 0) { iota(parent_.begin(), parent_.end(), 0); }
+    int find(int element) {
+        int root = element;
+        while (parent_[root] != root) root = parent_[root];
+        while (parent_[element] != root) {                      // path compression
+            const int next = parent_[element];
+            parent_[element] = root;
+            element = next;
+        }
         return root;
     }
     bool unite(int x, int y) {
-        int a = find(x), b = find(y);
-        if (a == b) return false;
-        if (rank_[a] > rank_[b]) swap(a, b);
-        p_[a] = b;
-        if (rank_[a] == rank_[b]) ++rank_[b];
+        int rootX = find(x), rootY = find(y);
+        if (rootX == rootY) return false;
+        if (rank_[rootX] > rank_[rootY]) swap(rootX, rootY);    // attach the shallower
+        parent_[rootX] = rootY;
+        if (rank_[rootX] == rank_[rootY]) ++rank_[rootY];
         return true;
     }
 private:
-    vector<int> p_, rank_;
+    vector<int> parent_, rank_;
 };
 
 struct MstResult {
@@ -198,18 +202,19 @@ struct MstResult {
 };
 
 // Safe edge = lowest-weight edge joining two distinct components (Corollary 21.2).
-MstResult kruskal(const WeightedGraph& g) {
-    vector<Edge> e = g.edges();
-    sort(e.begin(), e.end(), [](const Edge& a, const Edge& b) { return a.w < b.w; });
-    DisjointSet ds(g.n());
-    MstResult r;
-    for (const auto& x : e)
-        if (ds.unite(x.u, x.v)) {                       // different trees: safe to add
-            r.tree.push_back(x);
-            r.weight += x.w;
+MstResult kruskal(const WeightedGraph& graph) {
+    vector<Edge> allEdges = graph.edges();
+    sort(allEdges.begin(), allEdges.end(),
+         [](const Edge& a, const Edge& b) { return a.w < b.w; });
+    DisjointSet components(graph.n());
+    MstResult result;
+    for (const auto& edge : allEdges)
+        if (components.unite(edge.u, edge.v)) {         // different trees: safe to add
+            result.tree.push_back(edge);
+            result.weight += edge.w;
         }
-    r.connected = (int)r.tree.size() == g.n() - 1;
-    return r;
+    result.connected = (int)result.tree.size() == graph.n() - 1;
+    return result;
 }
 ```
 
@@ -272,59 +277,59 @@ The `Θ(V²)` version has no heap at all — it's the one Skiena implements — 
 #include <vector>
 
 // Safe edge = lightest edge crossing the cut (tree, non-tree). Lazy binary heap.
-MstResult primHeap(const WeightedGraph& g, int root) {
-    const int n = g.n();
+MstResult primHeap(const WeightedGraph& graph, int root) {
+    const int n = graph.n();
     const long long INF = LLONG_MAX / 4;
     vector<long long> key(n, INF);
     vector<int> parent(n, -1);
     vector<char> inTree(n, 0);
     using Item = pair<long long, int>;             // (key, vertex)
-    priority_queue<Item, vector<Item>, greater<Item>> q;
+    priority_queue<Item, vector<Item>, greater<Item>> frontier;
 
     key[root] = 0;
-    q.push({0, root});
-    MstResult r;
-    while (!q.empty()) {
-        const auto top = q.top(); q.pop();
-        const int u = top.second;
+    frontier.push({0, root});
+    MstResult result;
+    while (!frontier.empty()) {
+        const auto cheapest = frontier.top(); frontier.pop();
+        const int u = cheapest.second;
         if (inTree[u]) continue;                        // stale entry: skip
         inTree[u] = 1;
-        if (parent[u] != -1) { r.tree.push_back({parent[u], u, key[u]}); r.weight += key[u]; }
-        for (const auto& e : g.adj(u))
-            if (!inTree[e.first] && e.second < key[e.first]) {
-                key[e.first] = e.second;
-                parent[e.first] = u;
-                q.push({e.second, e.first});            // lazy decrease-key
+        if (parent[u] != -1) { result.tree.push_back({parent[u], u, key[u]}); result.weight += key[u]; }
+        for (const auto& link : graph.adj(u))
+            if (!inTree[link.first] && link.second < key[link.first]) {
+                key[link.first] = link.second;
+                parent[link.first] = u;
+                frontier.push({link.second, link.first});            // lazy decrease-key
             }
     }
-    r.connected = (int)r.tree.size() == n - 1;
-    return r;
+    result.connected = (int)result.tree.size() == n - 1;
+    return result;
 }
 
 // Exercise 21.2-2 / Skiena: O(V^2), no heap. Best for dense graphs.
-MstResult primDense(const WeightedGraph& g, int root) {
-    const int n = g.n();
+MstResult primDense(const WeightedGraph& graph, int root) {
+    const int n = graph.n();
     const long long INF = LLONG_MAX / 4;
     vector<long long> key(n, INF);
     vector<int> parent(n, -1);
     vector<char> inTree(n, 0);
     key[root] = 0;
-    MstResult r;
+    MstResult result;
     for (int iter = 0; iter < n; ++iter) {
         int u = -1;
         for (int i = 0; i < n; ++i)                     // linear scan for the minimum key
             if (!inTree[i] && (u < 0 || key[i] < key[u])) u = i;
         if (u < 0 || key[u] >= INF) break;              // graph is disconnected
         inTree[u] = 1;
-        if (parent[u] != -1) { r.tree.push_back({parent[u], u, key[u]}); r.weight += key[u]; }
-        for (const auto& e : g.adj(u))
-            if (!inTree[e.first] && e.second < key[e.first]) {
-                key[e.first] = e.second;
-                parent[e.first] = u;
+        if (parent[u] != -1) { result.tree.push_back({parent[u], u, key[u]}); result.weight += key[u]; }
+        for (const auto& link : graph.adj(u))
+            if (!inTree[link.first] && link.second < key[link.first]) {
+                key[link.first] = link.second;
+                parent[link.first] = u;
             }
     }
-    r.connected = (int)r.tree.size() == n - 1;
-    return r;
+    result.connected = (int)result.tree.size() == n - 1;
+    return result;
 }
 ```
 
@@ -347,37 +352,37 @@ The **oldest** MST algorithm — O. Borůvka, **1926** — and the one that para
 #include <vector>
 
 // Each round, every component picks its own cheapest outgoing edge; merge them all.
-MstResult boruvka(const WeightedGraph& g) {
-    const int n = g.n();
+MstResult boruvka(const WeightedGraph& graph) {
+    const int n = graph.n();
     DisjointSet ds(n);
-    MstResult r;
+    MstResult result;
     int components = n;
     while (components > 1) {
         vector<int> best(n, -1);                   // best[c] = index of c's cheapest edge
-        const auto& e = g.edges();
-        for (int i = 0; i < (int)e.size(); ++i) {
-            const int a = ds.find(e[i].u), b = ds.find(e[i].v);
-            if (a == b) continue;
-            for (int c : {a, b})
-                if (best[c] < 0 || e[i].w < e[best[c]].w ||
-                    (e[i].w == e[best[c]].w && i < best[c]))    // deterministic tie-break
-                    best[c] = i;
+        const auto& allEdges = graph.edges();
+        for (int i = 0; i < (int)allEdges.size(); ++i) {
+            const int rootU = ds.find(allEdges[i].u), rootV = ds.find(allEdges[i].v);
+            if (rootU == rootV) continue;
+            for (int component : {rootU, rootV})
+                if (best[component] < 0 || allEdges[i].w < allEdges[best[component]].w ||
+                    (allEdges[i].w == allEdges[best[component]].w && i < best[component]))    // deterministic tie-break
+                    best[component] = i;
         }
         bool merged = false;
-        for (int c = 0; c < n; ++c) {
-            if (best[c] < 0) continue;
-            const Edge& x = e[best[c]];
-            if (ds.unite(x.u, x.v)) {
-                r.tree.push_back(x);
-                r.weight += x.w;
+        for (int component = 0; component < n; ++component) {
+            if (best[component] < 0) continue;
+            const Edge& edge = allEdges[best[component]];
+            if (ds.unite(edge.u, edge.v)) {
+                result.tree.push_back(edge);
+                result.weight += edge.w;
                 --components;
                 merged = true;
             }
         }
         if (!merged) break;                             // disconnected
     }
-    r.connected = (int)r.tree.size() == n - 1;
-    return r;
+    result.connected = (int)result.tree.size() == n - 1;
+    return result;
 }
 ```
 
@@ -411,35 +416,35 @@ MstResult boruvka(const WeightedGraph& g) {
 #include <vector>
 
 // Maximum spanning tree: negate the weights and run any MST algorithm.
-MstResult maximumSpanningTree(const WeightedGraph& g) {
-    WeightedGraph h(g.n());
-    for (const auto& e : g.edges()) h.addEdge(e.u, e.v, -e.w);
-    MstResult r = kruskal(h);
-    r.weight = -r.weight;
-    for (auto& e : r.tree) e.w = -e.w;
-    return r;
+MstResult maximumSpanningTree(const WeightedGraph& graph) {
+    WeightedGraph negated(graph.n());
+    for (const auto& edge : graph.edges()) negated.addEdge(edge.u, edge.v, -edge.w);
+    MstResult result = kruskal(negated);
+    result.weight = -result.weight;
+    for (auto& edge : result.tree) edge.w = -edge.w;
+    return result;
 }
 
 // The bottleneck of a tree: its heaviest edge. Every MST minimises this.
-long long bottleneck(const MstResult& r) {
-    long long b = LLONG_MIN;
-    for (const auto& e : r.tree) b = max(b, e.w);
-    return r.tree.empty() ? 0 : b;
+long long bottleneck(const MstResult& tree) {
+    long long heaviest = LLONG_MIN;
+    for (const auto& edge : tree.tree) heaviest = max(heaviest, edge.w);
+    return tree.tree.empty() ? 0 : heaviest;
 }
 
 // Problem 21-1: the second-best spanning tree differs from the MST by exactly one
 // edge swap, so it suffices to delete each MST edge in turn and rebuild.
-long long secondBestMST(const WeightedGraph& g) {
-    const int n = g.n();
-    vector<int> idx(g.edges().size());
-    iota(idx.begin(), idx.end(), 0);
-    sort(idx.begin(), idx.end(),
-              [&](int a, int b) { return g.edges()[a].w < g.edges()[b].w; });
+long long secondBestMST(const WeightedGraph& graph) {
+    const int n = graph.n();
+    vector<int> order(graph.edges().size());
+    iota(order.begin(), order.end(), 0);
+    sort(order.begin(), order.end(),
+              [&](int left, int right) { return graph.edges()[left].w < graph.edges()[right].w; });
 
     vector<int> chosen;                            // indices of the MST's edges
     {
         DisjointSet ds(n);
-        for (int i : idx) if (ds.unite(g.edges()[i].u, g.edges()[i].v)) chosen.push_back(i);
+        for (int i : order) if (ds.unite(graph.edges()[i].u, graph.edges()[i].v)) chosen.push_back(i);
     }
     if ((int)chosen.size() != n - 1) return LLONG_MAX;
 
@@ -448,9 +453,9 @@ long long secondBestMST(const WeightedGraph& g) {
         DisjointSet ds(n);
         long long total = 0;
         int used = 0;
-        for (int i : idx) {
+        for (int i : order) {
             if (i == skip) continue;
-            if (ds.unite(g.edges()[i].u, g.edges()[i].v)) { total += g.edges()[i].w; ++used; }
+            if (ds.unite(graph.edges()[i].u, graph.edges()[i].v)) { total += graph.edges()[i].w; ++used; }
         }
         if (used == n - 1) second = min(second, total);
     }
@@ -574,16 +579,16 @@ Kruskal sorts edges by weight. Two idioms, both fine:
 ```cpp
 struct Link { int u, v; long long w; };
 
-void sortLinks(vector<Link>& e) {
+void sortLinks(vector<Link>& links) {
     // (a) a lambda at the call site -- local, explicit, no surprises
-    sort(e.begin(), e.end(), [](const Link& a, const Link& b) { return a.w < b.w; });
+    sort(links.begin(), links.end(), [](const Link& left, const Link& right) { return left.w < right.w; });
 }
 
 struct Link2 {
     int u, v; long long w;
     // (b) operator< as a member -- then sort(e.begin(), e.end()) just works,
     // and so do set<Link2>, map keys, and priority_queue<Link2>.
-    bool operator<(const Link2& o) const { return w < o.w; }
+    bool operator<(const Link2& other) const { return w < other.w; }
 };
 ```
 
@@ -688,17 +693,17 @@ struct MstOutput {
 //
 // This version makes the invariant executable by taking the safe-edge rule as
 // a parameter. Kruskal and Prim are then just two arguments to it.
-MstOutput genericMst(const MstGraph& g,
+MstOutput genericMst(const MstGraph& graph,
                      const function<int(const MstGraph&, const vector<int>&)>& findSafeEdge) {
-    MstOutput out;                                    // 1  A = empty
-    while ((int)out.edgeIds.size() < g.n - 1) {       // 2  while A is not spanning
-        int e = findSafeEdge(g, out.edgeIds);         // 3  find a SAFE edge
-        if (e < 0) break;                             //    disconnected: stop early
-        out.edgeIds.push_back(e);                     // 4  A = A union {(u,v)}
-        out.weight += g.edges[e].w;
+    MstOutput result;                                    // 1  A = empty
+    while ((int)result.edgeIds.size() < graph.n - 1) {       // 2  while A is not spanning
+        int safeEdge = findSafeEdge(graph, result.edgeIds);         // 3  find a SAFE edge
+        if (safeEdge < 0) break;                             //    disconnected: stop early
+        result.edgeIds.push_back(safeEdge);                     // 4  A = A union {(u,v)}
+        result.weight += graph.edges[safeEdge].w;
     }
-    out.connected = ((int)out.edgeIds.size() == g.n - 1);
-    return out;                                       // 5  return A
+    result.connected = ((int)result.edgeIds.size() == graph.n - 1);
+    return result;                                       // 5  return A
 }
 ```
 
@@ -723,48 +728,51 @@ public:
     explicit MstDisjointSet(int n) : parent_(n), rank_(n, 0) {
         iota(parent_.begin(), parent_.end(), 0);      // 2-3  MAKE-SET for every vertex
     }
-    int find(int x) {
-        while (x != parent_[x]) { parent_[x] = parent_[parent_[x]]; x = parent_[x]; }
-        return x;                                     // path halving
+    int find(int element) {
+        while (element != parent_[element]) {          // path halving
+            parent_[element] = parent_[parent_[element]];
+            element = parent_[element];
+        }
+        return element;
     }
-    bool unite(int a, int b) {
-        int ra = find(a), rb = find(b);
-        if (ra == rb) return false;                   // already connected: a CYCLE
-        if (rank_[ra] < rank_[rb]) swap(ra, rb);
-        parent_[rb] = ra;
-        if (rank_[ra] == rank_[rb]) ++rank_[ra];
+    bool unite(int x, int y) {
+        int rootX = find(x), rootY = find(y);
+        if (rootX == rootY) return false;             // already connected: a CYCLE
+        if (rank_[rootX] < rank_[rootY]) swap(rootX, rootY);
+        parent_[rootY] = rootX;
+        if (rank_[rootX] == rank_[rootY]) ++rank_[rootX];
         return true;
     }
 private:
     vector<int> parent_, rank_;
 };
 
-MstOutput mstKruskal(const MstGraph& g) {
-    MstOutput out;                                    // 1  A = empty
-    MstDisjointSet ds(g.n);                           // 2-3 MAKE-SET(v) for all v
+MstOutput mstKruskal(const MstGraph& graph) {
+    MstOutput result;                                    // 1  A = empty
+    MstDisjointSet components(graph.n);                           // 2-3 MAKE-SET(v) for all v
 
     // 4-5  sort the edges by increasing weight.
     // Sort a vector of INDICES, not of edges: an int is 4 bytes and an MstEdge
     // is 24, so this moves 6x less memory, and it keeps g.edges untouched so
     // `const MstGraph&` remains honest.
-    vector<int> order(g.edges.size());
+    vector<int> order(graph.edges.size());
     iota(order.begin(), order.end(), 0);
     sort(order.begin(), order.end(),
-         [&g](int a, int b) { return g.edges[a].w < g.edges[b].w; });
+         [&graph](int left, int right) { return graph.edges[left].w < graph.edges[right].w; });
 
     for (int e : order) {                             // 6  in sorted order
-        const MstEdge& ed = g.edges[e];
+        const MstEdge& edge = graph.edges[e];
         // 7  if FIND-SET(u) != FIND-SET(v)   -- unite() performs the test AND the
         //    union, returning whether it merged. `false` means this edge closes
         //    a cycle, which is exactly the cycle property in one bit.
-        if (ds.unite(ed.u, ed.v)) {                   // 8-9  A = A + edge; UNION(u,v)
-            out.edgeIds.push_back(e);
-            out.weight += ed.w;
-            if ((int)out.edgeIds.size() == g.n - 1) break;   // early exit: spanning
+        if (components.unite(edge.u, edge.v)) {                   // 8-9  A = A + edge; UNION(u,v)
+            result.edgeIds.push_back(e);
+            result.weight += edge.w;
+            if ((int)result.edgeIds.size() == graph.n - 1) break;   // early exit: spanning
         }
     }
-    out.connected = ((int)out.edgeIds.size() == g.n - 1);
-    return out;                                       // 10 return A
+    result.connected = ((int)result.edgeIds.size() == graph.n - 1);
+    return result;                                       // 10 return A
 }
 ```
 
@@ -782,62 +790,62 @@ MstOutput mstKruskal(const MstGraph& g) {
 // PRIM with a binary heap and the LAZY decrease-key idiom (toolkit 2).
 // `key[v]` is the weight of the cheapest known edge from the tree to v -- CLRS's
 // v.key -- and `parent[v]` is the other end of that edge, CLRS's v.pi.
-MstOutput mstPrim(const MstGraph& g, int r = 0) {
-    MstOutput out;
-    if (g.n == 0) return out;
+MstOutput mstPrim(const MstGraph& graph, int root = 0) {
+    MstOutput result;
+    if (graph.n == 0) return result;
 
     const long long INF = LLONG_MAX / 4;
-    vector<long long> key(g.n, INF);                  // 1-2  u.key = infinity
-    vector<int> parent(g.n, -1);                      //      u.pi = NIL
-    vector<char> inTree(g.n, 0);                      //      "is u still in Q?"
-    key[r] = 0;                                       // 4  r.key = 0
+    vector<long long> key(graph.n, INF);                  // 1-2  u.key = infinity
+    vector<int> parent(graph.n, -1);                      //      u.pi = NIL
+    vector<char> inTree(graph.n, 0);                      //      "is u still in Q?"
+    key[root] = 0;                                       // 4  r.key = 0
 
     // 5  Q = all vertices. With the lazy idiom the queue holds (key, vertex)
     //    pairs rather than vertices, and stale pairs are skipped on pop.
     using Item = pair<long long,int>;
-    priority_queue<Item, vector<Item>, greater<Item>> Q;   // MIN-heap (toolkit 3)
-    Q.push({0, r});
+    priority_queue<Item, vector<Item>, greater<Item>> frontier;   // MIN-heap (toolkit 3)
+    frontier.push({0, root});
 
-    while (!Q.empty()) {                              // 8  while Q != empty
-        auto [k, u] = Q.top(); Q.pop();               // 9  u = EXTRACT-MIN(Q)
+    while (!frontier.empty()) {                              // 8  while Q != empty
+        auto [bestKey, u] = frontier.top(); frontier.pop();               // 9  u = EXTRACT-MIN(Q)
         if (inTree[u]) continue;                      //    a STALE entry: skip it
         inTree[u] = 1;                                //    add u to the tree
-        if (parent[u] != -1) { out.weight += k; out.edgeIds.push_back(parent[u]); }
+        if (parent[u] != -1) { result.weight += bestKey; result.edgeIds.push_back(parent[u]); }
 
-        for (const auto& [v, w] : g.adj[u]) {         // 10 for each v in Adj[u]
+        for (const auto& [v, weight] : graph.adj[u]) {         // 10 for each v in Adj[u]
             // 11 if v in Q and w(u,v) < v.key
             // `!inTree[v]` IS the "v in Q" test -- the queue itself cannot
             // answer membership questions, so a separate array does it.
-            if (!inTree[v] && w < key[v]) {
-                key[v] = w;                           // 13 v.key = w(u,v)
+            if (!inTree[v] && weight < key[v]) {
+                key[v] = weight;                           // 13 v.key = w(u,v)
                 parent[v] = -1;                       //    (edge id filled below)
-                Q.push({w, v});                       // 14 DECREASE-KEY, lazily:
+                frontier.push({weight, v});                       // 14 DECREASE-KEY, lazily:
                 //                                    //    push a NEW entry, do not
                 //                                    //    update the old one
                 // Remember which edge achieved this key, for reporting.
-                for (const MstEdge& e : g.edges)
-                    if ((e.u == u && e.v == v) || (e.u == v && e.v == u)) {
-                        if (e.w == w) { parent[v] = e.id; break; }
+                for (const MstEdge& candidate : graph.edges)
+                    if ((candidate.u == u && candidate.v == v) || (candidate.u == v && candidate.v == u)) {
+                        if (candidate.w == weight) { parent[v] = candidate.id; break; }
                     }
             }
         }
     }
-    out.connected = ((int)out.edgeIds.size() == g.n - 1);
-    return out;
+    result.connected = ((int)result.edgeIds.size() == graph.n - 1);
+    return result;
 }
 
 // PRIM WITH A LINEAR SCAN -- Theta(V^2), no heap, and the RIGHT choice on a
 // dense or implicit-complete graph (toolkit 4).
-MstOutput mstPrimDense(const vector<vector<long long>>& w, int r = 0) {
-    const int n = (int)w.size();
+MstOutput mstPrimDense(const vector<vector<long long>>& weight, int root = 0) {
+    const int n = (int)weight.size();
     const long long INF = LLONG_MAX / 4;
-    MstOutput out;
-    if (n == 0) return out;
+    MstOutput result;
+    if (n == 0) return result;
 
     vector<long long> key(n, INF);
     vector<int> parent(n, -1);
     vector<char> inTree(n, 0);
-    key[r] = 0;
+    key[root] = 0;
 
     for (int iter = 0; iter < n; ++iter) {
         // EXTRACT-MIN by linear scan: Theta(V) here, Theta(V^2) overall.
@@ -848,18 +856,18 @@ MstOutput mstPrimDense(const vector<vector<long long>>& w, int r = 0) {
         if (u == -1) break;                            // remainder is unreachable
 
         inTree[u] = 1;
-        if (parent[u] != -1) out.weight += key[u];
+        if (parent[u] != -1) result.weight += key[u];
 
         for (int v = 0; v < n; ++v)                    // relax every neighbour:
-            if (!inTree[v] && w[u][v] < key[v]) {      // Theta(V) per vertex,
-                key[v] = w[u][v];                      // Theta(V^2) = Theta(E) overall
+            if (!inTree[v] && weight[u][v] < key[v]) {      // Theta(V) per vertex,
+                key[v] = weight[u][v];                      // Theta(V^2) = Theta(E) overall
                 parent[v] = u;
             }
     }
     int count = 0;
     for (int v = 0; v < n; ++v) if (parent[v] != -1) ++count;
-    out.connected = (count == n - 1);
-    return out;
+    result.connected = (count == n - 1);
+    return result;
 }
 ```
 

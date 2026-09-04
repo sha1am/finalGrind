@@ -24,6 +24,10 @@ correspondence with CLRS/Skiena.
 | M09 | `s_`→`stack_`, `a_`→`bits_`, `v_`→`elements_`, `n_`→`count_`, merge helpers |
 | M10 | `p_`→`parent_`, `sets_`→`componentCount_`, `rx/ry`→`rootX/rootY`, `off_`→`offsetToParent_`, offline LCA / offline minimum |
 | M11 | DP tables named for what they hold: `r`→`bestRevenue`, `m`→`minCost`, `s`→`splitAt`, `c`→`lcsLen`, `D`→`dist`, `L`→`lisLenEndingAt`, `T`→`reachable`, `M`→`minMaxSum`/`chart`, `e/w/r`→`expectedCost`/`weight`/`rootCandidate` |
+| M12 | `a`→`activities`/`jobs`, `idx`→`order`, `q`/`Q`→`ready`, `x`/`y`→`smallest`/`secondSmallest`, `nd`→`current`, `ch`/`fx`/`fy`→`ch`/`leftFreq`/`rightFreq`, `req`→`requests`, `C`→`frequencies`, `h`→`tree` |
+| M13 | `g`/`g_`→`graph`/`graph_`, `s`→`source`, `r`→`result`/`finished`, `stk`→`pending`, `q`/`Q`→`frontier`/`ready`, `pi`→`parent`, `d`/`f`→`discovery`/`finish`, `out`/`out_`→`result`/`result_`, `c`→`componentId` |
+| M14 | `g`→`graph`, `r`→`result`, `e`→`allEdges`/`link`/`candidate`, `x`→`edge`, `ds`→`components`, `p_`→`parent_`, `a`/`b` in union-find→`rootX`/`rootY`, `ra`/`rb`→`rootX`/`rootY`, `ed`→`edge`, `h`→`negated`, `Q`→`frontier`, `k`→`bestKey` |
+| M15 | `g`→`graph`, `s`→`source`, `r`→`result`, `d`→`dist`, `pi`→`parent`, `x`→`at`, `W`→`weight`, `D`→`distance`, `h`→`potential`, `gp`/`gh`/`bf`→`augmented`/`reweighted`/`bellman`, `du`→`knownDist`, `pq`→`frontier`, `cs`→`constraints`, `v0`→`superSource` |
 
 M08's body and appendix were additionally re-verified behaviourally after the
 rename (randomized B-tree / red-black / order-statistic invariant checks) because
@@ -31,12 +35,18 @@ the rotation and B-tree split were rewritten by hand rather than mechanically.
 
 ## Remaining
 
-| Module | Identifiers to fix |
-|---|---|
-| M12 greedy | `a, t, x, ch, nd, idx, q, Q, h` |
-| M13 traversal | `g, r, stk, q, c, d, pi` (keep `u`/`v`) |
-| M14 MST | `e, g, r, x, b, a, c, p_` |
-| M15 shortest paths | `r` (the `PathResult`), `d`, `g`, `pi`, `x`, `a` |
+**None.** M01–M20 have all had the pass.
+
+M12–M15 were additionally re-verified behaviourally after the rename, because
+M14's two union-find classes were rewritten by hand rather than mechanically
+(`find`'s path-compression loop and `unite`'s union-by-rank direction both
+change shape when `a`/`b` become `rootX`/`rootY`, and getting the attachment
+direction backwards is silent — it still produces a correct MST, just a slower
+one). The checks: greedy activity selection against a `2ⁿ` search on 3 000
+instances; Huffman encode/decode round-trip on 500 alphabets; Kruskal, Prim
+(heap), Prim (dense) and Borůvka agreeing on the MST weight over 3 000 random
+graphs; and Dijkstra, Bellman–Ford and Floyd–Warshall agreeing on every
+source-to-`v` distance over 2 000 random digraphs. Zero disagreements.
 
 Then: re-run the whole-tree compile + link check, rebuild the zip, re-sync to the project.
 

@@ -151,26 +151,26 @@ struct Activity {
 };
 
 // GREEDY-ACTIVITY-SELECTOR: always take the compatible activity that finishes first.
-vector<int> activitySelect(vector<Activity> a) {
-    const int n = (int)a.size();
-    vector<int> idx(n);
-    iota(idx.begin(), idx.end(), 0);
-    sort(idx.begin(), idx.end(),
-              [&](int i, int j) { return a[i].finish < a[j].finish; });
+vector<int> activitySelect(vector<Activity> activities) {
+    const int n = (int)activities.size();
+    vector<int> order(n);
+    iota(order.begin(), order.end(), 0);
+    sort(order.begin(), order.end(),
+              [&](int i, int j) { return activities[i].finish < activities[j].finish; });
     vector<int> chosen;
     int lastFinish = INT_MIN;
-    for (int i : idx)
-        if (a[i].start >= lastFinish) { chosen.push_back(i); lastFinish = a[i].finish; }
+    for (int i : order)
+        if (activities[i].start >= lastFinish) { chosen.push_back(i); lastFinish = activities[i].finish; }
     return chosen;
 }
 
 // Interval-graph colouring (Exercise 15.1-4): fewest lecture halls = max overlap.
-int minLectureHalls(const vector<Activity>& a) {
+int minLectureHalls(const vector<Activity>& activities) {
     vector<pair<int, int>> events;               // (time, +1 start / -1 finish)
-    for (const auto& x : a) { events.push_back({x.start, +1}); events.push_back({x.finish, -1}); }
+    for (const auto& activity : activities) { events.push_back({activity.start, +1}); events.push_back({activity.finish, -1}); }
     sort(events.begin(), events.end());               // finishes (-1) sort before starts at equal time
-    int cur = 0, best = 0;
-    for (const auto& e : events) { cur += e.second; best = max(best, cur); }
+    int openNow = 0, best = 0;
+    for (const auto& event : events) { openNow += event.second; best = max(best, openNow); }
     return best;
 }
 ```
@@ -251,18 +251,18 @@ Capacity 50. **Greedy takes item 1** (highest density) and then can fit only ite
 #include <numeric>
 #include <vector>
 
-double fractionalKnapsack(vector<int> w, vector<double> v, double cap) {
-    const int n = (int)w.size();
-    vector<int> idx(n);
-    iota(idx.begin(), idx.end(), 0);
-    sort(idx.begin(), idx.end(),                      // greedy: best value per pound first
-              [&](int i, int j) { return v[i] / w[i] > v[j] / w[j]; });
+double fractionalKnapsack(vector<int> weight, vector<double> value, double capacity) {
+    const int n = (int)weight.size();
+    vector<int> order(n);
+    iota(order.begin(), order.end(), 0);
+    sort(order.begin(), order.end(),                      // greedy: best value per pound first
+              [&](int i, int j) { return value[i] / weight[i] > value[j] / weight[j]; });
     double total = 0;
-    for (int i : idx) {
-        if (cap <= 0) break;
-        const double take = min((double)w[i], cap);
-        total += v[i] * take / w[i];
-        cap -= take;
+    for (int i : order) {
+        if (capacity <= 0) break;
+        const double take = min((double)weight[i], capacity);
+        total += value[i] * take / weight[i];
+        capacity -= take;
     }
     return total;
 }
@@ -388,61 +388,61 @@ struct HuffmanResult {
 };
 
 HuffmanResult huffman(const map<char, long long>& freq) {
-    HuffmanResult out{0, {}, {}, -1};
-    if (freq.empty()) return out;
+    HuffmanResult result{0, {}, {}, -1};
+    if (freq.empty()) return result;
 
     using Item = pair<long long, int>;                // (frequency, node index)
-    priority_queue<Item, vector<Item>, greater<Item>> q;
-    for (const auto& kv : freq) {
-        out.nodes.push_back({kv.second, kv.first, -1, -1});
-        q.push({kv.second, (int)out.nodes.size() - 1});
+    priority_queue<Item, vector<Item>, greater<Item>> ready;
+    for (const auto& entry : freq) {
+        result.nodes.push_back({entry.second, entry.first, -1, -1});
+        ready.push({entry.second, (int)result.nodes.size() - 1});
     }
-    if (q.size() == 1) {                                   // degenerate single-symbol alphabet
-        out.root = q.top().second;
-        out.code[out.nodes[out.root].ch] = "0";
-        out.cost = out.nodes[out.root].freq;
-        return out;
+    if (ready.size() == 1) {                                   // degenerate single-symbol alphabet
+        result.root = ready.top().second;
+        result.code[result.nodes[result.root].ch] = "0";
+        result.cost = result.nodes[result.root].freq;
+        return result;
     }
-    while (q.size() > 1) {                                 // n-1 merges
-        const auto x = q.top(); q.pop();
-        const auto y = q.top(); q.pop();
-        out.nodes.push_back({x.first + y.first, 0, x.second, y.second});
-        q.push({x.first + y.first, (int)out.nodes.size() - 1});
+    while (ready.size() > 1) {                                 // n-1 merges
+        const auto smallest = ready.top(); ready.pop();
+        const auto secondSmallest = ready.top(); ready.pop();
+        result.nodes.push_back({smallest.first + secondSmallest.first, 0, smallest.second, secondSmallest.second});
+        ready.push({smallest.first + secondSmallest.first, (int)result.nodes.size() - 1});
     }
-    out.root = q.top().second;
+    result.root = ready.top().second;
 
     string path;
-    function<void(int)> walk = [&](int u) {
-        if (out.nodes[u].left < 0) {                       // leaf
-            out.code[out.nodes[u].ch] = path;
-            out.cost += out.nodes[u].freq * (long long)path.size();
+    function<void(int)> walk = [&](int node) {
+        if (result.nodes[node].left < 0) {                       // leaf
+            result.code[result.nodes[node].ch] = path;
+            result.cost += result.nodes[node].freq * (long long)path.size();
             return;
         }
-        path.push_back('0'); walk(out.nodes[u].left);  path.pop_back();
-        path.push_back('1'); walk(out.nodes[u].right); path.pop_back();
+        path.push_back('0'); walk(result.nodes[node].left);  path.pop_back();
+        path.push_back('1'); walk(result.nodes[node].right); path.pop_back();
     };
-    walk(out.root);
-    return out;
+    walk(result.root);
+    return result;
 }
 
-string huffmanEncode(const HuffmanResult& h, const string& text) {
+string huffmanEncode(const HuffmanResult& tree, const string& text) {
     string bits;
-    for (char c : text) bits += h.code.at(c);
+    for (char c : text) bits += tree.code.at(c);
     return bits;
 }
 
-string huffmanDecode(const HuffmanResult& h, const string& bits) {
-    string out;
-    int u = h.root;
-    if (h.nodes[u].left < 0) {                             // single-symbol alphabet
-        for (size_t i = 0; i < bits.size(); ++i) out += h.nodes[u].ch;
-        return out;
+string huffmanDecode(const HuffmanResult& tree, const string& bits) {
+    string result;
+    int node = tree.root;
+    if (tree.nodes[node].left < 0) {                             // single-symbol alphabet
+        for (size_t i = 0; i < bits.size(); ++i) result += tree.nodes[node].ch;
+        return result;
     }
-    for (char b : bits) {
-        u = (b == '0') ? h.nodes[u].left : h.nodes[u].right;
-        if (h.nodes[u].left < 0) { out += h.nodes[u].ch; u = h.root; }
+    for (char bit : bits) {
+        node = (bit == '0') ? tree.nodes[node].left : tree.nodes[node].right;
+        if (tree.nodes[node].left < 0) { result += tree.nodes[node].ch; node = tree.root; }
     }
-    return out;
+    return result;
 }
 ```
 
@@ -521,36 +521,36 @@ At request `b_m = z` the two caches become identical, and from then on `S′` co
 #include <vector>
 
 // furthest-in-future: evict the cached block whose next use is latest (or never).
-int furthestInFutureMisses(const vector<int>& req, int k) {
+int furthestInFutureMisses(const vector<int>& requests, int cacheSize) {
     set<int> cache;
     int misses = 0;
-    for (size_t i = 0; i < req.size(); ++i) {
-        if (cache.count(req[i])) continue;                 // hit
+    for (size_t i = 0; i < requests.size(); ++i) {
+        if (cache.count(requests[i])) continue;                 // hit
         ++misses;
-        if ((int)cache.size() < k) { cache.insert(req[i]); continue; }
+        if ((int)cache.size() < cacheSize) { cache.insert(requests[i]); continue; }
         int victim = -1;
         size_t victimNext = 0;
-        for (int b : cache) {
-            size_t next = req.size();                 // "never used again"
-            for (size_t j = i + 1; j < req.size(); ++j)
-                if (req[j] == b) { next = j; break; }
-            if (victim < 0 || next > victimNext) { victim = b; victimNext = next; }
+        for (int block : cache) {
+            size_t next = requests.size();                 // "never used again"
+            for (size_t j = i + 1; j < requests.size(); ++j)
+                if (requests[j] == block) { next = j; break; }
+            if (victim < 0 || next > victimNext) { victim = block; victimNext = next; }
         }
         cache.erase(victim);
-        cache.insert(req[i]);
+        cache.insert(requests[i]);
     }
     return misses;
 }
 
-int lruMisses(const vector<int>& req, int k) {
+int lruMisses(const vector<int>& requests, int cacheSize) {
     vector<int> order;                                // front = least recent
     int misses = 0;
-    for (int b : req) {
-        auto it = find(order.begin(), order.end(), b);
-        if (it != order.end()) { order.erase(it); order.push_back(b); continue; }
+    for (int block : requests) {
+        auto it = find(order.begin(), order.end(), block);
+        if (it != order.end()) { order.erase(it); order.push_back(block); continue; }
         ++misses;
-        if ((int)order.size() == k) order.erase(order.begin());
-        order.push_back(b);
+        if ((int)order.size() == cacheSize) order.erase(order.begin());
+        order.push_back(block);
     }
     return misses;
 }
@@ -587,21 +587,21 @@ int lruMisses(const vector<int>& req, int k) {
 #include <algorithm>
 #include <vector>
 
-int coinChangeGreedy(vector<int> coins, int n) {
+int coinChangeGreedy(vector<int> coins, int amount) {
     sort(coins.rbegin(), coins.rend());
     int used = 0;
-    for (int c : coins) { used += n / c; n %= c; }
-    return n == 0 ? used : -1;
+    for (int coin : coins) { used += amount / coin; amount %= coin; }
+    return amount == 0 ? used : -1;
 }
 
-int coinChangeDP(const vector<int>& coins, int n) {
+int coinChangeDP(const vector<int>& coins, int amount) {
     const int INF = 1000000;
-    vector<int> best(n + 1, INF);
+    vector<int> best(amount + 1, INF);
     best[0] = 0;
-    for (int j = 1; j <= n; ++j)
-        for (int c : coins)
-            if (c <= j && best[j - c] + 1 < best[j]) best[j] = best[j - c] + 1;
-    return best[n] >= INF ? -1 : best[n];
+    for (int target = 1; target <= amount; ++target)
+        for (int coin : coins)
+            if (coin <= target && best[target - coin] + 1 < best[target]) best[target] = best[target - coin] + 1;
+    return best[amount] >= INF ? -1 : best[amount];
 }
 ```
 
@@ -626,10 +626,10 @@ int coinChangeDP(const vector<int>& coins, int n) {
 #include <vector>
 
 // Shortest-processing-time-first minimizes total (hence average) completion time.
-long long totalCompletionTime(vector<long long> p) {
-    sort(p.begin(), p.end());
+long long totalCompletionTime(vector<long long> processingTime) {
+    sort(processingTime.begin(), processingTime.end());
     long long clock = 0, total = 0;
-    for (long long x : p) { clock += x; total += clock; }
+    for (long long duration : processingTime) { clock += duration; total += clock; }
     return total;
 }
 ```
@@ -760,12 +760,12 @@ Greedy algorithms are overwhelmingly "sort, then sweep". The comparator carries 
 ```cpp
 struct Job { int start, finish; int id; };
 
-void sortForActivitySelection(vector<Job>& a) {
+void sortForActivitySelection(vector<Job>& jobs) {
     // Sort by FINISH time. Sorting by start time, by duration, or by
     // "fewest conflicts" all give WRONG answers on the counterexamples in
     // section 1 of this module -- the comparator IS the algorithmic choice.
-    sort(a.begin(), a.end(),
-         [](const Job& x, const Job& y) { return x.finish < y.finish; });
+    sort(jobs.begin(), jobs.end(),
+         [](const Job& left, const Job& right) { return left.finish < right.finish; });
 }
 ```
 
@@ -775,9 +775,9 @@ The comparator must be a **strict weak ordering** ([M05](M05-sorting.md) toolkit
 
 ```cpp
 void heapDirections() {
-    priority_queue<int> maxq;                                    // top() = largest
-    priority_queue<int, vector<int>, greater<int>> minq;         // top() = smallest
-    (void)maxq; (void)minq;
+    priority_queue<int> maxHeap;                                    // top() = largest
+    priority_queue<int, vector<int>, greater<int>> minHeap;         // top() = smallest
+    (void)maxHeap; (void)minHeap;
 }
 ```
 
@@ -791,8 +791,8 @@ Huffman's queue holds tree **nodes**, not numbers. A `priority_queue<DemoNode*>`
 struct DemoNode { long long freq; char ch; DemoNode *left = nullptr, *right = nullptr; };
 
 struct ByFreq {                       // a function object [Weiss 1.6.4, p.42]
-    bool operator()(const DemoNode* a, const DemoNode* b) const {
-        return a->freq > b->freq;     // `>` because priority_queue is a MAX-heap
+    bool operator()(const DemoNode* left, const DemoNode* right) const {
+        return left->freq > right->freq;     // `>` because priority_queue is a MAX-heap
     }                                 // and we want the MINIMUM on top
 };
 using DemoQueue = priority_queue<DemoNode*, vector<DemoNode*>, ByFreq>;
@@ -806,9 +806,9 @@ When two nodes have equal frequency, the order is arbitrary — and different or
 
 ```cpp
 struct ByFreqThenId {
-    bool operator()(const pair<long long,int>& a, const pair<long long,int>& b) const {
-        if (a.first != b.first) return a.first > b.first;
-        return a.second > b.second;    // stable, reproducible across runs
+    bool operator()(const pair<long long,int>& left, const pair<long long,int>& right) const {
+        if (left.first != right.first) return left.first > right.first;
+        return left.second > right.second;    // stable, reproducible across runs
     }
 };
 ```
@@ -851,14 +851,14 @@ struct Activity {
 // The recursion is TAIL recursive -- the recursive call's result is returned
 // with only a prepend -- which is precisely why the iterative version below
 // exists and why CLRS presents both.
-void recursiveActivitySelector(const vector<Activity>& a, int k, int n,
+void recursiveActivitySelector(const vector<Activity>& activities, int lastChosen, int n,
                                vector<int>& chosen) {
-    int m = k + 1;                                   // 1  m = k + 1
-    while (m <= n && a[m].start < a[k].finish)       // 2  find the first activity in S_k
-        m = m + 1;                                   // 3
-    if (m <= n) {                                    // 4
-        chosen.push_back(a[m].id);                   // 5  {a_m} union RECURSIVE-...
-        recursiveActivitySelector(a, m, n, chosen);
+    int candidate = lastChosen + 1;                                   // 1  m = k + 1
+    while (candidate <= n && activities[candidate].start < activities[lastChosen].finish)       // 2  find the first activity in S_k
+        candidate = candidate + 1;                                   // 3
+    if (candidate <= n) {                                    // 4
+        chosen.push_back(activities[candidate].id);                   // 5  {a_m} union RECURSIVE-...
+        recursiveActivitySelector(activities, candidate, n, chosen);
     }
     // 6  else return empty -- nothing left that starts after a_k finishes
 }
@@ -868,20 +868,20 @@ void recursiveActivitySelector(const vector<Activity>& a, int k, int n,
 // is Theta(n) -- the while loop of the recursive version and the for loop here
 // scan the SAME sequence exactly once. This is an amortized argument
 // (M09): the inner scan looks nested but is bounded globally.
-vector<int> greedyActivitySelector(vector<Activity> a) {
-    if (a.empty()) return {};
+vector<int> greedyActivitySelector(vector<Activity> activities) {
+    if (activities.empty()) return {};
     // Sort by FINISH time. This is the greedy choice, and it is the only sort
     // key that works (toolkit 1).
-    sort(a.begin(), a.end(),
-         [](const Activity& x, const Activity& y) { return x.finish < y.finish; });
+    sort(activities.begin(), activities.end(),
+         [](const Activity& left, const Activity& right) { return left.finish < right.finish; });
 
     vector<int> chosen;
-    chosen.push_back(a[0].id);                       // 1  A = {a_1}
-    int k = 0;                                       // 2  k = 1
-    for (int m = 1; m < (int)a.size(); ++m) {        // 3  for m = 2 to n
-        if (a[m].start >= a[k].finish) {             // 4      is a_m compatible?
-            chosen.push_back(a[m].id);               // 5      A = A union {a_m}
-            k = m;                                   // 6      k = m
+    chosen.push_back(activities[0].id);                       // 1  A = {a_1}
+    int lastChosen = 0;                                       // 2  k = 1
+    for (int candidate = 1; candidate < (int)activities.size(); ++candidate) {        // 3  for m = 2 to n
+        if (activities[candidate].start >= activities[lastChosen].finish) {             // 4      is a_m compatible?
+            chosen.push_back(activities[candidate].id);               // 5      A = A union {a_m}
+            lastChosen = candidate;                                   // 6      k = m
         }
     }
     return chosen;                                   // 7  return A
@@ -917,66 +917,66 @@ struct HuffTree {
 };
 
 // HUFFMAN(C): C is a map from character to frequency.
-HuffTree huffman(const vector<pair<char,long long>>& C) {
-    HuffTree t;
-    if (C.empty()) return t;
+HuffTree huffman(const vector<pair<char,long long>>& frequencies) {
+    HuffTree tree;
+    if (frequencies.empty()) return tree;
 
     // The priority queue holds (freq, nodeIndex). `greater<>` makes it a
     // MIN-heap (toolkit 2); the nodeIndex breaks ties deterministically
     // (toolkit 4), so the same input always yields the same tree.
     using Item = pair<long long,int>;
-    priority_queue<Item, vector<Item>, greater<Item>> Q;
+    priority_queue<Item, vector<Item>, greater<Item>> ready;
 
-    for (const auto& [ch, f] : C) {                  // 2  Q = C
-        t.nodes.push_back({f, (int)(unsigned char)ch, -1, -1});
-        Q.push({f, (int)t.nodes.size() - 1});
+    for (const auto& [ch, frequency] : frequencies) {                  // 2  Q = C
+        tree.nodes.push_back({frequency, (int)(unsigned char)ch, -1, -1});
+        ready.push({frequency, (int)tree.nodes.size() - 1});
     }
 
     // A single character is a special case the pseudocode glosses over: the
     // loop runs zero times and the "tree" is one leaf with no code at all.
     // Real encoders assign it the single bit 0.
-    if (Q.size() == 1) { t.root = Q.top().second; return t; }
+    if (ready.size() == 1) { tree.root = ready.top().second; return tree; }
 
-    for (size_t i = 1; i + 1 <= C.size() - 1 + 1 && Q.size() > 1; ++i) {   // 3  n-1 times
-        auto [fx, x] = Q.top(); Q.pop();             // 5  x = EXTRACT-MIN(Q)
-        auto [fy, y] = Q.top(); Q.pop();             // 6  y = EXTRACT-MIN(Q)
-        t.nodes.push_back({fx + fy, -1, x, y});      // 4,7,8,9  z.left=x, z.right=y,
+    for (size_t i = 1; i + 1 <= frequencies.size() - 1 + 1 && ready.size() > 1; ++i) {   // 3  n-1 times
+        auto [leftFreq, leftIndex] = ready.top(); ready.pop();             // 5  x = EXTRACT-MIN(Q)
+        auto [rightFreq, rightIndex] = ready.top(); ready.pop();             // 6  y = EXTRACT-MIN(Q)
+        tree.nodes.push_back({leftFreq + rightFreq, -1, leftIndex, rightIndex});      // 4,7,8,9  z.left=x, z.right=y,
         //                                           //          z.freq = x.freq + y.freq
-        Q.push({fx + fy, (int)t.nodes.size() - 1});  // 10 INSERT(Q, z)
+        ready.push({leftFreq + rightFreq, (int)tree.nodes.size() - 1});  // 10 INSERT(Q, z)
         // NOTE: push_back may REALLOCATE t.nodes, invalidating any pointer into
         // it (M09 toolkit 2). Storing INDICES rather than pointers is what makes
         // that harmless -- an index survives reallocation, a pointer does not.
     }
-    t.root = Q.top().second;                         // 11 the last node is the root
-    return t;
+    tree.root = ready.top().second;                         // 11 the last node is the root
+    return tree;
 }
 
 // Walk the tree to read off the codes: left = 0, right = 1.
-void huffmanCodes(const HuffTree& t, int node, string prefix,
-                  map<char,string>& out) {
+void huffmanCodes(const HuffTree& tree, int node, string prefix,
+                  map<char,string>& codes) {
     if (node < 0) return;
-    const auto& nd = t.nodes[node];
-    if (nd.ch >= 0) { out[(char)nd.ch] = prefix.empty() ? "0" : prefix; return; }
-    huffmanCodes(t, nd.left,  prefix + '0', out);
-    huffmanCodes(t, nd.right, prefix + '1', out);
+    const auto& current = tree.nodes[node];
+    if (current.ch >= 0) { codes[(char)current.ch] = prefix.empty() ? "0" : prefix; return; }
+    huffmanCodes(tree, current.left,  prefix + '0', codes);
+    huffmanCodes(tree, current.right, prefix + '1', codes);
 }
 
 // B(T) = sum over characters of freq(c) * depth(c) -- the cost in BITS.
-long long huffmanCost(const HuffTree& t, int node, int depth = 0) {
+long long huffmanCost(const HuffTree& tree, int node, int depth = 0) {
     if (node < 0) return 0;
-    const auto& nd = t.nodes[node];
-    if (nd.ch >= 0) return nd.freq * depth;          // a leaf contributes freq * depth
-    return huffmanCost(t, nd.left, depth + 1) + huffmanCost(t, nd.right, depth + 1);
+    const auto& current = tree.nodes[node];
+    if (current.ch >= 0) return current.freq * depth;          // a leaf contributes freq * depth
+    return huffmanCost(tree, current.left, depth + 1) + huffmanCost(tree, current.right, depth + 1);
 }
 
 // The same total, computed a completely different way: the sum of the MERGE
 // COSTS. Every merge of x and y adds (x.freq + y.freq), and each character's
 // frequency is counted once per merge it participates in -- which is exactly
 // its depth. B(T) = sum of the internal nodes' frequencies.
-long long huffmanCostByMerges(const HuffTree& t) {
+long long huffmanCostByMerges(const HuffTree& tree) {
     long long total = 0;
-    for (const auto& nd : t.nodes)
-        if (nd.ch < 0) total += nd.freq;             // internal nodes only
+    for (const auto& current : tree.nodes)
+        if (current.ch < 0) total += current.freq;             // internal nodes only
     return total;
 }
 ```
