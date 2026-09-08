@@ -6,11 +6,11 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 
 ## What is in this archive
 
-23 markdown files: `INDEX.md`, `README.md`, `RENAME-PASS-STATUS.md`, and modules **`M01`–`M20`**. Every module is a unified synthesis of Skiena and CLRS on one topic, with **all implementation code in C++17**.
+24 markdown files: `INDEX.md`, `README.md`, `RENAME-PASS-STATUS.md`, and modules **`M01`–`M21`**. Every module is a unified synthesis of Skiena and CLRS on one topic, with **all implementation code in C++17**.
 
-**Coverage as of this build:** foundations and asymptotics, divide & conquer, randomization, sorting, every core data structure (lists, hashing, search trees, B-trees, augmentation), amortized analysis, union-find, dynamic programming, greedy, the full graph sequence (traversal, MST, shortest paths, network flow and matching), backtracking and branch-and-bound, string matching and suffix structures, `NP`-completeness, and approximation algorithms and heuristic search.
+**Coverage as of this build:** foundations and asymptotics, divide & conquer, randomization, sorting, every core data structure (lists, hashing, search trees, B-trees, augmentation), amortized analysis, union-find, dynamic programming, greedy, the full graph sequence (traversal, MST, shortest paths, network flow and matching), backtracking and branch-and-bound, string matching and suffix structures, `NP`-completeness, approximation algorithms and heuristic search, and number theory with RSA.
 
-**Still to be written:** M21–M27 — number theory, linear programming, FFT and matrix operations, parallel and online algorithms, machine learning, computational geometry, and the master cheat sheet. The INDEX carries the full roadmap with status markers, and every forward reference in the notes points at it rather than at a missing file.
+**Still to be written:** M22–M27 — linear programming, FFT and matrix operations, parallel and online algorithms, machine learning, computational geometry, and the master cheat sheet. The INDEX carries the full roadmap with status markers, and every forward reference in the notes points at it rather than at a missing file.
 
 ---
 
@@ -18,10 +18,10 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 
 | | |
 |---|---|
-| **Every code block compiles** | **40 translation units** — a body TU and an appendix TU per module — all verified under `g++ -std=c++17 -Wall -Wextra`. Illustrative fragments were rewritten into real compilable functions rather than left as snippets. |
+| **Every code block compiles** | **42 translation units** — a body TU and an appendix TU per module — all verified under `g++ -std=c++17 -Wall -Wextra`. Illustrative fragments were rewritten into real compilable functions rather than left as snippets. |
 | **Every algorithm is behaviourally checked** | Each implementation is run against a brute-force oracle on randomized inputs, and the result is recorded in the `*Verified:*` line beneath it — including the counts, the worst observed approximation ratios, and the bugs the testing actually caught. |
-| **All links resolve** | **703** internal links checked, **0 broken**. |
-| **Links under every pseudocode block** | **149** `→ C++ implementation:` links connect each pseudocode block in the notes to a runnable, heavily commented translation. |
+| **All links resolve** | **744** internal links checked, **0 broken**. |
+| **Links under every pseudocode block** | **158** `→ C++ implementation:` links connect each pseudocode block in the notes to a runnable, heavily commented translation. |
 | **`using namespace std;` everywhere** | Every block assumes the prelude `#include <bits/stdc++.h>` + `using namespace std;`. No `std::` prefixes anywhere. |
 | **Meaningful identifiers throughout** | Every module has had the variable-naming pass — see [RENAME-PASS-STATUS.md](RENAME-PASS-STATUS.md). Conventional names are kept (`i, j, k`, `n, m`, `u, v`, `lo, hi, mid`); cryptic ones are not. Pseudocode citations in comments are left intact, so each block still documents its correspondence with the book. |
 | **Practice sections** | Every module has a *Practice — where to drill this module* table: specific problems by number and title, plus CSES and Codeforces tag pages. **Every LeetCode slug was verified against live search**, not written from memory. |
@@ -51,7 +51,8 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 | M18 String Matching & Suffix Structures | 10 | 12 |
 | M19 NP-Completeness & Reductions | 10 | 12 |
 | M20 Coping With Hard Problems | 13 | 13 |
-| **Total** | **149** | **162** |
+| M21 Number-Theoretic Algorithms | 9 | 10 |
+| **Total** | **158** | **172** |
 
 ---
 

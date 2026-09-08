@@ -24,7 +24,7 @@ using namespace std;        // no std:: prefixes anywhere in these notes
 - **Third book used only for the C++ teaching**, not for algorithms: Mark Allen Weiss, *Data Structures and Algorithm Analysis in C++*, 4th ed. Cited as `[Weiss §1.5.3, p.25]`.
 - **Every module also ends with a `Practice` section** — specific problems by number and title on LeetCode, plus [CSES](https://cses.fi/problemset/) and Codeforces tag pages.
 
-**Verified state of the code and links:** 40 translation units (a body and an appendix per module) all compile under `g++ -std=c++17 -Wall -Wextra`; 703 internal links resolve with 0 broken; 149 `→ C++ implementation:` links connect every pseudocode block in the notes to a runnable translation. Every algorithm is additionally checked by randomized differential testing against a brute-force oracle, and the results are recorded in the `*Verified:*` line under each implementation.
+**Verified state of the code and links:** 42 translation units (a body and an appendix per module) all compile under `g++ -std=c++17 -Wall -Wextra`; 744 internal links resolve with 0 broken; 158 `→ C++ implementation:` links connect every pseudocode block in the notes to a runnable translation. Every algorithm is additionally checked by randomized differential testing against a brute-force oracle, and the results are recorded in the `*Verified:*` line under each implementation.
 
 ---
 
@@ -99,7 +99,7 @@ Page references look like `[CLRS §2.1, p.17]` and `[Skiena §1.3, p.11]` so you
 
 | # | Module | Primary sources | Status |
 |---|---|---|---|
-| M21 | Number-Theoretic Algorithms | CLRS 31 | ⏳ |
+| [M21](M21-number-theory.md) | Number-Theoretic Algorithms | CLRS 31 · Skiena 16.8–16.9, 21.6 | ✅ |
 | M22 | Linear Programming | CLRS 29 · Skiena 13.6 | ⏳ |
 | M23 | Matrix Operations, Polynomials & FFT | CLRS 28, 30 | ⏳ |
 | M24 | Parallel & Online Algorithms | CLRS 26–27 | ⏳ |
@@ -178,7 +178,7 @@ Use this when you want to read the *books* rather than the notes, and want the m
 5. M18 (strings), M17 (backtracking)
 6. M16 (flow), M19 (NP-completeness), M20 (approximation) — appear in senior interviews as "is this even tractable, and what do I ship if it isn't?"
 7. M27 (cheat sheet) — revise weekly from here once modules are done
-8. M01, M04, M21–M26 as depth/breadth passes
+8. M01, M04, M22–M26 as depth/breadth passes
 
 **If you are studying for mastery:** front to back.
 
