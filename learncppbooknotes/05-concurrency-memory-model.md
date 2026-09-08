@@ -4,6 +4,14 @@ The book barely covers this; interviews at SDE-2+ lean on it hard. Know the
 primitives, the ownership of data, and enough of the memory model to reason
 about correctness.
 
+> **How to think about this.** Stop imagining threads as sequential programs
+> running side by side. Instead hold two facts: (1) the compiler and CPU
+> **reorder** your memory operations for speed, and (2) each core sees other
+> cores' writes on a delay. "Correct" concurrent code is code where you've
+> established enough *happens-before* edges (via mutex, or acquire/release) that
+> the reorderings you allowed can't produce a state your logic didn't expect.
+> Every primitive in this file is just a way to buy a happens-before edge.
+
 > **Take-home lesson.** Don't reason about "threads"; reason about *shared
 > mutable state*. Concurrency bugs live exactly where two threads touch the same
 > data and at least one writes. Eliminate the sharing (copy, or confine to one
@@ -78,12 +86,34 @@ cv.wait(lk, []{ return ready; });   // re-checks predicate; immune to spurious w
 - `notify_one` vs `notify_all`. Modify the shared state **under the lock**
   before notifying, or you get lost wakeups.
 
+**Stop and think.** Why does `cv.wait(lk)` *without* a predicate risk waking up
+to do nothing — or worse, missing a notification entirely?
+<details><summary>answer</summary>
+Two separate hazards. (1) **Spurious wakeups**: `wait` may return without any
+`notify` at all (allowed by the standard, and real on some platforms) — without
+a predicate you proceed as if signaled. (2) **Lost wakeup**: if the producer
+calls `notify_one` *before* the consumer reaches `wait`, the notification
+vanishes (CVs don't queue), and the consumer sleeps forever. The predicate
+overload `cv.wait(lk, pred)` fixes both: it checks `pred` *before* sleeping (so
+an already-true condition never sleeps) and *re-checks after every wakeup* (so
+spurious wakeups loop back). The rule "modify state under the lock, then notify"
+is what makes the predicate observation atomic w.r.t. the wait.
+</details>
+
 ---
 
 ## 5. Atomics & `std::atomic`
 
 - `std::atomic<T>` — indivisible ops, no torn reads/writes; `is_lock_free()`
   tells you if it's truly lock-free (usually for pointer/integral sizes).
+
+> **Atomicity is per-operation, not per-statement.** `atomic` guarantees each
+> individual load and store is indivisible (no torn value), but
+> `counter = counter + 1;` is *three* operations — load, add, store — with a gap
+> where another thread can interleave, so increments get lost. For a correct
+> increment you need one indivisible read-modify-write: `counter.fetch_add(1)`
+> (or `++counter`, which maps to it). CAS (`compare_exchange`) is the general
+> tool when the update isn't a simple arithmetic RMW.
 - `fetch_add`, `compare_exchange_weak/strong` (CAS — the foundation of
   lock-free algorithms). `weak` can fail spuriously (loop it); `strong` doesn't.
 - `std::atomic_flag` — the only guaranteed-lock-free type; basis of spinlocks.
@@ -161,11 +191,28 @@ creates the happens-before edge; relaxed does not.
 
 ---
 
-## Drill prompts
-1. Define data race vs race condition; give one example of each.
-2. Implement a thread-safe queue (mutex + condition_variable, predicate wait).
-3. Why must you modify shared state under the lock before `notify_one`?
-4. Explain acquire/release with a producer publishing a pointer to data.
-5. Why is `volatile bool done` insufficient for stopping a worker thread?
-6. Sketch a fixed-size thread pool; then add graceful shutdown.
-7. Show an ABA scenario and how a tagged pointer / hazard pointer addresses it.
+## Self-check ladder (grade your own mastery)
+
+**Level 1 — Recall**
+- Define data race vs race condition in one sentence each.
+- Name the memory orders from weakest to strongest.
+- What does `std::jthread` do that `std::thread` doesn't?
+
+**Level 2 — Apply**
+1. Implement a thread-safe queue (mutex + condition_variable, predicate wait).
+2. Explain acquire/release with a producer publishing a pointer to data (write the code).
+3. Sketch a fixed-size thread pool; then add graceful shutdown via `stop_token`.
+
+**Level 3 — Transfer**
+4. Why must you modify shared state *under the lock* before `notify_one`? Tie it to lost wakeups.
+5. Why is `volatile bool done` insufficient for stopping a worker thread? Say precisely what guarantee it lacks.
+6. Show an ABA scenario and how a tagged pointer / hazard pointer addresses it.
+
+**Level 4 — Teach**
+- Explain *happens-before* to someone who thinks threads just run line-by-line. If you can't produce a two-thread example where reordering breaks naive code, you're reciting terms.
+
+## Connects to
+- **File 01** — `shared_ptr`'s atomic ref count; who owns data across threads is a lifetime question.
+- **File 02** — moving work/data into a thread or task (init-capture, move-only lambdas) to avoid sharing.
+- **File 07** — `noexcept` and RAII lock guards; never manual lock/unlock, always scope-bound.
+- **File 08** — `jthread`, `atomic_ref`, `atomic<shared_ptr>`, `stop_token` are the C++20 additions used above.

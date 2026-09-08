@@ -3,6 +3,14 @@
 Interviewers expect you to pick the right container by complexity + memory
 layout, and to know the invalidation rules cold.
 
+> **How to think about this.** Choosing a container is answering two questions,
+> in order: (1) *what's my access pattern* — random index, both ends, ordered
+> traversal, key lookup? That narrows you to a couple of candidates by big-O.
+> (2) *what's the memory layout* — contiguous (vector/array) or pointer-chasing
+> (list/map/node)? On real hardware the second question often overrules the
+> first, because a cache miss costs ~100× an L1 hit. Start from "vector until
+> proven otherwise" and make the container justify a *departure* from contiguity.
+
 > **Take-home lesson.** Big-O tells you how cost *scales*; cache lines tell you
 > what the cost *is*. For the n you actually have, a contiguous `vector` with a
 > "worse" complexity usually beats a node-based container with a "better" one.
@@ -89,6 +97,13 @@ v.erase(it);` *without* the `++it` on the erase branch, or just use
   moves. `shrink_to_fit` (non-binding request).
 - `size()` vs `capacity()`. `clear()` keeps capacity; swap-with-empty frees it
   (pre-C++11) — now `shrink_to_fit`.
+
+> **`clear()` empties, it doesn't deallocate.** It destroys the elements and
+> sets `size()` to 0 but **keeps `capacity()`** — the buffer is retained so you
+> can refill without reallocating. That retention is a feature (cheap reuse),
+> not a leak. If you genuinely need the memory back, call `shrink_to_fit()`
+> (non-binding) or swap with a fresh empty vector. `std::string` behaves the
+> same way.
 - **`emplace_back` vs `push_back`**: emplace constructs in place from args
   (avoids a temporary); push_back takes an already-built object (can move).
   Not always faster; emplace can suppress useful conversions/`explicit` checks.
@@ -169,11 +184,28 @@ auto evens_squared = v | std::views::filter([](int x){return x%2==0;})
 
 ---
 
-## Drill prompts
-1. Pick containers for: LRU cache, task queue with both-end ops, sorted range
-   queries, dedup-by-key. Justify by complexity *and* layout.
-2. Fix a loop that erases from a `vector` while iterating (invalidation bug).
-3. When is `emplace_back` NOT faster than `push_back`?
-4. Find the kth largest element without sorting the whole array.
-5. Write a `std::hash` + `operator==` for a struct key.
-6. Rewrite a nested loop as a ranges view pipeline.
+## Self-check ladder (grade your own mastery)
+
+**Level 1 — Recall**
+- Give the access and insert/erase complexity for `vector`, `deque`, `list`, `map`, `unordered_map`.
+- What operation invalidates *all* `vector` iterators? What invalidates `unordered_map` iterators?
+- Which is contiguous: `vector`, `deque`, `array`? Which is stable under middle insertion: `list`, `vector`?
+
+**Level 2 — Apply**
+1. Pick containers for: LRU cache, task queue with both-end ops, sorted range queries, dedup-by-key. Justify by complexity *and* layout.
+2. Fix a loop that erases from a `vector` while iterating (invalidation bug), two ways.
+3. Write a `std::hash` + `operator==` for a struct key so it works in `unordered_map`.
+
+**Level 3 — Transfer**
+4. When is `emplace_back` NOT faster than `push_back`? Give a concrete case where it's actively worse.
+5. Find the kth largest element without sorting the whole array; state the complexity and the algorithm name.
+6. Rewrite a nested filtering-and-transforming loop as a ranges view pipeline; explain what "lazy" buys you and where a dangling view could bite.
+
+**Level 4 — Teach**
+- Explain to a new grad why `std::list` is almost never the right default despite its O(1) insert. If you don't invoke cache lines / pointer-chasing, you're quoting big-O, not teaching.
+
+## Connects to
+- **File 01** — element lifetimes inside containers; `clear()` vs freeing; placement-new in `vector`'s uninitialized capacity.
+- **File 02** — `noexcept` moves decide whether `vector` growth moves or copies; `emplace`/`push_back` and move semantics.
+- **File 03** — iterator categories and tag dispatch are template metaprogramming; `std::sort` needing random-access iterators.
+- **File 08** — ranges, `span`, `string_view`, `flat_map` are the modern-standard additions layered on these containers.

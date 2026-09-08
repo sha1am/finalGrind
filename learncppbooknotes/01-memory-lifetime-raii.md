@@ -4,6 +4,13 @@ The single most-tested C++ area. Interviewers probe whether you understand
 *when* objects are created/destroyed, *where* they live, and how ownership
 is expressed in the type system.
 
+> **How to think about this.** Trace every object through three moments: *birth*
+> (storage obtained + initialized), *life* (the only window it's legal to touch
+> it), and *death* (destructor runs, storage released). Almost every bug in this
+> file is one of: touched before birth, touched after death, or nobody scheduled
+> the death. When you read code, literally ask "who owns this, and when does it
+> die?" If you can't answer instantly, that's the bug.
+
 > **Take-home lesson.** In C++ you don't manage memory — you manage *lifetimes*.
 > Every resource bug is a lifetime bug in disguise: used too early, freed too
 > late, or owned by no one.
@@ -160,6 +167,15 @@ if (!file) return;                 // fclose runs automatically on scope exit
   destroyed at strong==0; control block freed at strong==0 && weak==0.
 - `sizeof(shared_ptr)` == 2 pointers (object ptr + control-block ptr).
 - Ref-count ops are **atomic** (thread-safe count, NOT thread-safe pointee).
+
+> **What "thread-safe" actually covers.** Only the control block's ref count is
+> atomic — that's what lets two threads copy/destroy *their own* `shared_ptr`
+> instances to the same object without corrupting the count. It does **not**
+> protect the pointee (two threads calling a mutating method on `*p` is a data
+> race like any other) and does **not** protect a single shared `shared_ptr`
+> *instance* that threads reassign concurrently (a race on the handle). For a
+> handle mutated by several threads, use `std::atomic<std::shared_ptr<T>>`
+> (C++20); for the object, synchronize it yourself.
 - **`make_shared` vs `shared_ptr(new T)`**: `make_shared` does one allocation
   (object + control block together) — faster, better locality, exception-safe.
   Downside: the object's memory isn't freed until the *last weak_ptr* dies
@@ -244,11 +260,28 @@ p->~T();                    // you own the destruction
 
 ---
 
-## Drill prompts
-1. Walk the exact sequence when `auto p = make_shared<Foo>()` throws in Foo's ctor.
-2. When is `make_shared` the *wrong* choice?
-3. Why is member destruction order tied to declaration order, and when does it bite?
-4. Implement a minimal `unique_ptr` (move ctor/assign, `release`, `reset`, `get`).
-5. Show a reference-cycle leak and fix it with `weak_ptr`.
-6. Explain why `string_view = std::string("x")` dangles but `const string& = std::string("x")` doesn't.
-7. Write the `ScopeGuard` above from scratch, with the CTAD deduction guide.
+## Self-check ladder (grade your own mastery)
+
+**Level 1 — Recall**
+- Name the four storage durations and where each lives.
+- What are the three moments of an object's lifetime?
+- What does `weak_ptr::lock()` return, and why is `expired()` alone unsafe?
+
+**Level 2 — Apply**
+1. Implement a minimal `unique_ptr` (move ctor/assign, `release`, `reset`, `get`).
+2. Show a reference-cycle leak and fix it with `weak_ptr`.
+3. Write the `ScopeGuard` above from scratch, with the CTAD deduction guide.
+
+**Level 3 — Transfer**
+4. Walk the exact sequence when `auto p = make_shared<Foo>()` throws in Foo's ctor. Where does the allocation go? Is anything leaked?
+5. When is `make_shared` the *wrong* choice? Tie your answer to the shared control-block lifetime.
+6. Explain why `string_view = std::string("x")` dangles but `const string& = std::string("x")` doesn't — from the lifetime-extension rule, not from memory.
+
+**Level 4 — Teach**
+- Explain RAII to someone who only knows `try/finally`. If your explanation doesn't mention *stack unwinding running destructors*, you're describing the pattern, not the mechanism.
+
+## Connects to
+- **File 02** — a moved-from object is still alive and must reach a valid death; move semantics is a lifetime operation.
+- **File 06** — the virtual-destructor rule is a lifetime rule: deleting through a base pointer must schedule the *derived* death.
+- **File 05** — `shared_ptr`'s atomic ref count and where it is / isn't thread-safe.
+- **File 07** — RAII's power comes from exception-safe destruction during stack unwinding.

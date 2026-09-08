@@ -3,6 +3,14 @@
 This is the highest-yield modern-C++ interview area. Expect to reason about
 what moves, what copies, and why.
 
+> **How to think about this.** Every C++ expression carries a hidden second
+> label besides its type: *can the compiler treat this as disposable?* That
+> label is the value category. Move semantics is just the machinery that fires
+> when the answer is "yes." Get the labeling right and everything else — which
+> overload binds, when a copy becomes a move, why `std::move` on a return hurts —
+> follows mechanically. Don't memorize the rules; learn to *label the expression*
+> and read the rules off the label.
+
 > **Take-home lesson.** A "move" transfers *ownership of guts*, not bytes.
 > `std::move` moves nothing — it's a cast that grants *permission* to move.
 > The actual stealing happens in a move constructor/assignment you (or the
@@ -29,6 +37,13 @@ not-mov    lvalue     glvalue
   returning `T&&`, `arr[i]` where arr is `T&&`.
 - **glvalue** = lvalue ∪ xvalue (has identity). **rvalue** = prvalue ∪ xvalue
   (movable).
+
+> **How to categorize any expression in two questions.** Forget the "left/right
+> of `=`" mnemonic — it breaks instantly (`arr[i]` is an lvalue on either side).
+> Ask instead: (1) *Does it have identity* — can I take its address, does it
+> persist beyond this expression? (2) *Is it movable* — is the compiler allowed
+> to gut it? Identity+not-movable = **lvalue**; identity+movable = **xvalue**;
+> no-identity (always movable) = **prvalue**. That 2×2 *is* the taxonomy.
 
 Why it matters: overload resolution binds `T&&` to rvalues, `const T&` to
 anything. `std::move` is just a `static_cast<T&&>` — it *marks* an lvalue as
@@ -69,6 +84,18 @@ Rules & gotchas:
   the move ctor is `noexcept`; otherwise it copies (strong exception guarantee).
   This is a real, measurable perf cliff. `vector::push_back` growth is the
   canonical example.
+
+> **Reason it out — why the `noexcept` matters.** When `push_back` outgrows
+> capacity, `vector` allocates a bigger buffer and relocates existing elements.
+> It promises the *strong guarantee*: if anything throws, the original vector is
+> unchanged. Now suppose it relocates by **moving** and element #7's move throws
+> midway — elements 0–6 are already gutted in the old buffer, #7 is half-moved,
+> and there's **no way to put them back** (moving them back could throw again).
+> The invariant is unrecoverable. So the library plays safe: it only moves when
+> the move is `noexcept` (can't throw → can't corrupt); otherwise it **copies**
+> (the originals stay intact, and on throw it just frees the new buffer). Your
+> missing `noexcept` silently downgrades every reallocation from N moves to N
+> copies. This is `std::move_if_noexcept` under the hood.
 
 ```cpp
 struct Slow { std::string s; Slow(Slow&&) /* not noexcept */; };
@@ -112,6 +139,20 @@ self-assignment, at the cost of always constructing a copy:
 ```cpp
 T& operator=(T other) { swap(*this, other); return *this; } // by value = copy/move
 ```
+
+**Stop and think.** You add a destructor to a class that previously had none
+(say, to log). It compiled and passed tests. What silently changed, and where
+might it now be slow?
+<details><summary>answer</summary>
+Declaring a destructor **suppresses the implicit move constructor and move
+assignment**. Every place that used to move your objects — `vector` growth,
+`return`ing them, `std::move` at call sites — now silently **copies** instead
+(copies are still generated as the fallback). Nothing fails to compile; it just
+gets slower, sometimes dramatically. This is why the Rule of Five is
+all-or-nothing: touch one special member and you must consider all six. The fix
+is usually `= default`-ing the moves, or better, removing the manual destructor
+and finding another way to log.
+</details>
 
 ---
 
@@ -181,9 +222,27 @@ overload set when the argument is a `Person`, letting the real copy/move ctor wi
 
 ---
 
-## Drill prompts
+## Self-check ladder (grade your own mastery)
+
+**Level 1 — Recall (can you state it?)**
+- Name the five value categories and the two properties that define them.
+- What are the three parts of the Rule of Five? The Rule of Zero?
+- Which special members does declaring a destructor suppress?
+
+**Level 2 — Apply (can you use it?)**
 1. Given `void f(T&&)` and `void f(const T&)`, which binds for `f(x)`, `f(std::move(x))`, `f(T{})`?
-2. Why does an un-`noexcept` move ctor make `vector` slower? Demonstrate.
-3. Write Rule-of-Five for a class holding `char*`; then rewrite as Rule of Zero.
-4. Explain why `return std::move(local)` pessimizes.
-5. Implement `std::move` and `std::forward` yourself (they're one cast each).
+2. Write Rule-of-Five for a class holding `char*`; then rewrite as Rule of Zero.
+3. Add `noexcept` to a move ctor and prove (with `static_assert`) a `vector<T>` will now move on realloc.
+
+**Level 3 — Transfer (can you reason past the obvious?)**
+4. Explain why `return std::move(local)` pessimizes — trace what elision would have done.
+5. A forwarding-reference constructor hijacks copy construction. Diagnose *why* from overload resolution, then fix it two ways (concept guard, `enable_if`).
+6. Implement `std::move` and `std::forward` yourself (they're one cast each) and explain the reference-collapsing that makes `forward` work.
+
+**Level 4 — Teach (can you explain it to someone else?)**
+- In 60 seconds, explain to a Java dev why C++ has "moves" at all and what problem they solve. If you reach for "it's faster" without saying *what work is avoided*, you don't have it yet.
+
+## Connects to
+- **File 01** — moves leave a "valid but unspecified" state; that state must still be safely *destructible* (RAII/lifetime).
+- **File 03** — forwarding references are the same `T&&`-in-a-deduced-context machinery; `std::forward` lives there too.
+- **File 07** — `noexcept` and the exception-safety guarantees that *force* the move-vs-copy decision above.

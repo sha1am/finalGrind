@@ -4,6 +4,13 @@ Interviewers use templates to test whether you understand *when* code is
 generated, how overload/specialization resolution works, and modern
 constraint tools.
 
+> **How to think about this.** Split every template question into two clocks:
+> *compile time* (the compiler stamps out a concrete function/class from the
+> recipe) and *run time* (that stamped-out code executes). Most confusion —
+> two-phase lookup, `if constexpr`, why errors fire late, code bloat — dissolves
+> once you ask "which clock is this happening on?" Templates are a program that
+> runs *on types* at compile time and emits the program that runs on *values*.
+
 > **Take-home lesson.** A template is not code — it's a *code generator*.
 > Nothing exists until you instantiate it, errors in untaken branches don't
 > fire, and every distinct instantiation is a separate compiled entity. Reason
@@ -69,6 +76,14 @@ template <> struct S<int>       { static constexpr int v = 2; }; // full spec
 **SFINAE** — "Substitution Failure Is Not An Error": an invalid substitution
 in a function template's signature removes it from the overload set instead of
 erroring. Old workhorse for constraints:
+
+> **The catch: only the "immediate context" is soft.** SFINAE forgives failures
+> in the signature — return type, parameter types, template arguments — because
+> those are what get substituted during overload resolution. An error deep in the
+> function *body* is a **hard error** that halts compilation; it never triggers
+> SFINAE. This fragility (constraint behavior depending on *where* the failure
+> lands) is exactly why concepts and `if constexpr` supersede it: they put the
+> check in a place with clean, predictable semantics.
 
 ```cpp
 template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
@@ -182,12 +197,65 @@ semantics. `std::function`, `std::any`, `std::shared_ptr`'s deleter all use it.
 Pattern: an abstract inner "concept" + templated "model" holding the concrete
 object, owned via a pointer. Trades a virtual dispatch for flexibility.
 
+The whole trick in ~20 lines — a value-semantic "any drawable":
+```cpp
+class Drawable {
+    struct Concept {                              // the erased interface
+        virtual ~Concept() = default;
+        virtual void draw() const = 0;
+        virtual std::unique_ptr<Concept> clone() const = 0;
+    };
+    template <class T> struct Model : Concept {    // one per concrete type
+        T obj;
+        explicit Model(T o) : obj(std::move(o)) {}
+        void draw() const override { obj.draw(); } // calls T::draw — no base class needed
+        std::unique_ptr<Concept> clone() const override {
+            return std::make_unique<Model>(*this);
+        }
+    };
+    std::unique_ptr<Concept> self_;
+public:
+    template <class T>                             // accepts ANY type with .draw()
+    Drawable(T x) : self_(std::make_unique<Model<T>>(std::move(x))) {}
+    Drawable(const Drawable& o) : self_(o.self_->clone()) {}   // value semantics
+    Drawable(Drawable&&) noexcept = default;
+    void draw() const { self_->draw(); }
+};
+// Circle and Square need NO common base, NO virtual — just a draw() method.
+std::vector<Drawable> shapes{Circle{}, Square{}};   // heterogeneous, value-typed
+for (const auto& s : shapes) s.draw();
+```
+
+Why this matters: the stored types share **no inheritance relationship** — the
+`virtual` lives entirely inside `Drawable`, not in `Circle`/`Square`. That's the
+difference from classic OOP polymorphism (File 06): the interface is *external*
+to the types, so you can retrofit it onto types you don't own (`int`, a
+third-party class) as long as they have the required operation.
+
 ---
 
-## Drill prompts
-1. Explain two-phase lookup with a code sample that needs `typename`.
-2. Convert an `enable_if` overload pair into `if constexpr`, then into concepts.
-3. Why can't you partially specialize a function template? What do you do instead?
-4. Implement `tuple`-like `get<N>` or a compile-time `for_each` over a pack.
-5. Write a CRTP base that adds `operator!=` from a derived `operator==`.
-6. Sketch a minimal type-erased `Function<R(Args...)>`.
+## Self-check ladder (grade your own mastery)
+
+**Level 1 — Recall**
+- What are the two phases of two-phase name lookup, and what happens in each?
+- Which can be partially specialized: class templates, function templates, or both?
+- What does `if constexpr` do to the *discarded* branch?
+
+**Level 2 — Apply**
+1. Explain two-phase lookup with a code sample that needs `typename` and one that needs the `template` disambiguator.
+2. Convert an `enable_if` overload pair into `if constexpr`, then into concepts. Note what each version costs in readability and error quality.
+3. Write a CRTP base that adds `operator!=` from a derived `operator==`.
+
+**Level 3 — Transfer**
+4. Why can't you partially specialize a function template? What do you use instead, and why does *that* work?
+5. Implement `tuple`-like `get<N>` or a compile-time `for_each` over a parameter pack.
+6. Sketch a minimal type-erased `Function<R(Args...)>` — identify exactly where the virtual dispatch hides.
+
+**Level 4 — Teach**
+- Explain to a colleague why a template error message is 200 lines long, and how concepts shorten it. If you can't point to *substitution* as the cause, revisit two-phase lookup.
+
+## Connects to
+- **File 02** — forwarding references (`T&&` deduced) and `std::forward` are template-deduction machinery.
+- **File 06** — CRTP here is the static-polymorphism counterpart to virtual dispatch there; both solve "call the right function," on different clocks.
+- **File 04** — tag dispatch and iterator categories are template metaprogramming the STL uses internally.
+- **File 08** — concepts, `if constexpr`, fold expressions, and CTAD are the modern-standard tools that replaced the old SFINAE patterns.
