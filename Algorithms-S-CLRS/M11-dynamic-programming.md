@@ -473,7 +473,7 @@ Skiena factors the algorithm into four replaceable pieces. **Swapping them turns
 |---|---|---|
 | `row_init(i)` / `column_init(i)` | `m[0][i] = i`, `m[i][0] = i` | boundary: matching a length-`i` string against the empty string costs `i` indels |
 | `match(c,d)` / `indel(c)` | `0` if `c == d` else `1`; `indel` = 1 | the cost model |
-| `goal_cell()` | `(|P|, |T|)` | where the answer lives |
+| `goal_cell()` | `(\|P\|, \|T\|)` | where the answer lives |
 | `match_out` / `insert_out` / `delete_out` | print `M`/`S`/`I`/`D` | what to do during traceback |
 
 **Variant 1 — approximate substring matching.** Find where a short pattern best occurs *inside* a long text. Plain edit distance is useless here: *"the vast majority of any edit cost will consist of deleting all that is not 'Skiena' from the body of the text."* The fix is two stub changes:
@@ -1094,7 +1094,7 @@ When you suspect DP, work these in order:
 10. **Add the choice table** if you need the actual solution, not just its value.
 11. **Optimize space** only after it's correct, and only if reconstruction doesn't need the full table.
 
-### Recognition patterns
+## Recognition Patterns
 
 | Signal | State shape | Example |
 |---|---|---|
@@ -1604,7 +1604,7 @@ long long knapsack01(const vector<int>& weight, const vector<long long>& value, 
 
 **Complexity. `Θ(n·target)` time, `Θ(target)` space with one row.**
 
-**This is `Θ(n·S)`, which is *pseudo-polynomial*, not polynomial.** The input size is `Θ(n lg S)` bits, so the running time is **exponential in the number of bits of `S`**. Subset sum is NP-complete ([M19 *(planned)*](INDEX.md#module-map)), and this table is not a contradiction — it is fast only when `S` is small in absolute terms. Being able to say that sentence is the point of the exercise.
+**This is `Θ(n·S)`, which is *pseudo-polynomial*, not polynomial.** The input size is `Θ(n lg S)` bits, so the running time is **exponential in the number of bits of `S`**. Subset sum is NP-complete ([M19](M19-np-completeness.md)), and this table is not a contradiction — it is fast only when `S` is small in absolute terms. Being able to say that sentence is the point of the exercise.
 
 ### A7 The ordered partition problem
 

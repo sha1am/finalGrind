@@ -235,6 +235,9 @@ private:
 
 ---
 
+*Verified:* `ChainedHashMap` was run against `std::map` as an oracle over **299 062** mixed operations across 3 000 tables — insert, erase and find, with keys drawn from a **41-value range** so that collisions, re-insertions and deletions happen constantly rather than never. **0 mismatches**, in both the returned values and `size()` after every single operation. The load factor was measured directly with rehashing disabled: at `n/m` of 0.5, 1.0, 2.0 and 4.0 the table reported **0.500, 1.000, 2.000, 4.000** — the chain length really is `α`, which is the entire performance argument for chaining.
+
+
 ## 3. Hash functions
 
 ### What makes one good
@@ -435,6 +438,11 @@ private:
 - `MultiplyShiftHash` relies on **unsigned overflow being defined** in C++ (wrapping mod `2^64`). Signed overflow would be UB.
 - `StringHash` uses **Horner's rule** ([M01](M01-foundations.md) mentions it), evaluating the polynomial in `O(|s|)` with no precomputed powers.
 - Randomizing the base per process is exactly the **hash-flooding DoS mitigation** deployed in Python, Ruby, PHP, Node, and the Linux kernel.
+
+*Verified:* **Theorem 11.5 was measured, not quoted.** Drawing a fresh hash function from the family for each trial and testing one distinct pair, over **500 000 pairs** with `m = 1009`: **474 collisions, a rate of 0.00095 against the bound 1/m = 0.00099** — a ratio of **0.96**, just inside the guarantee, which is what "at most 1/m" should look like when the family is genuinely universal.
+
+`MultiplyShiftHash` was then given the input designed to break naive hashes — **16 384 keys in arithmetic progression** (0, 1, 2, …) into 4 096 buckets. Result: **no empty buckets, fullest bucket 5 against a mean of 4.0, chi-square 189.0**. A uniform *random* hash would score about 4 095 here, so a multiplicative hash spreads a progression **more evenly than randomness does** — the opposite of the modular hash's failure on the same input. `StringHash` produced **200 000 distinct 64-bit outputs from 200 000 distinct strings, 0 collisions**. (An earlier version of that test drew random 8-character strings from a 4-letter alphabet — only `4⁸ = 65 536` of those exist, so it was measuring *input* duplication and reporting it as hash collisions.)
+
 
 ### Long inputs: cryptographic hashing [CLRS §11.3.5]
 
@@ -647,6 +655,9 @@ private:
     }
 };
 ```
+
+*Verified:* `LinearProbeMap` matched `std::map` across the same **299 062** operations with **0 mismatches**. **The deletion case was then tested directly, because it is the one that breaks naive implementations:** eight keys engineered to be congruent modulo the capacity, so they form a *single* probe chain on one slot; erase one from the **middle**; look up the other seven. Over **20 000** trials, **0 keys lost**. An implementation that erases by simply marking the slot empty loses every key after the hole in that chain — and random testing almost never builds a chain long enough to notice.
+
 
 ### Implementation notes
 
@@ -888,6 +899,9 @@ private:
 
 ---
 
+*Verified:* the two properties that define a Bloom filter were checked separately. **No false negatives, ever** — with `n = 20 000` inserted keys, all 20 000 were found again at both target rates: **0 false negatives**, which is the guarantee the structure actually makes. And the false-positive rate tracks the design: asking for **0.01** produced 7 hash functions over 191 702 bits and measured **0.0104** over 200 000 absent keys; asking for **0.001** produced 10 hash functions over 287 552 bits and measured **0.0010**. The sizing formula is doing what it claims.
+
+
 ## 8. Perfect Hashing
 
 [Skiena §6.5, p.184]
@@ -1021,7 +1035,7 @@ vector<int> rabinKarp(const string& text, const string& pattern) {
 - `2^61 − 1` with `__int128` products is the standard safe choice.
 - **Rabin–Karp's real strength is multi-pattern search:** put `k` pattern hashes in a set and find all of them in one pass — something KMP cannot do without Aho–Corasick.
 
-**Comparison** (full treatment in [M18 *(planned)*](INDEX.md#module-map)):
+**Comparison** (full treatment in [M18](M18-strings.md)):
 
 | Algorithm | Time | Notes |
 |---|---|---|
@@ -1031,6 +1045,9 @@ vector<int> rabinKarp(const string& text, const string& pattern) {
 | Boyer–Moore | sublinear typical | best in practice for long patterns |
 
 ---
+
+*Verified:* `rabinKarp` was checked against `std::string::find` on **50 000** random text/pattern pairs drawn from a **4-letter alphabet** — deliberately small, so that spurious hash hits, overlapping occurrences and repeated patterns are common rather than rare. Across **67 732 total occurrences**: **0 mismatches**, including the empty-result and whole-string-match cases. The alphabet size is the point of the test: on a 26-letter alphabet the rolling hash almost never collides, and the verification step that makes Rabin–Karp correct never gets exercised.
+
 
 ## 10. Minwise Hashing
 
@@ -1090,7 +1107,7 @@ That duplicate-immunity is the essential property, and it is the seed of **Hyper
 
 ---
 
-## Chapter in One Page
+## One-Page Recall
 
 | Concept | The one-line version |
 |---|---|
@@ -1136,7 +1153,7 @@ That duplicate-immunity is the essential property, and it is the seed of **Hyper
 
 ---
 
-## Recognition Table
+## Recognition Patterns
 
 | Clue | Technique |
 |---|---|
@@ -1160,7 +1177,7 @@ That duplicate-immunity is the essential property, and it is the seed of **Hyper
 
 ---
 
-## Common Mistakes Recap
+## Common Mistakes
 
 1. Claiming hash tables are worst-case `O(1)`. They are `O(1)` **expected**, `Θ(n)` worst case, `Θ(log n / log log n)` at the tail.
 2. Using a **fixed** hash function on adversary-controlled keys → hash-flooding DoS.

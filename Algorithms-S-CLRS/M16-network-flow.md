@@ -145,7 +145,7 @@ capacity of the cut:       c(S,T) = Σ_{u∈S} Σ_{v∈T} c(u,v)                
 
 *Proof sketch.* Start from `|f| = Σ_v f(s,v) − Σ_v f(v,s)`, then add zero — namely the flow-conservation identity `Σ_v f(u,v) − Σ_v f(v,u) = 0`, summed over all `u ∈ S − {s}`. Regroup, split every sum over `V` into sums over `S` and `T`, and the `S`-to-`S` terms cancel because each `f(x,y)` with `x,y ∈ S` appears once with each sign. What survives is `f(S,T)`. ∎
 
-**Corollary 24.5.** `|f| ≤ c(S,T)` for every flow and every cut — because `f(S,T) ≤ Σ_{S,T} f(u,v) ≤ Σ_{S,T} c(u,v)`. So **any cut is a certificate of an upper bound**, and any flow is a certificate of a lower bound. When the two meet, both are optimal. This is **weak duality**, and it is the same shape as the Hungarian algorithm's labels later in this module and as LP duality in [M22 *(planned)*](INDEX.md#module-map).
+**Corollary 24.5.** `|f| ≤ c(S,T)` for every flow and every cut — because `f(S,T) ≤ Σ_{S,T} f(u,v) ≤ Σ_{S,T} c(u,v)`. So **any cut is a certificate of an upper bound**, and any flow is a certificate of a lower bound. When the two meet, both are optimal. This is **weak duality**, and it is the same shape as the Hungarian algorithm's labels later in this module and as LP duality in [M22](M22-linear-programming.md).
 
 ### Theorem 24.6 — the max-flow min-cut theorem
 
@@ -928,7 +928,7 @@ E_h = { (l,r) ∈ E :  l.h + r.h = w(l,r) }
 
 *Proof.* Every edge of `M*` is tight, and `M*` covers every vertex once, so `w(M*) = Σ_{(l,r) ∈ M*}(l.h + r.h) = Σ_{l} l.h + Σ_{r} r.h`. For *any* perfect matching `M`, feasibility gives `w(M) ≤ Σ_{(l,r)∈M}(l.h + r.h) = Σ_l l.h + Σ_r r.h`. So `w(M) ≤ w(M*)`. ∎
 
-**This is duality again, for the third time in one module.** The labels are a *dual* solution; their sum bounds every matching from above; a perfect matching inside the equality subgraph makes the bound tight and certifies both. CLRS says it outright: *"these problems — maximizing the weight of a matching and minimizing the sum of the feasible vertex labels — are 'duals' of each other, in a similar vein to how the value of a maximum flow equals the capacity of a minimum cut."* Compare: max-flow/min-cut (Part 2), Hall's condition as a cut certificate (Part 6), and the general theory in [M22 *(planned)*](INDEX.md#module-map).
+**This is duality again, for the third time in one module.** The labels are a *dual* solution; their sum bounds every matching from above; a perfect matching inside the equality subgraph makes the bound tight and certifies both. CLRS says it outright: *"these problems — maximizing the weight of a matching and minimizing the sum of the feasible vertex labels — are 'duals' of each other, in a similar vein to how the value of a maximum flow equals the capacity of a minimum cut."* Compare: max-flow/min-cut (Part 2), Hall's condition as a cut certificate (Part 6), and the general theory in [M22](M22-linear-programming.md).
 
 ### The algorithm
 
@@ -944,7 +944,7 @@ GREEDY-BIPARTITE-MATCHING(G)
 
 → **C++ implementation:** [A9 GREEDY-BIPARTITE-MATCHING](#a9-greedy-bipartite-matching)
 
-*(Ex. 25.3-2: this returns at least **half** a maximum matching. Reason: every edge of a maximum matching has an endpoint touched by the greedy matching, or greedy would have taken it — so greedy is a maximal matching, and a maximal matching is a `½`-approximation. Same argument as the vertex-cover approximation in [M20 *(planned)*](INDEX.md#module-map).)*
+*(Ex. 25.3-2: this returns at least **half** a maximum matching. Reason: every edge of a maximum matching has an endpoint touched by the greedy matching, or greedy would have taken it — so greedy is a maximal matching, and a maximal matching is a `½`-approximation. Same argument as the vertex-cover approximation in [M20](M20-heuristics.md).)*
 
 ```
 HUNGARIAN(G)
@@ -2266,7 +2266,7 @@ static int greedyBipartiteMatching(const vector<vector<int>>& adjacency, int rig
 
 **Maximal is not maximum**, and the gap is real: a path `a—b—c—d` where greedy takes the middle edge `b—c` ends with 1 edge where 2 (`a—b` and `c—d`) were available. But as a **warm start** for Kuhn, Hopcroft–Karp or the Hungarian algorithm it is free and it removes most of the work — which is exactly why CLRS puts it here, as line 5 of `HUNGARIAN`.
 
-The `½`-approximation argument is the same one behind the classic vertex-cover approximation in [M20 *(planned)*](INDEX.md#module-map); recognising it twice is worth more than memorising it once.
+The `½`-approximation argument is the same one behind the classic vertex-cover approximation in [M20](M20-heuristics.md); recognising it twice is worth more than memorising it once.
 
 ### A10 HUNGARIAN and FIND-AUGMENTING-PATH
 
@@ -2493,7 +2493,7 @@ private:
 
 *Why (parts d–f of the problem).* When the inner loop for a given `K` finishes, no augmenting path of capacity `≥ K` remains, so the min cut of the residual network is `< K·|E|` — every one of its at most `|E|` edges has residual capacity `< K`. After halving, the remaining flow is `< 2K|E|`, and each augmentation moves `≥ K`, so the inner loop runs `O(E)` times per threshold. There are `lg C + 1` thresholds and each augmentation costs `O(E)`.
 
-**When scaling beats BFS.** `O(E² lg C)` versus `O(VE²)`: scaling wins on **dense graphs with modest capacities** (`lg C ≪ V`), which is the common case. The same "scale the numbers, not the structure" idea gives the polynomial min-cost-flow algorithms and the FPTAS for knapsack in [M20 *(planned)*](INDEX.md#module-map).
+**When scaling beats BFS.** `O(E² lg C)` versus `O(VE²)`: scaling wins on **dense graphs with modest capacities** (`lg C ≪ V`), which is the common case. The same "scale the numbers, not the structure" idea gives the polynomial min-cost-flow algorithms and the FPTAS for knapsack in [M20](M20-heuristics.md).
 
 ### A12 Minimum cut, path cover and project selection
 

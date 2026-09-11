@@ -1322,7 +1322,7 @@ Called as an expert witness in a case about high-performance sorting programs, S
 
 ---
 
-## Chapter in One Page
+## One-Page Recall
 
 | Concept | The one-line version |
 |---|---|
@@ -1341,7 +1341,7 @@ Called as an expert witness in a case about high-performance sorting programs, S
 | Priority queue | `INSERT`, `MAXIMUM`, `EXTRACT-MAX`, `INCREASE-KEY`, all `O(lg n)`. |
 | Handles | `DECREASE-KEY` needs object→index mapping; `std::priority_queue` has none → lazy deletion. |
 | X + Y pattern | PQ as a lazy frontier over `(i,j)` pairs — the airline-fare war story. |
-| Quicksort partition | Four regions; loop invariant `≤x | >x | unknown | pivot`. |
+| Quicksort partition | Four regions; loop invariant `≤x \| >x \| unknown \| pivot`. |
 | Split proportionality | **Any** constant-ratio split (9:1, 99:1) gives `O(n lg n)`. Only the constant changes. |
 | Bad split absorbed | A bad split followed by a good one costs the same as a single good split. |
 | Good-enough pivot | Half of all pivots land in `[n/4, 3n/4]`; average tree height ≈ `2 ln n ≈ 1.386 lg n`. |
@@ -1367,7 +1367,7 @@ Called as an expert witness in a case about high-performance sorting programs, S
 
 ---
 
-## Recognition Table
+## Recognition Patterns
 
 | Clue | Technique |
 |---|---|
@@ -1395,7 +1395,7 @@ Called as an expert witness in a case about high-performance sorting programs, S
 
 ---
 
-## Common Mistakes Recap
+## Common Mistakes
 
 1. Claiming `BUILD-MAX-HEAP` is `O(n log n)`. It is `Θ(n)`.
 2. Building a heap by `n` insertions and calling it linear. That is `Θ(n log n)`.

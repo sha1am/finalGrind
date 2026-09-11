@@ -79,7 +79,7 @@ And CLRS, more precisely:
 
 > *"Faster methods are known. For example, a simple divide-and-conquer method for multiplying two `β`-bit integers has a running time of `Θ(β^lg 3)`, and `O(β lg β lg lg β)` time is possible. For practical purposes, however, the `Θ(β²)` algorithm is often best."*
 
-**`Θ(β^lg 3)` is Karatsuba — you wrote it in [M03](M03-divide-conquer.md)**, and `O(β lg β lg lg β)` is Schönhage–Strassen via FFT ([M23 *(planned)*](INDEX.md#module-map)). The practical crossover for schoolbook → Karatsuba is around 300–600 bits in real libraries, which is *below* RSA key sizes — so production big-integer code does use them.
+**`Θ(β^lg 3)` is Karatsuba — you wrote it in [M03](M03-divide-conquer.md)**, and `O(β lg β lg lg β)` is Schönhage–Strassen via FFT ([M23](M23-matrices-fft.md)). The practical crossover for schoolbook → Karatsuba is around 300–600 bits in real libraries, which is *below* RSA key sizes — so production big-integer code does use them.
 
 ### Unified Understanding
 
@@ -540,7 +540,7 @@ a  = (a₁c₁ + a₂c₂ + ⋯ + aₖcₖ) mod n                (31.32)
 cᵢ ↔ (0, 0, …, 0, 1, 0, …, 0)      ← 1 in position i
 ```
 
-> ***"The `cᵢ` thus form a 'basis' for the representation."*** **That is exactly the right way to hold CRT in your head: it is a change of basis, and the `cᵢ` are the unit vectors.** Compare `interpolation` in [M23 *(planned)*](INDEX.md#module-map) — the same idea with polynomials.
+> ***"The `cᵢ` thus form a 'basis' for the representation."*** **That is exactly the right way to hold CRT in your head: it is a change of basis, and the `cᵢ` are the unit vectors.** Compare `interpolation` in [M23](M23-matrices-fft.md) — the same idea with polynomials.
 
 **CLRS's worked example.** `a ≡ 2 (mod 5)`, `a ≡ 3 (mod 13)`, so `n = 65`. `13⁻¹ ≡ 2 (mod 5)` and `5⁻¹ ≡ 8 (mod 13)`:
 
@@ -1257,7 +1257,7 @@ pair<long long, long long> factorFromTotient(long long n, long long totient) {
 
 | Clue in the problem | What to reach for |
 |---|---|
-| "can you measure exactly `z` litres with jugs of `x` and `y`" | **Bézout**: solvable iff `gcd(x,y) | z` (and `z ≤ x+y`) |
+| "can you measure exactly `z` litres with jugs of `x` and `y`" | **Bézout**: solvable iff `gcd(x,y) \| z` (and `z ≤ x+y`) |
 | "is there a subset with `Σ aᵢxᵢ = 1` for integers `xᵢ`" | `gcd` of the whole array `== 1` |
 | answer must be reported "modulo `10⁹+7`" and involves division | **modular inverse**, and the modulus is prime → `a^(p−2)` |
 | "modulo `10⁹+7`" and a huge exponent | **repeated squaring**; reduce the exponent mod `p−1` by Fermat if the base is coprime |
@@ -2147,4 +2147,4 @@ double euclidPotential(long long a, long long b) {
 
 ---
 
-*Next: [M22 — Linear Programming](INDEX.md#module-map) (CLRS 29 + Skiena 13.6) — the general-purpose optimiser behind half the algorithms in [M20](M20-heuristics.md).*
+*Next: [M22 — Linear Programming](M22-linear-programming.md) (CLRS 29 + Skiena 13.6) — the general-purpose optimiser behind half the algorithms in [M20](M20-heuristics.md).*

@@ -347,7 +347,7 @@ That last clause is the practical one. **One-sided error** is far more useful th
 |---|---|---|
 | **Random sampling** | Want the median of `n` things but can't touch them all? Take a small random sample and use its median. *"This is the idea behind opinion polling… Biases creep in unless you take a truly random sample, as opposed to the first `x` people you happen to see."* | quickselect pivots, approximate quantiles, reservoir sampling |
 | **Randomized hashing** | For any fixed hash function there is a worst-case key set. Pick the function at random from a large family. | universal hashing, [M07](M07-hashing.md) |
-| **Randomized search** | Drive a search with randomness. | simulated annealing, [M20 *(planned)*](INDEX.md#module-map) |
+| **Randomized search** | Drive a search with randomness. | simulated annealing, [M20](M20-heuristics.md) |
 | **Random shuffle / random pivot** | Destroy input structure before running a structure-sensitive algorithm. | quicksort, [M05](M05-sorting.md) |
 
 ### Stop and Think: Nuts and Bolts [Skiena §4.6.2, p.134]
@@ -518,7 +518,7 @@ Maximize the lower bound: `d/dk[(k/n)(ln n − ln k)] = (1/n)(ln n − ln k − 
 
 **Result: observe `n/e ≈ 37%` of candidates, then take the first record-breaker. Succeeds with probability at least `1/e ≈ 37%`.**
 
-This is one of the most-cited results in online algorithms — see [M24 *(planned)*](INDEX.md#module-map) for the competitive-analysis framing.
+This is one of the most-cited results in online algorithms — see [M24](M24-parallel-online.md) for the competitive-analysis framing.
 
 ---
 
@@ -594,7 +594,7 @@ Pick 100 random `a` in `[1, n−1]`. Verify none divides `n`. Compute `a^{n−1}
 
 > A very small fraction of integers (roughly 1 in 50 billion up to `10²¹`) are not prime, yet also satisfy the Fermat congruence **for all `a`**. Such **Carmichael numbers** like 561 and 1105 are doomed to always be misclassified as prime.
 
-**This is why you use Miller–Rabin, not plain Fermat.** Miller–Rabin adds a check on non-trivial square roots of 1 and defeats Carmichael numbers, with error `≤ 4^{−k}` for `k` rounds. Full treatment in [M21 *(planned)*](INDEX.md#module-map).
+**This is why you use Miller–Rabin, not plain Fermat.** Miller–Rabin adds a check on non-trivial square roots of 1 and defeats Carmichael numbers, with error `≤ 4^{−k}` for `k` rounds. Full treatment in [M21](M21-number-theory.md).
 
 ### Complexity
 
@@ -703,7 +703,7 @@ Skiena's most practically useful paragraph in the chapter [§6.1.6, p.178]:
 
 ---
 
-## Chapter in One Page
+## One-Page Recall
 
 | Concept | The one-line version |
 |---|---|
@@ -737,7 +737,7 @@ Skiena's most practically useful paragraph in the chapter [§6.1.6, p.178]:
 
 ---
 
-## Recognition Table
+## Recognition Patterns
 
 | Clue | Technique |
 |---|---|
@@ -758,7 +758,7 @@ Skiena's most practically useful paragraph in the chapter [§6.1.6, p.178]:
 
 ---
 
-## Common Mistakes Recap
+## Common Mistakes
 
 1. Saying "average-case" when you mean "expected", or vice versa. They quantify over different things.
 2. Checking independence before applying **linearity of expectation** — it isn't needed.
@@ -1077,7 +1077,7 @@ int reservoirPick(const vector<int>& items) {
 }
 ```
 
-**Complexity.** `Θ(n)` time, `Θ(1)` space, and — crucially — **one pass with no take-backs**. This is the defining shape of an *online* algorithm ([M24 *(planned)*](INDEX.md#module-map)).
+**Complexity.** `Θ(n)` time, `Θ(1)` space, and — crucially — **one pass with no take-backs**. This is the defining shape of an *online* algorithm ([M24](M24-parallel-online.md)).
 
 **The analysis.** With `k = n/e`, the probability of ending up with the genuine best candidate tends to `1/e ≈ 0.368`. Intuition: `k` too small and you commit before you know what "good" looks like; `k` too large and the best candidate has probably already gone by. The optimum balances the two, and remarkably the answer does not vanish as `n → ∞` — you keep a **constant** 37% chance no matter how many candidates there are.
 

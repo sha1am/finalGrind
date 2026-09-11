@@ -24,7 +24,7 @@ using namespace std;        // no std:: prefixes anywhere in these notes
 - **Third book used only for the C++ teaching**, not for algorithms: Mark Allen Weiss, *Data Structures and Algorithm Analysis in C++*, 4th ed. Cited as `[Weiss §1.5.3, p.25]`.
 - **Every module also ends with a `Practice` section** — specific problems by number and title on LeetCode, plus [CSES](https://cses.fi/problemset/) and Codeforces tag pages.
 
-**Verified state of the code and links:** 42 translation units (a body and an appendix per module) all compile under `g++ -std=c++17 -Wall -Wextra`; 744 internal links resolve with 0 broken; 158 `→ C++ implementation:` links connect every pseudocode block in the notes to a runnable translation. Every algorithm is additionally checked by randomized differential testing against a brute-force oracle, and the results are recorded in the `*Verified:*` line under each implementation.
+**Verified state of the code and links:** 53 translation units (a body and an appendix per module) all compile under `g++ -std=c++17 -Wall -Wextra`; 1 150 internal links resolve with 0 broken; 199 `→ C++ implementation:` links connect every pseudocode block in the notes to a runnable translation. Every algorithm is additionally checked by randomized differential testing against a brute-force oracle, and the results are recorded in the `*Verified:*` line under each implementation.
 
 ---
 
@@ -48,7 +48,7 @@ Page references look like `[CLRS §2.1, p.17]` and `[Skiena §1.3, p.11]` so you
 
 ## Module map
 
-**Status:** ✅ written · ⏳ planned (no file yet — links in the modules point back here).
+**Status:** ✅ written. **All 27 modules are complete** — every cross-reference in the notes points at a real file.
 
 ### Part I — Foundations
 
@@ -100,17 +100,17 @@ Page references look like `[CLRS §2.1, p.17]` and `[Skiena §1.3, p.11]` so you
 | # | Module | Primary sources | Status |
 |---|---|---|---|
 | [M21](M21-number-theory.md) | Number-Theoretic Algorithms | CLRS 31 · Skiena 16.8–16.9, 21.6 | ✅ |
-| M22 | Linear Programming | CLRS 29 · Skiena 13.6 | ⏳ |
-| M23 | Matrix Operations, Polynomials & FFT | CLRS 28, 30 | ⏳ |
-| M24 | Parallel & Online Algorithms | CLRS 26–27 | ⏳ |
-| M25 | Machine-Learning Algorithms | CLRS 33 | ⏳ |
-| M26 | Geometry & the Algorithm Catalog | Skiena 13, Part II | ⏳ |
+| [M22](M22-linear-programming.md) | Linear Programming | CLRS 29 · Skiena 16.6 | ✅ |
+| [M23](M23-matrices-fft.md) | Matrix Operations, Polynomials & FFT | CLRS 28, 30 · Skiena 16.9, 16.11 | ✅ |
+| [M24](M24-parallel-online.md) | Parallel & Online Algorithms | CLRS 26–27 | ✅ |
+| [M25](M25-machine-learning.md) | Machine-Learning Algorithms | CLRS 33 · Skiena 16.5, 8.2 | ✅ |
+| [M26](M26-geometry.md) | Computational Geometry & the Algorithm Catalog | Skiena 20, 11.2.4, 3.6, 15.6 | ✅ |
 
 ### Part VII — Revision
 
 | # | Module | | Status |
 |---|---|---|---|
-| M27 | Master Cheat Sheet & Recognition Playbook | cross-module | ⏳ |
+| [M27](M27-master-cheatsheet.md) | Master Cheat Sheet & Recognition Playbook | cross-module · Skiena 13, 14 | ✅ |
 
 ---
 
@@ -178,7 +178,7 @@ Use this when you want to read the *books* rather than the notes, and want the m
 5. M18 (strings), M17 (backtracking)
 6. M16 (flow), M19 (NP-completeness), M20 (approximation) — appear in senior interviews as "is this even tractable, and what do I ship if it isn't?"
 7. M27 (cheat sheet) — revise weekly from here once modules are done
-8. M01, M04, M22–M26 as depth/breadth passes
+8. M01, M04, M24–M26 as depth/breadth passes
 
 **If you are studying for mastery:** front to back.
 

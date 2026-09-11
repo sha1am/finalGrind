@@ -1502,6 +1502,26 @@ Before you write a line of tree code:
 
 ---
 
+## Common Mistakes
+
+- **Reaching for a tree when you do not need order.** If you never ask for predecessor, successor, range, or sorted traversal, a hash table is `Θ(1)` expected against the tree's `Θ(lg n)` ([M07](M07-hashing.md)).
+- **Using a plain BST on sorted or adversarial input.** Insertion in sorted order builds a linked list: every operation degrades to `Θ(n)`, silently. This is the single most common tree bug, and it never shows up on random test data.
+- **Forgetting that `TREE-DELETE` has three cases, not two.** No child, one child, two children — and the two-child case is the one that needs the successor and `TRANSPLANT`. Getting the successor's own removal wrong is where the pointers get lost.
+- **Deleting the wrong node in the two-child case.** You splice out the *successor*, but you must move its **key** into the target node — or, as CLRS does, transplant the successor into the target's position. Mixing the two approaches corrupts the tree.
+- **Forgetting `x.p` updates in `TRANSPLANT`.** The routine deliberately does **not** update `v.left` or `v.right`; that is the caller's job. Assuming otherwise leaves dangling child pointers.
+- **Rotating without fixing the parent pointer.** A rotation touches **three** parent links, not one. Missing the subtree's parent is the classic silent corruption — the tree still traverses, but deletion later walks into nothing.
+- **Treating `T.nil` as optional.** The red-black sentinel is what lets the fixup code read `x.p.p` without a null check. Replacing it with `nullptr` means every one of those reads needs a guard, and the cases stop matching the book.
+- **Colouring the new node black on insertion.** It must be **red**: a black node would immediately violate the equal-black-height property, which is the hard invariant to repair. Red only risks a red-red violation, which the fixup handles in `O(lg n)`.
+- **Believing rotations are what make red-black trees fast.** The height bound `2 lg(n+1)` comes from the *colour invariants*; rotations are only how the invariants are restored.
+- **Augmenting with a field that is not locally computable.** Theorem 17.1's condition is that the field must be recoverable in `O(1)` from the node and its two children. Subtree size, subtree max and subtree sum qualify; "rank among all keys" and "median of the subtree" do not.
+- **Forgetting to maintain the augmentation inside rotations.** A rotation changes two nodes' subtrees, so both need their augmented fields recomputed — bottom node first, then the top one. Order matters.
+- **Off-by-one in `OS-SELECT`.** The rank of `x` within its own subtree is `x.left.size + 1`, not `x.left.size`. Get it wrong and select returns a neighbour, which random tests catch only about half the time.
+- **Keying an interval tree on the wrong endpoint.** It keys on **`low`** and augments with the **`max` of `high`** over the subtree. Keying on `high` breaks the search's pruning rule.
+- **Assuming interval search returns *all* overlaps.** `INTERVAL-SEARCH` returns *one*. Finding every overlapping interval needs a different traversal and costs `O(k lg n)`.
+- **Splitting B-tree nodes on the way back up.** CLRS splits **on the way down**, which is what makes insertion a single pass and avoids the parent ever being full when a child splits.
+- **Choosing the B-tree's `t` from taste instead of from the hardware.** The minimum degree exists to make a node fill a disk block or cache line; picking `t = 2` gives you a 2-3-4 tree and none of the locality that motivated B-trees.
+- **Hand-rolling a red-black tree under time pressure.** A **treap** or randomized BST gets the same expected bounds in about forty lines with no case analysis. Say why you are choosing it.
+
 ## Complexity Summary
 
 | Operation | Plain BST | Red-black tree | B-tree (min. degree `t`) |

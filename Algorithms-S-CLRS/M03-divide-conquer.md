@@ -742,7 +742,7 @@ void normalize(BigNum& lhs) {
 - **Base 10000, not 10.** Four decimal digits per limb cuts the limb count 4× and keeps `a[i]*b[j] ≤ 10⁸` — nowhere near `int64` overflow even after summing `n` of them for realistic `n`.
 - **Cutoff to schoolbook at ~32 limbs.** Karatsuba's constant factor is worse; below the crossover, `n²` with a small constant beats `n^{1.585}` with a large one. This is the same "coarsen the leaves" idea as insertion sort inside merge sort [CLRS Problem 2-1].
 - `q1` is computed on operands one limb longer than `m` — that is fine and is why `add` allocates `max+1`.
-- For production big-integer work use GMP. Above ~10⁴ digits, FFT-based multiplication ([M23 *(planned)*](INDEX.md#module-map)) beats Karatsuba.
+- For production big-integer work use GMP. Above ~10⁴ digits, FFT-based multiplication ([M23](M23-matrices-fft.md)) beats Karatsuba.
 
 ### Common bugs
 
@@ -762,7 +762,7 @@ You have an operation that looks like it needs `k` expensive sub-operations, and
 | Schoolbook | `Θ(n²)` | `n` up to a few hundred digits |
 | **Karatsuba** | `Θ(n^{1.585})` | hundreds to ~10⁴ digits |
 | Toom–Cook (Toom-3) | `Θ(n^{1.465})` | intermediate range |
-| Schönhage–Strassen / FFT | `O(n log n log log n)` | very large `n` — [M23 *(planned)*](INDEX.md#module-map) |
+| Schönhage–Strassen / FFT | `O(n log n log log n)` | very large `n` — [M23](M23-matrices-fft.md) |
 
 ---
 
@@ -874,7 +874,7 @@ Uses **7 submatrix multiplications and 18 submatrix additions**.
 
 > This algorithm has been repeatedly "improved" by increasingly complicated recurrences, and the current best is `O(n^{2.3727})`. [Skiena §5.5, p.157]
 
-These galactic algorithms are asymptotically better and practically useless. See [M23 *(planned)*](INDEX.md#module-map).
+These galactic algorithms are asymptotically better and practically useless. See [M23](M23-matrices-fft.md).
 
 **A useful exercise to have thought about** [CLRS Ex. 4.2-3]: if you could multiply `3×3` matrices with `k` multiplications, you'd get `T(n) = kT(n/3) + Θ(n²)` → `Θ(n^{log₃k})`. Beating Strassen needs `log₃k < lg 7`, i.e. `k ≤ 21`. (The best known is 23.)
 
@@ -1040,7 +1040,7 @@ The **convolution** of arrays `A` (length `m`) and `B` (length `n`):
 C[k] = Σ_{j=0}^{m−1} A[j]·B[k − j]        (out-of-range treated as 0)
 ```
 
-The obvious nested loop is `Θ(nm)`. **A divide-and-conquer algorithm computes it in `O(n log n)`** — via the FFT, developed in [M23 *(planned)*](INDEX.md#module-map).
+The obvious nested loop is `Θ(nm)`. **A divide-and-conquer algorithm computes it in `O(n log n)`** — via the FFT, developed in [M23](M23-matrices-fft.md).
 
 > Going from `O(n²)` to `O(n log n)` is as big a win for convolution as it was for sorting. Taking advantage of it requires **recognizing when you are doing a convolution operation**.
 
@@ -1066,11 +1066,11 @@ Three observations [Skiena §5.9.2]:
 2. **In point-value form, multiplication is `O(n)`** — just multiply the `y`-values at matching `x`-values.
 3. **Evaluation at `n` arbitrary points costs `O(n²)`** — too slow. *Unless* you choose the points cleverly: at the complex `n`-th roots of unity, a degree-`n` polynomial splits into two degree-`n/2` polynomials in `x²`, giving `T(n) = 2T(n/2) + O(n) = O(n log n)`.
 
-Full treatment in [M23 *(planned)*](INDEX.md#module-map).
+Full treatment in [M23](M23-matrices-fft.md).
 
 ---
 
-## Chapter in One Page
+## One-Page Recall
 
 | Concept | The one-line version |
 |---|---|
@@ -1106,7 +1106,7 @@ Full treatment in [M23 *(planned)*](INDEX.md#module-map).
 
 ---
 
-## Recognition Table
+## Recognition Patterns
 
 | Clue | Technique |
 |---|---|
@@ -1123,13 +1123,13 @@ Full treatment in [M23 *(planned)*](INDEX.md#module-map).
 | Recurrence `aT(n/b) + f(n)` | master theorem |
 | Subproblems of **different** sizes | Akra–Bazzi, or a recursion tree + substitution |
 | Master theorem doesn't apply (gap) | recursion tree to guess, substitution to verify |
-| Sliding a pattern over a sequence, or "all pairs summing to `k`" | convolution → FFT ([M23 *(planned)*](INDEX.md#module-map)) |
+| Sliding a pattern over a sequence, or "all pairs summing to `k`" | convolution → FFT ([M23](M23-matrices-fft.md)) |
 | Recursion drops by 1 each call | `T(n) = T(n−1) + f(n)` — sum, don't use the master theorem |
 | Recursion into overlapping subproblems | **not** D&C — dynamic programming ([M11](M11-dynamic-programming.md)) |
 
 ---
 
-## Common Mistakes Recap
+## Common Mistakes
 
 1. Using the master theorem when subproblem sizes differ (use Akra–Bazzi or a recursion tree).
 2. Forgetting the **polynomial** separation requirement in cases 1 and 3 — e.g. claiming case 1 for `2T(n/2) + n/lg n`.

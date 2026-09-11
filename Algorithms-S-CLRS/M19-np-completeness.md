@@ -52,7 +52,7 @@ That is the whole subject. Everything else is bookkeeping about *which* problems
 - Explain the **3-CNF-SAT ≤ SUBSET-SUM** construction, and why binary encoding is essential to it.
 - Apply Skiena's hardness-proving advice: restrict the source, generalise the target, amplify penalties, build gadgets.
 - Say precisely what **pseudo-polynomial** means and why `SUBSET-SUM` being solvable in `O(nk)` is not a proof that `P = NP`.
-- Say what to do *after* proving hardness — which is [M20 *(planned)*](INDEX.md#module-map).
+- Say what to do *after* proving hardness — which is [M20](M20-heuristics.md).
 
 ---
 
@@ -431,7 +431,7 @@ Output: Is there a truth assignment making every clause contain at least one tru
 
 **Theorem 34.10: 3-CNF-SAT is `NP`-complete.** Skiena's construction converts each clause by length:
 
-| `|Cᵢ|` | replacement |
+| `\|Cᵢ\|` | replacement |
 |---|---|
 | 1, say `{z₁}` | 2 new variables, 4 clauses `{v₁,v₂,z₁}, {v̄₁,v₂,z₁}, {v₁,v̄₂,z₁}, {v̄₁,v̄₂,z₁}` — satisfiable together **only if `z₁` is true** |
 | 2, say `{z₁,z₂}` | 1 new variable, `{v₁,z₁,z₂}, {v̄₁,z₁,z₂}` — forces `z₁ ∨ z₂` |
@@ -519,7 +519,7 @@ For each boolean `vᵢ`, integer variables `Vᵢ, V̄ᵢ` with `0 ≤ Vᵢ ≤ 1
 
 > *"The transformation captures the essence of why IP is hard. It has nothing to do with big coefficients or large ranges on the variables, because restricting them all to 0/1 is enough. It has nothing to do with having inequalities having large numbers of variables. **Integer programming is hard because satisfying a large set of constraints is hard.** A careful study of the properties needed for a reduction can tell us a lot about the problem."*
 
-**Contrast linear programming, which is in `P`** ([M22 *(planned)*](INDEX.md#module-map)). Drop "integer" and the problem becomes easy; that single word is the entire difficulty. Recognising *which word* makes a problem hard is what these proofs are for.
+**Contrast linear programming, which is in `P`** ([M22](M22-linear-programming.md)). Drop "integer" and the problem becomes easy; that single word is the entire difficulty. Recognising *which word* makes a problem hard is what these proofs are for.
 
 ### 5.6 3-CNF-SAT ≤ₚ SUBSET-SUM (CLRS Thm 34.15)
 
@@ -635,7 +635,7 @@ The answer arrives at 3 a.m.: **split the edges**. Replace each undirected `(x,y
 **The honest position** is that "`NP`-complete" means *"no polynomial algorithm is known, and finding one would be a `$1 000 000` result and would simultaneously solve thousands of other open problems."* That is a *very* good reason to stop looking — and it is not a proof.
 
 > ### Outside / Engineering Context — what "hard" does and does not mean
-> **`NP`-complete is a statement about the worst case over all instances, of the exact optimum, asymptotically.** Every one of those qualifiers is an escape hatch, and [M20 *(planned)*](INDEX.md#module-map) is about using them:
+> **`NP`-complete is a statement about the worst case over all instances, of the exact optimum, asymptotically.** Every one of those qualifiers is an escape hatch, and [M20](M20-heuristics.md) is about using them:
 >
 > | qualifier | escape |
 > |---|---|
@@ -775,7 +775,7 @@ private:
 | TSP | minimum spanning tree ([M14](M14-mst.md)) | a tour instead of a tree |
 | vertex cover / independent set / clique | the same problems on a **bipartite** graph (König, [M16](M16-network-flow.md)) | bipartiteness |
 | 3-SAT | **2**-SAT (implication graph + SCC) | three literals instead of two |
-| integer programming | linear programming ([M22 *(planned)*](INDEX.md#module-map)) | the word "integer" |
+| integer programming | linear programming ([M22](M22-linear-programming.md)) | the word "integer" |
 | graph colouring with `k ≥ 3` | 2-colouring = bipartiteness test ([M13](M13-graphs-traversal.md)) | three colours instead of two |
 | set cover | ... | — |
 | subset sum / partition | subset sum with **small** target (`O(nt)` DP, [M11](M11-dynamic-programming.md)) | the magnitude of the numbers |
@@ -791,7 +791,7 @@ private:
 2. **Try to find an algorithm anyway** — for ten minutes. DP, flow ([M16](M16-network-flow.md)) and matching solve a surprising number of things that look hard.
 3. **Match the shape to a source problem:** selection → vertex cover; ordering → Hamiltonian path; numbers → integer partition; logic/constraints → 3-SAT.
 4. **Get the direction right**, then build gadgets.
-5. **When you have the proof, go to [M20 *(planned)*](INDEX.md#module-map)** — hardness is where the engineering starts, not where it stops.
+5. **When you have the proof, go to [M20](M20-heuristics.md)** — hardness is where the engineering starts, not where it stops.
 
 ---
 
@@ -852,7 +852,7 @@ private:
 - **Skiena's four sources:** 3-SAT (logic), integer partition (numbers), vertex cover (selection), Hamiltonian path (ordering).
 - **Reductions to know cold:** HAM-CYCLE ≤ TSP (weights 1/2); VC ≡ IS ≡ CLIQUE (complement, `V − S`); SAT ≤ 3-SAT (clause chains); 3-SAT ≤ VC (`n` variable edges + `c` triangles, budget `n + 2c`); SAT ≤ IP (0/1 variables, `ΣZ ≥ 1`); 3-SAT ≤ SUBSET-SUM (digit columns, no carrying).
 - **Gadget design:** amplify penalties, make the budget exactly the forced minimum, and split vertices or edges when you need to force a choice.
-- **`NP`-complete = worst case, exact, asymptotic, all instances.** Every one of those is an escape hatch, and that is [M20 *(planned)*](INDEX.md#module-map).
+- **`NP`-complete = worst case, exact, asymptotic, all instances.** Every one of those is an escape hatch, and that is [M20](M20-heuristics.md).
 
 ---
 
@@ -864,7 +864,7 @@ There is no LeetCode problem that asks you to write an `NP`-completeness proof. 
 |---|---|---|
 | Subset sum / partition, the canonical numeric hard problem | [416 · Partition Equal Subset Sum](https://leetcode.com/problems/partition-equal-subset-sum/) | `NP`-complete, and solved by a **pseudo-polynomial** DP. Ask yourself why that is not a proof of `P = NP` |
 | Partition into `k` parts | [698 · Partition to K Equal Sum Subsets](https://leetcode.com/problems/partition-to-k-equal-sum-subsets/) · [2305 · Fair Distribution of Cookies](https://leetcode.com/problems/fair-distribution-of-cookies/) | `n ≤ 16` is the author saying "this is hard; use `2ⁿ`" |
-| **Set cover**, `NP`-hard and `ln n`-approximable | [1125 · Smallest Sufficient Team](https://leetcode.com/problems/smallest-sufficient-team/) | the greedy `ln n` approximation is the [M20 *(planned)*](INDEX.md#module-map) algorithm; the DP here is exact because `n ≤ 60` skills, `≤ 16` people |
+| **Set cover**, `NP`-hard and `ln n`-approximable | [1125 · Smallest Sufficient Team](https://leetcode.com/problems/smallest-sufficient-team/) | the greedy `ln n` approximation is the [M20](M20-heuristics.md) algorithm; the DP here is exact because `n ≤ 60` skills, `≤ 16` people |
 | **TSP**, in disguise | [943 · Find the Shortest Superstring](https://leetcode.com/problems/find-the-shortest-superstring/) · [847 · Shortest Path Visiting All Nodes](https://leetcode.com/problems/shortest-path-visiting-all-nodes/) | 943 is shortest common superstring — `NP`-hard, and reduces to TSP. Both are Held–Karp ([M11](M11-dynamic-programming.md)) |
 | Independent set on an interval structure | [1349 · Maximum Students Taking Exam](https://leetcode.com/problems/maximum-students-taking-exam/) | maximum independent set — `NP`-hard in general, **polynomial here** because the graph is bipartite by column (König, [M16](M16-network-flow.md)) |
 | Recognising the boundary | [785 · Is Graph Bipartite?](https://leetcode.com/problems/is-graph-bipartite/) | 2-colouring is linear; 3-colouring is `NP`-complete. One number apart |
@@ -1353,7 +1353,7 @@ bool hasCliqueOfSize(const SubsetProblem& instance) {           // >= k
 
 **Complexity of each reduction: `Θ(n²)`.**
 
-**The `V − S` identity is worth being able to state instantly**, because it is asked constantly: *minimum vertex cover* + *maximum independent set* = `|V|`, always, in every graph. So a `2`-approximation for vertex cover gives **nothing** for independent set — the additive relationship does not preserve *ratios*. (Vertex cover is 2-approximable; independent set is `NP`-hard to approximate within `n^{1−ε}`.) **Two problems can be equally hard to solve exactly and wildly different to approximate**, which is [M20 *(planned)*](INDEX.md#module-map)'s opening surprise.
+**The `V − S` identity is worth being able to state instantly**, because it is asked constantly: *minimum vertex cover* + *maximum independent set* = `|V|`, always, in every graph. So a `2`-approximation for vertex cover gives **nothing** for independent set — the additive relationship does not preserve *ratios*. (Vertex cover is 2-approximable; independent set is `NP`-hard to approximate within `n^{1−ε}`.) **Two problems can be equally hard to solve exactly and wildly different to approximate**, which is [M20](M20-heuristics.md)'s opening surprise.
 
 **CLRS reaches CLIQUE differently** — 3-CNF-SAT ≤ CLIQUE directly (Theorem 34.11): one vertex per literal-occurrence, and an edge between two literals in *different* clauses that are not each other's negation. A `k`-clique then picks exactly one consistent true literal per clause. See [A8](#a8-3-sat-reduces-to-clique).
 
@@ -1899,7 +1899,7 @@ bool dpll(const CnfFormula& formula, vector<char>& value, int variableCount) {
 
 **The verifiers are the proof that these problems are in `NP`**, and writing them out is worth the two minutes: *"a certificate exists and can be checked in polynomial time"* is a claim about code, and here is the code.
 
-**DPLL is the honest ending for this module.** `NP`-completeness says the *worst case* is intractable; it says nothing about the instances a real system produces, which are full of structure that unit propagation eats. **The engineering conclusion of a hardness proof is usually "encode it into SAT and call a solver"**, not "give up" — and the rest of the conclusions are [M20 *(planned)*](INDEX.md#module-map).
+**DPLL is the honest ending for this module.** `NP`-completeness says the *worst case* is intractable; it says nothing about the instances a real system produces, which are full of structure that unit propagation eats. **The engineering conclusion of a hardness proof is usually "encode it into SAT and call a solver"**, not "give up" — and the rest of the conclusions are [M20](M20-heuristics.md).
 
 *Verified:* every reduction above was checked by randomized differential testing against the brute-force deciders — `hamiltonianCycleToTsp` on 400 random graphs (`n ≤ 7`), `vertexCoverToIndependentSet` and `independentSetToClique` on 600 graphs (`n ≤ 9`) across all values of `k`, `independentSetToMovieScheduling` on 300 graphs, `satToThreeSat` on 2 000 random CNF formulas (`n ≤ 7`, clause lengths 1–6), `threeSatToVertexCover` and `threeSatToClique` on 1 500 random 3-CNF formulas (`n ≤ 5`, `c ≤ 5`), `satToIntegerProgram` on 1 000 formulas, and `threeSatToSubsetSum` on 800 formulas (`n + k ≤ 12`) — in every case `bruteForceSource(x)` and `bruteForceTarget(f(x))` agreed. `dpll` agreed with exhaustive assignment search on 5 000 random formulas.
 

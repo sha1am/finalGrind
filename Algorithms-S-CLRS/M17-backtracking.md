@@ -541,7 +541,7 @@ Nodes became boards with **any** number of pieces, possibly stacked on one squar
 **The answer:** no arrangement of the eight standard pieces covers all 64 squares with bishops on opposite colours. But **seven** pieces suffice if a queen and a knight may share a square.
 
 **Two lessons, both bigger than chess.**
-1. **A relaxation makes a fast, valid pruning test.** Weak attacks are cheaper to compute and *over*-estimate coverage, so "not covered even weakly" is a sound rejection. This is precisely the LP-relaxation idea of [M22 *(planned)*](INDEX.md#module-map) and the admissible-heuristic idea of A\* below, in a concrete costume.
+1. **A relaxation makes a fast, valid pruning test.** Weak attacks are cheaper to compute and *over*-estimate coverage, so "not covered even weakly" is a sound rejection. This is precisely the LP-relaxation idea of [M22](M22-linear-programming.md) and the admissible-heuristic idea of A\* below, in a concrete costume.
 2. **When pruning stalls, change the state space, not the test.** Skiena's first two prunes were good and insufficient; the third redefined what a node *was*. That is a design move, not an optimisation.
 
 ---
@@ -769,7 +769,7 @@ Split the `n` items in half, enumerate `2^{n/2}` outcomes on each side, sort one
 
 For `NP`-hard problems with real-world structure, a modern **SAT solver** (CDCL) or **CP-SAT** solver will usually beat a hand-written backtracker by orders of magnitude — they do clause learning, restarts, and conflict-driven backjumping that no hand-rolled search does. **The engineering skill is encoding your problem, not searching it.** Hand-written search is right when the problem has structure a general encoding would lose, when the instance is small, or when you are in an interview.
 
-**And when the instance is simply too big for exact search,** the answer is heuristics — local search, simulated annealing, and approximation with a proven ratio. That is [M20 *(planned)*](INDEX.md#module-map), and Skiena signposts it in this chapter's opening: *"For problems that are too large to contemplate using combinatorial search, heuristic methods like simulated annealing are presented in Chapter 12."*
+**And when the instance is simply too big for exact search,** the answer is heuristics — local search, simulated annealing, and approximation with a proven ratio. That is [M20](M20-heuristics.md), and Skiena signposts it in this chapter's opening: *"For problems that are too large to contemplate using combinatorial search, heuristic methods like simulated annealing are presented in Chapter 12."*
 
 ---
 
@@ -787,7 +787,7 @@ For `NP`-hard problems with real-world structure, a modern **SAT solver** (CDCL)
 | "the **best** arrangement", `n` small | branch and bound with an admissible lower bound |
 | "shortest path" with a good distance estimate | **A\*** |
 | "partition into `k` groups" | backtracking with the *canonical form* symmetry break (first element of each group increasing) |
-| `n` in the hundreds and the problem is `NP`-hard | **stop searching** — heuristics ([M20 *(planned)*](INDEX.md#module-map)) or an off-the-shelf SAT/CP solver |
+| `n` in the hundreds and the problem is `NP`-hard | **stop searching** — heuristics ([M20](M20-heuristics.md)) or an off-the-shelf SAT/CP solver |
 
 **The reflex worth building:** read the constraint bound *first*, before the problem. `n ≤ 20` and `n ≤ 200` are two different problems even with identical statements, and the bound is the author telling you which technique they had in mind.
 

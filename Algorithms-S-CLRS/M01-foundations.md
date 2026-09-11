@@ -754,7 +754,7 @@ Read it backwards: the constraint in the problem statement tells you the intende
 
 ---
 
-## Chapter in One Page
+## One-Page Recall
 
 | Concept | The one-line version |
 |---|---|
@@ -780,7 +780,7 @@ Read it backwards: the constraint in the problem statement tells you the intende
 
 ---
 
-## Recognition Table
+## Recognition Patterns
 
 | Clue in the problem | What it points to |
 |---|---|
@@ -803,7 +803,7 @@ Read it backwards: the constraint in the problem statement tells you the intende
 
 ---
 
-## Common Mistakes Recap
+## Common Mistakes
 
 1. Defending a heuristic because you couldn't find a counterexample in 30 seconds.
 2. Proving the invariant's initialization and maintenance, then forgetting termination — which is the only part that yields the theorem.

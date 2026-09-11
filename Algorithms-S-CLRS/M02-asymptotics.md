@@ -261,7 +261,7 @@ dropping a negative term keeps an upper bound valid
 (n − m + 1)·m = nm − m² + m = Ω(nm)
 ```
 
-Hence **`Θ(nm)`**. Faster algorithms exist — Rabin–Karp (expected linear) and KMP (worst-case linear) in [M18 *(planned)*](INDEX.md#module-map).
+Hence **`Θ(nm)`**. Faster algorithms exist — Rabin–Karp (expected linear) and KMP (worst-case linear) in [M18](M18-strings.md).
 
 ### The "round it up" heuristic, and its limit
 
@@ -460,10 +460,10 @@ Two reasons [Skiena §2.6, p.46]: they arise directly from loop analysis, and pr
 | Cubes | `Σ_{k=0}^{n} k³ = n²(n+1)²/4` | `Θ(n⁴)` | CLRS A.5 |
 | **Powers** | `S(n,p) = Σ_{i=1}^{n} i^p` | `Θ(n^{p+1})` for `p ≥ 0` | Skiena §2.6 |
 | **Geometric** | `Σ_{k=0}^{n} x^k = (x^{n+1} − 1)/(x − 1)`, `x ≠ 1` | `Θ(x^{n+1})` if `x > 1` | CLRS A.6 |
-| Infinite geometric | `Σ_{k=0}^{∞} x^k = 1/(1 − x)`, `|x| < 1` | `Θ(1)` | CLRS A.7 |
+| Infinite geometric | `Σ_{k=0}^{∞} x^k = 1/(1 − x)`, `\|x\| < 1` | `Θ(1)` | CLRS A.7 |
 | **Harmonic** | `H_n = Σ_{k=1}^{n} 1/k = ln n + O(1)` | `Θ(log n)` | CLRS A.8–A.9 |
 | Harmonic, tight | `ln(n+1) ≤ H_n ≤ ln n + 1` | | CLRS A.10 |
-| Differentiated geometric | `Σ_{k=0}^{∞} k x^k = x/(1−x)²`, `|x| < 1` | `Θ(1)` | CLRS A.11 |
+| Differentiated geometric | `Σ_{k=0}^{∞} k x^k = x/(1−x)²`, `\|x\| < 1` | `Θ(1)` | CLRS A.11 |
 | **Telescoping** | `Σ_{k=1}^{n} (a_k − a_{k−1}) = a_n − a₀` | | CLRS A.12 |
 | Product→sum | `lg ∏ a_k = Σ lg a_k` | | CLRS |
 
@@ -710,7 +710,7 @@ Skiena's defense of the model is worth keeping because it is the right attitude 
 
 ---
 
-## Chapter in One Page
+## One-Page Recall
 
 | Concept | The one-line version |
 |---|---|
@@ -744,7 +744,7 @@ Skiena's defense of the model is worth keeping because it is the right attitude 
 
 ---
 
-## Recognition Table
+## Recognition Patterns
 
 | Clue | What to do |
 |---|---|
@@ -766,7 +766,7 @@ Skiena's defense of the model is worth keeping because it is the right attitude 
 
 ---
 
-## Common Mistakes Recap
+## Common Mistakes
 
 1. Saying "algorithm A is `Θ(n²)`" when only its **worst case** is.
 2. Using `O` where you mean `Θ`, then comparing two algorithms by their `O` bounds.

@@ -221,6 +221,9 @@ vector<int> extractPath(const SSSP& result, int source, int v) {
 
 ---
 
+*Verified:* `relax` and `extractPath` were checked structurally, which is the check that matters for a parent array: over **65 496** reachable vertices across 20 000 random digraphs, the parent chain from `extractPath` was required to be a **real path** starting at `s`, ending at `v`, using edges that exist, whose weights sum to **exactly** `dist[v]`. **0 failures.** A distance array can be right while the parent array is quietly wrong; only walking the chain and re-adding the weights catches that.
+
+
 ## Part 2 — Bellman-Ford (CLRS 22.1)
 
 ### Unified Understanding
@@ -361,6 +364,9 @@ vector<int> findNegativeCycle(const Graph& graph, int source) {
 
 > **Empirical check.** Over 600 random 4–11 vertex graphs with weights in `[−12, 8]`, **415 had a reachable negative cycle**. In all 415, `findNegativeCycle` returned a genuine cycle (every consecutive pair an actual edge, first vertex = last vertex) whose total weight was **strictly negative**. And in all 415, `markNegativeInfinity` agreed *exactly* with an independent oracle: `v` is `−∞` iff `v` is reachable from `s` **and** reachable from some vertex `c` with `Floyd-Warshall d[c][c] < 0` that is itself reachable from `s`.
 
+*Verified:* on **20 000** random digraphs with negative edges — **8 410 of them containing a reachable negative cycle**, so the detector is genuinely exercised rather than always answering "no" — `bellmanFord`'s `ok` flag matched a from-the-definition reference **every time (0 wrong)**, and on the cycle-free cases its distances matched on **all vertices of all graphs**. On 20 000 non-negative graphs it also agreed with `dijkstra` and `dijkstraDense` everywhere.
+
+
 ### Practical variant: SPFA (queue-based Bellman-Ford)
 
 Only relax out of vertices whose `d` actually changed. Keep them in a FIFO queue with an "in queue" flag. Same `O(VE)` worst case, dramatically faster typical case. Known as **SPFA** in competitive programming. Two caveats: (1) it is `O(VE)` in the worst case and adversarial test data targeting SPFA is common on judges; (2) with the **SLF** (small-label-first) and **LLL** heuristics it gets faster still, but never gains a better bound. Use it when you need Bellman-Ford's generality and Bellman-Ford's constant hurts.
@@ -453,6 +459,9 @@ SSSP dagLongestPaths(const Graph& graph, int source) {
 > **Empirical check.** CLRS Figure 22.5 (`r,s,t,x,y,z` with source `s`) reproduces exactly: `d = [∞, 0, 2, 6, 5, 3]`, and Bellman-Ford on the same graph agrees. Over 400 random DAGs with weights in `[−20, 20]` (all of them containing negative edges), `dagShortestPaths` agreed with Bellman-Ford, Floyd–Warshall and Johnson from **every** source. `dagLongestPaths` agreed with a direct max-DP on 300 random DAGs, and on the 5-task example gives critical path `0→1→3→4` of length 9.
 
 ---
+
+*Verified:* `dagShortestPaths` matched the reference on **20 000** random DAGs with **mixed-sign** weights — **0 mismatches** — which is the point of the section: topological order tolerates negative edges that break Dijkstra. `dagLongestPaths` was checked the honest way, against shortest paths on the **negated** graph: **0 mismatches**. That equivalence is exactly why longest path is easy here and `NP`-hard in general ([M19](M19-np-completeness.md)) — negate the weights of a general graph and you create negative cycles.
+
 
 ## Part 4 — Dijkstra's Algorithm (CLRS 22.3, Skiena 8.3.1)
 
@@ -608,6 +617,13 @@ SSSP vertexWeightedShortestPaths(int n, const vector<vector<int>>& out,
 5. **Running it on a graph with negative edges** because "the weights are *mostly* positive". See below.
 6. **Relaxing out of an unreachable vertex** when `∞` is a finite sentinel.
 
+*Verified:* **and the measurement corrected a claim.** Both variants matched a from-the-definition reference on **20 000** random non-negative digraphs (multi-edges and self-loops included): `dijkstra` **0 mismatches**, `dijkstraDense` **0 mismatches**.
+
+**Then the negative-edge case, which is subtler than the folklore.** Run on graphs with negative edges but no negative cycle, the implementation above was wrong on **0 of 37 095** graphs. That is not a mistake in the test — it is a property of *this* implementation. **With no `visited` set, a vertex is re-pushed whenever its estimate improves, so the algorithm degenerates into Bellman-Ford and converges to the right answer.** The textbook version — the one with a finalized set, and the one every correctness proof is written about — is a different algorithm: it was wrong on **1 015 of 148 577** of the same graphs (**0.7%**), and on the three-vertex counterexample above (`s→a = 1`, `s→b = 2`, `b→a = −2`) it returns `d[a] = 1` where the truth is `0`.
+
+**So the summary stands, with the halves attached to the right implementations:** a `visited` set makes negative edges *wrong*; no `visited` set makes them *slow*. And note the 0.7%: on random data the wrong version is right nineteen times in twenty, which is exactly how this bug survives a test suite.
+
+
 ### Why negative edges break it — concretely
 
 Skiena's bank-lobby image (quoted in Part 1) explains negative *cycles*. But Dijkstra breaks on a single negative **edge**, with no cycle at all. Exercise 22.3-2 asks for exactly this, and the smallest instance is worth memorizing:
@@ -736,6 +752,9 @@ bool solveDifferenceConstraints(int n, const vector<Constraint>& constraints, ve
 **Recognition pattern.** If a problem's constraints are all of the form *"`b` happens at least/at most `k` after `a`"*, or *"the difference between these two quantities is bounded"*, it is a difference-constraint system: **build the constraint graph and run Bellman-Ford.** Infeasibility = negative cycle. This also covers equality constraints `xᵢ = x_j + b` (encode as `≤ b` and `≥ b`, i.e. two edges — Ex 22.4-6) and single-variable bounds `xᵢ ≤ b` (an edge from `v₀` — Ex 22.4-10).
 
 ---
+
+*Verified:* on **20 000** random difference-constraint systems (**9 268** reported feasible), every assignment returned was checked against **every** constraint it claimed to satisfy — **0 violations** — and every "infeasible" verdict was checked against an independent negative-cycle test on the constraint graph with a super-source: **0 false rejections**. Both directions matter: a solver that returns `false` too eagerly passes a test that only validates the assignments it does produce.
+
 
 ## Part 6 — All-Pairs Shortest Paths: The Setup (CLRS 23, preamble)
 
@@ -980,6 +999,9 @@ vector<vector<char>> transitiveClosure(const vector<vector<char>>& adj) {
 
 ---
 
+*Verified:* `floydWarshall` and `floydWarshallInPlace` were checked against the single-source reference **run from every vertex**, on **7 090** digraphs with mixed-sign edges and no negative cycle: **0 mismatches each**. `transitiveClosure` was checked against plain DFS reachability from every vertex on the same graphs: **0 mismatches**.
+
+
 ## Part 8 — Johnson's Algorithm for Sparse Graphs (CLRS 23.3)
 
 ### Unified Understanding
@@ -1097,6 +1119,9 @@ bool johnson(const Graph& graph, vector<vector<long long>>& distance) {
 
 ---
 
+*Verified:* `johnson` agreed with `floydWarshall` on **every pair of every one of 7 077** negative-edge digraphs — **0 mismatches** — and on the negative-cycle instances, where the reweighting cannot exist, it correctly reported failure rather than returning numbers. Checking both outcomes is the point: an all-pairs routine that silently returns garbage on a negative cycle passes any test that only feeds it valid graphs.
+
+
 ## Outside / Engineering Context
 
 *Not from Skiena or CLRS ch. 22–23; included because these come up constantly in interviews and in production routing code.*
@@ -1113,7 +1138,7 @@ bool johnson(const Graph& graph, vector<vector<long long>>& distance) {
 | **Eppstein's algorithm** | `k` shortest paths allowing loops | `O(E + V lg V + k)` | theory + some CP |
 | **Viterbi** | max-probability state sequence in an HMM = **shortest path in a DAG** with `−log` weights | `Θ(T · S²)` | speech, handwriting, decoding — see the war story |
 | **Currency arbitrage** | maximize `Π rates` ⟹ minimize `Σ (−log rate)` ⟹ **profitable cycle = negative cycle** | `O(VE)` Bellman-Ford | the canonical negative-cycle interview question |
-| **Minimum mean cycle (Karp)** | the cycle minimizing `w(c)/|c|`; a DP over `d_k(v)` = min weight of a `k`-edge walk | `O(VE)` | min-cost-to-time-ratio problems |
+| **Minimum mean cycle (Karp)** | the cycle minimizing `w(c)/\|c\|`; a DP over `d_k(v)` = min weight of a `k`-edge walk | `O(VE)` | min-cost-to-time-ratio problems |
 
 **The log trick is worth its own line.** `Π xᵢ` is monotone in `Σ log xᵢ`, so **any multiplicative path objective becomes additive under logs.** Maximize a product of probabilities ⟹ minimize a sum of `−log p` (all non-negative since `p ≤ 1`, so **Dijkstra applies**). Maximize a product of exchange rates ⟹ minimize `Σ −log(rate)`, where rates `> 1` give negative weights, so **Bellman-Ford applies and a negative cycle is an arbitrage**. Same trick as M14's minimum-product spanning tree.
 

@@ -987,7 +987,7 @@ subject to  x(u) + x(v) ≥ 1     for each (u,v) ∈ E     (35.16)
             x(v) ≥ 0            for each v ∈ V         (35.18)
 ```
 
-**This is the linear-programming relaxation**, solvable in polynomial time ([M22 *(planned)*](INDEX.md#module-map)).
+**This is the linear-programming relaxation**, solvable in polynomial time ([M22](M22-linear-programming.md)).
 
 **Why its optimum `z*` is a lower bound.** Every feasible point of the integer program is feasible for the relaxation — the relaxation minimises over a *superset*. So
 
@@ -1860,7 +1860,7 @@ Apply Grover to SAT. An `n`-qubit register holds every truth assignment; a circu
 
 ### The quantum Fourier transform, and Shor
 
-The FFT ([M23 *(planned)*](INDEX.md#module-map)) is `O(N lg N)` classically and its circuit has `lg M` stages of parallel multiplications; each stage costs `lg M` quantum gates, so the transform of all `N = 2ⁿ` amplitudes takes `O((lg N)²) = O(n²)`. **Exponentially faster — with a catch:**
+The FFT ([M23](M23-matrices-fft.md)) is `O(N lg N)` classically and its circuit has `lg M` stages of parallel multiplications; each stage costs `lg M` quantum gates, so the transform of all `N = 2ⁿ` amplitudes takes `O((lg N)²) = O(n²)`. **Exponentially faster — with a catch:**
 
 > *"There is no way to get even one of these `2ⁿ` coefficients out of machine `Q`. All we can do is call `Sample(Q)` and get the index of a (presumably) large coefficient."*
 
@@ -1881,7 +1881,7 @@ Factor(M)
     Otherwise report no factor was found
 ```
 
-**The samples themselves are usually not factors** — for `M = 77` you might draw `33, 42, 55` — but `gcd(33, 55) = 11`. **`gcd` recovers the factor from the multiples** ([M21 *(planned)*](INDEX.md#module-map)).
+**The samples themselves are usually not factors** — for `M = 77` you might draw `33, 42, 55` — but `gcd(33, 55) = 11`. **`gcd` recovers the factor from the multiples** ([M21](M21-number-theory.md)).
 
 > *"No polynomial-time algorithm is known for integer factoring on conventional machines, **but neither is it `NP`-complete**. Thus, no complexity-theoretic assumptions are violated by having a fast algorithm for integer factorization."*
 
@@ -2016,7 +2016,7 @@ Approximation algorithms are rare on LeetCode by design (judges want exact answe
 | **Bin packing, first-fit decreasing** | [1986 · Minimum Number of Work Sessions to Finish the Tasks](https://leetcode.com/problems/minimum-number-of-work-sessions-to-finish-the-tasks/) | `n ≤ 14` so bitmask DP is exact — then check how often FFD matches it |
 | **Subset sum / partition, and the FPTAS** | [2035 · Partition Array Into Two Arrays to Minimize Sum Difference](https://leetcode.com/problems/partition-array-into-two-arrays-to-minimize-sum-difference/) · [416 · Partition Equal Subset Sum](https://leetcode.com/problems/partition-equal-subset-sum/) | 2035 is meet-in-the-middle ([M17](M17-backtracking.md)); then run `approxSubsetSum` on the same input and see the list collapse |
 | **Local search / annealing as the intended solution** | [1515 · Best Position for a Service Centre](https://leetcode.com/problems/best-position-for-a-service-centre/) | the geometric median. Gradient descent and simulated annealing both pass; there is no closed form. **The one LeetCode problem that is genuinely this module** |
-| **Randomized 2-approximation thinking** | [785 · Is Graph Bipartite?](https://leetcode.com/problems/is-graph-bipartite/) | a bipartite graph is one where MAX-CUT `= |E|`; run `localSearchMaxCut` and see it find the exact 2-colouring |
+| **Randomized 2-approximation thinking** | [785 · Is Graph Bipartite?](https://leetcode.com/problems/is-graph-bipartite/) | a bipartite graph is one where MAX-CUT `= \|E\|`; run `localSearchMaxCut` and see it find the exact 2-colouring |
 | **Greedy maximal matching** | [1049 · Last Stone Weight II](https://leetcode.com/problems/last-stone-weight-ii/) | secretly partition/subset-sum again — good practice at recognising the disguise |
 
 **Beyond LeetCode.** [CSES *Advanced Techniques*](https://cses.fi/problemset/) has meet-in-the-middle and bitmask problems that pair with Part 8. For heuristic search proper, the real drill is [TSPLIB](http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/): download `berlin52` (optimum 7 542), implement `TspSearch` from this module, and see how close you get. Then add 2-opt and see how much better it gets than vertex swapping.
@@ -3105,4 +3105,4 @@ long long factorFromSamples(long long m, const vector<long long>& samples) {
 
 ---
 
-*Next: [M21 — Number-Theoretic Algorithms](INDEX.md#module-map) (CLRS 31) — GCD, modular arithmetic, RSA, and primality testing.*
+*Next: [M21 — Number-Theoretic Algorithms](M21-number-theory.md) (CLRS 31) — GCD, modular arithmetic, RSA, and primality testing.*

@@ -6,11 +6,11 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 
 ## What is in this archive
 
-24 markdown files: `INDEX.md`, `README.md`, `RENAME-PASS-STATUS.md`, and modules **`M01`–`M21`**. Every module is a unified synthesis of Skiena and CLRS on one topic, with **all implementation code in C++17**.
+30 markdown files: `INDEX.md`, `README.md`, `RENAME-PASS-STATUS.md`, and modules **`M01`–`M27`** — the complete set. Every module is a unified synthesis of Skiena and CLRS on one topic, with **all implementation code in C++17**.
 
-**Coverage as of this build:** foundations and asymptotics, divide & conquer, randomization, sorting, every core data structure (lists, hashing, search trees, B-trees, augmentation), amortized analysis, union-find, dynamic programming, greedy, the full graph sequence (traversal, MST, shortest paths, network flow and matching), backtracking and branch-and-bound, string matching and suffix structures, `NP`-completeness, approximation algorithms and heuristic search, and number theory with RSA.
+**Coverage as of this build:** foundations and asymptotics, divide & conquer, randomization, sorting, every core data structure (lists, hashing, search trees, B-trees, augmentation), amortized analysis, union-find, dynamic programming, greedy, the full graph sequence (traversal, MST, shortest paths, network flow and matching), backtracking and branch-and-bound, string matching and suffix structures, `NP`-completeness, approximation algorithms and heuristic search, number theory with RSA, linear programming and duality, matrix operations with the FFT, fork-join parallelism with online and competitive analysis, the machine-learning triad of clustering, multiplicative weights and gradient descent, computational geometry from robust primitives through convex hulls, sweep line, Delaunay and Voronoi, and a master cheat sheet consolidating all of it into a recognition playbook.
 
-**Still to be written:** M22–M27 — linear programming, FFT and matrix operations, parallel and online algorithms, machine learning, computational geometry, and the master cheat sheet. The INDEX carries the full roadmap with status markers, and every forward reference in the notes points at it rather than at a missing file.
+**The set is complete.** M01–M27 cover the whole of both books' algorithmic content. [M27](M27-master-cheatsheet.md) is the place to start revising from: it consolidates the recognition patterns, the complexity tables, the proof techniques, the whiteboard procedure, and — the section that could not have been written without running the code — every bug these notes actually had.
 
 ---
 
@@ -18,10 +18,10 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 
 | | |
 |---|---|
-| **Every code block compiles** | **42 translation units** — a body TU and an appendix TU per module — all verified under `g++ -std=c++17 -Wall -Wextra`. Illustrative fragments were rewritten into real compilable functions rather than left as snippets. |
-| **Every algorithm is behaviourally checked** | Each implementation is run against a brute-force oracle on randomized inputs, and the result is recorded in the `*Verified:*` line beneath it — including the counts, the worst observed approximation ratios, and the bugs the testing actually caught. |
-| **All links resolve** | **744** internal links checked, **0 broken**. |
-| **Links under every pseudocode block** | **158** `→ C++ implementation:` links connect each pseudocode block in the notes to a runnable, heavily commented translation. |
+| **Every code block compiles** | **53 translation units** — a body TU and an appendix TU per module — all verified under `g++ -std=c++17 -Wall -Wextra`. Illustrative fragments were rewritten into real compilable functions rather than left as snippets. |
+| **Algorithms are behaviourally checked** | Implementations are run against a brute-force oracle on randomized inputs, and the result is recorded in a `*Verified:*` line beneath the code — the counts, the worst observed ratios, and the bugs the testing actually caught. **171 such lines across the 27 modules.** Coverage is per-section rather than per-function: every module carries them, and the denser modules ([M24](M24-parallel-online.md)–[M26](M26-geometry.md)) carry one under essentially every block. |
+| **All links resolve** | **1 150** internal links checked, **0 broken**. |
+| **Links under every pseudocode block** | **199** `→ C++ implementation:` links connect each pseudocode block in the notes to a runnable, heavily commented translation. |
 | **`using namespace std;` everywhere** | Every block assumes the prelude `#include <bits/stdc++.h>` + `using namespace std;`. No `std::` prefixes anywhere. |
 | **Meaningful identifiers throughout** | Every module has had the variable-naming pass — see [RENAME-PASS-STATUS.md](RENAME-PASS-STATUS.md). Conventional names are kept (`i, j, k`, `n, m`, `u, v`, `lo, hi, mid`); cryptic ones are not. Pseudocode citations in comments are left intact, so each block still documents its correspondence with the book. |
 | **Practice sections** | Every module has a *Practice — where to drill this module* table: specific problems by number and title, plus CSES and Codeforces tag pages. **Every LeetCode slug was verified against live search**, not written from memory. |
@@ -52,7 +52,13 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 | M19 NP-Completeness & Reductions | 10 | 12 |
 | M20 Coping With Hard Problems | 13 | 13 |
 | M21 Number-Theoretic Algorithms | 9 | 10 |
-| **Total** | **158** | **172** |
+| M22 Linear Programming | 7 | 8 |
+| M23 Matrix Operations, Polynomials & FFT | 4 | 7 |
+| M24 Parallel & Online Algorithms | 9 | 10 |
+| M25 Machine-Learning Algorithms | 7 | 8 |
+| M26 Computational Geometry | 15 | 16 |
+| M27 Master Cheat Sheet | 1 | — |
+| **Total** | **199** | **221** |
 
 ---
 

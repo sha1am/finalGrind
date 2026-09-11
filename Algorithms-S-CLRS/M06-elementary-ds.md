@@ -677,8 +677,8 @@ void traverse(LCRSNode<T>* x, Visit visit) {
 
 | Object | Structures | Module |
 |---|---|---|
-| **Strings** | character arrays; **suffix trees / suffix arrays** for fast pattern matching | [M18 *(planned)*](INDEX.md#module-map) |
-| **Geometric** | polygons as vertex arrays `(v₁,…,vₙ,v₁)`; **kd-trees** organizing points by location | [M26 *(planned)*](INDEX.md#module-map) |
+| **Strings** | character arrays; **suffix trees / suffix arrays** for fast pattern matching | [M18](M18-strings.md) |
+| **Geometric** | polygons as vertex arrays `(v₁,…,vₙ,v₁)`; **kd-trees** organizing points by location | [M26](M26-geometry.md) |
 | **Graphs** | **adjacency matrices** or **adjacency lists** — "the choice of representation can have a **substantial impact** on the design of the resulting graph algorithms" | [M13](M13-graphs-traversal.md) |
 | **Sets** | dictionaries for membership; **bit vectors** where bit `i` is 1 iff `i` is in the subset | [M07](M07-hashing.md) |
 
@@ -694,7 +694,7 @@ void traverse(LCRSNode<T>* x, Visit visit) {
 
 > …so we knew not to look for an optimal algorithm, but concentrate instead on **heuristics**.
 
-*(That move — recognize the NP-complete core, then stop looking for optimality — is the whole content of [M19 *(planned)*](INDEX.md#module-map)/[M20 *(planned)*](INDEX.md#module-map) applied in one sentence.)*
+*(That move — recognize the NP-complete core, then stop looking for optimality — is the whole content of [M19](M19-np-completeness.md)/[M20](M20-heuristics.md) applied in one sentence.)*
 
 **The naive heuristic.** Start anywhere, walk left–right until you hit the boundary or a used triangle. Fast, simple, no quality guarantee.
 
@@ -763,7 +763,7 @@ So the inner-loop operation is: **is this length-`k` string in our dictionary?**
 >
 > "But we can use a **suffix tree**… By following a pointer from `ACAC` to its longest proper suffix `CAC`, we get to the right place to test whether `CACT` is in our set of strings. **One character comparison is all we need to do from there.**"
 
-**That suffix-link idea is the same one behind Aho–Corasick and KMP** ([M18 *(planned)*](INDEX.md#module-map)).
+**That suffix-link idea is the same one behind Aho–Corasick and KMP** ([M18](M18-strings.md)).
 
 **The measured escalation** [Fig. 3.14, seconds]:
 
@@ -783,7 +783,7 @@ So the inner-loop operation is: **is this length-`k` string in our dictionary?**
 
 ---
 
-## Chapter in One Page
+## One-Page Recall
 
 | Concept | The one-line version |
 |---|---|
@@ -821,7 +821,7 @@ So the inner-loop operation is: **is this length-`k` string in our dictionary?**
 
 ---
 
-## Recognition Table
+## Recognition Patterns
 
 | Clue | Structure |
 |---|---|
@@ -845,7 +845,7 @@ So the inner-loop operation is: **is this length-`k` string in our dictionary?**
 
 ---
 
-## Common Mistakes Recap
+## Common Mistakes
 
 1. Believing dynamic-array `push_back` is `O(1)` **worst case**. It is `O(1)` amortized.
 2. Circular buffer where full and empty both give `head == tail`.

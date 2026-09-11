@@ -502,7 +502,7 @@ long long secondBestMST(const WeightedGraph& graph) {
 |---|---|
 | Using the MST to answer shortest-path queries | Wrong. MST paths are minimax, not minimum-sum |
 | Applying weight negation to shortest paths ("longest path") | Fails — negative weights break Dijkstra, and longest simple path is NP-hard |
-| Forgetting that Kruskal on a disconnected graph yields a **forest** | Silent wrong answer unless you check `|tree| == n−1` |
+| Forgetting that Kruskal on a disconnected graph yields a **forest** | Silent wrong answer unless you check `\|tree\| == n−1` |
 | Building an indexed heap with real `decrease-key` for Prim | Works, but the lazy-push version is shorter and the same asymptotically |
 | Forgetting the `if (inTree[u]) continue;` stale-entry guard in lazy Prim | Vertices get added twice; wrong tree, wrong weight |
 | No deterministic tie-break in Borůvka | Two components can select the same edge, or cycles of picks form |
