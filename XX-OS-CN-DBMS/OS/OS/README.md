@@ -1,100 +1,68 @@
-# Operating Systems — SDE Interview Notes
+# Operating Systems — Interview Notes (README)
 
-> Interview-focused OS notes for Software Engineering, Backend and SDE interviews.
+Dense, interview-optimized OS notes for **SDE / Backend interview prep (SDE-2 level)**, organized as numbered modules **M01, M02, …** (like a lecture playlist).
 
-## How this repository was designed
+---
 
-The curriculum is primarily aligned to the supplied **TakeUForward (TUF) OS interview sheet** and the supplied **Complete OS Course** YouTube playlist by Riti Kumari. TUF currently groups its OS interview sheet into Introduction, Process Management, Memory Management, File Systems, I/O Systems, and Storage/Data Protection, with 28 tracked items. The playlist describes itself as a complete OS course aimed at placements, semester exams and jobs.
+## What this is
 
-Primary sources:
-- TUF: https://takeuforward.org/operating-system/most-asked-operating-system-interview-questions
-- YouTube playlist: https://www.youtube.com/playlist?list=PLrL_PSQ6q0606tibu0c9lFIzkFtshv7HI
+A complete, teach-from-scratch OS course reorganized for interviews. Built from **CodeHelp's *Complete Operating Systems in 1 Shot*** (a ~16-hour placement course following the standard Silberschatz *OS Concepts* syllabus), then **taught and restructured** into a fundamentals → advanced progression. Every technical claim is cross-checked against **OSTEP** (*Operating Systems: Three Easy Pieces*).
 
-The notes are **original synthesis**, not a transcription of either source. Standard OS concepts are added where they materially improve SDE interview readiness, especially synchronization, deadlocks, virtual memory, IPC, file descriptors, I/O models, Linux process behavior, and container isolation.
+This is **not** a video transcript — it's a rewritten reference optimized for conceptual clarity, connections, interview relevance, and fast revision.
 
-## Priority levels
+## How to study
 
-- **P0 — Must know:** expected in most SDE/backend interviews.
-- **P1 — Strongly recommended:** common follow-ups and useful for debugging/performance discussions.
-- **P2 — Advanced:** know the mental model; detailed derivations are usually optional.
+1. **Open `INDEX.md`** — the map: roadmap (with prerequisites), progress tracker, and concept → module lookup.
+2. **Follow the module order** (M01 → M12). Don't skip prerequisites.
+3. **First pass:** read a module fully; focus on the `💡 FRAMING` box and ASCII diagrams.
+4. **Practice:** do each module's **Interview Questions** out loud, check against answers.
+5. **Revise:** use each module's **`🧠 RECALL`** sheet, then **M12** (Top 50 Q&A + 1-page cheat sheet).
+6. **Prioritize by marker:** 🔥 → ⭐ → ○.
 
-## Suggested study order
+> **Module MNN = Chapter N.** Inside the files you'll see "Ch.2", "Ch.4", etc.; these map one-to-one to M02, M04, and so on.
 
-1. Read `00-os-roadmap.md`.
-2. Finish Introduction → Processes/Threads → Scheduling → Synchronization → Deadlocks.
-3. Finish Memory → Virtual Memory → File Systems → I/O/Storage.
-4. Read the SDE/Linux extensions before backend interviews.
-5. Use `11-interview-revision/` for final revision.
+---
 
-## Interview answer pattern
+## Conventions
 
-For almost every OS question, answer in this order:
+| Marker | Meaning |
+|--------|---------|
+| 🔥 | **VERY IMPORTANT** — asked constantly |
+| ⭐ | **IMPORTANT** — should know cold |
+| ○ | **LOW PRIORITY** — good to know |
 
-**definition → problem solved → mechanism → example → trade-off → common confusion.**
+| Box | Meaning |
+|-----|---------|
+| `💡 FRAMING` | The core tension a topic is really about |
+| `⚠️ SUPPLEMENT` | Material **beyond** a typical one-shot video (senior depth / correction) |
+| `🧠 RECALL` | 60-second self-test at chapter end |
+| `⚠️ Trap` / `⚠️ Common Mistakes` | Look-alike concepts candidates confuse |
 
-## Directory map
+**Teaching spine** (applied organically): *What → Why → How → Example → Terms → Connects to → Interview angle → Trap.*
 
-- `01-introduction/` — OS role, kernel boundary, system calls and structures.
-- `02-process-management/` — processes, PCB, context switches, fork/exec, threads and IPC.
-- `03-cpu-scheduling/` — scheduling policies and metrics.
-- `04-process-synchronization/` — races, locks, semaphores, monitors and classic problems.
-- `05-deadlocks/` — conditions, graphs, prevention, avoidance, Banker’s algorithm and recovery.
-- `06-memory-management/` — allocation, fragmentation, paging, page tables, TLB and segmentation.
-- `07-virtual-memory/` — demand paging, page faults, replacement and thrashing.
-- `08-file-systems/` — files, allocation, directories, inodes and links.
-- `09-io-and-storage/` — interrupts, DMA, disks, scheduling and practical I/O.
-- `10-security-and-protection/` — protection, access control and OS security.
-- `11-interview-revision/` — rapid revision, comparisons and interview questions.
-- `12-sde-linux-extensions/` — high-value Linux/backend topics not always explicit in basic OS syllabi.
+## Source & correctness policy
 
-## What to memorize vs understand
+Primary source = the CodeHelp OS one-shot (coverage/ordering). Verification = OSTEP. Where a typical one-shot video is loose or outdated (e.g. "thread = lightweight process", mutex/semaphore conflation, "mode switch = context switch"), the notes **flag and correct** it.
 
-Memorize: definitions, scheduling formulas, four deadlock conditions, page-table/TLB flow, classic comparisons, and key system-call behavior.
+---
 
-Understand: why context switches cost time, why TLBs exist, why page faults are expensive, why locks need atomicity, why deadlocks form, and how a file read reaches storage.
+## Files
 
-## Resources to sharpen concepts
+| File | Contents | Status |
+|------|----------|--------|
+| `README.md` | This file | ✅ |
+| `INDEX.md` | Roadmap + TOC + progress tracker + concept lookup | ✅ |
+| `M01_OS_Fundamentals.md` | OS fundamentals, kernel, modes, system calls | ✅ |
+| `M02_Processes.md` | Process, PCB, states, context switch, fork/exec, zombie/orphan | ✅ |
+| `M03_Threads.md` | Threads, process vs thread, concurrency vs parallelism | ✅ |
+| `M04_CPU_Scheduling.md` | Scheduling metrics + FCFS/SJF/SRTF/Priority/RR (worked) | ✅ |
+| `M05_Synchronization.md` | Race condition, critical section, mutex, semaphore, classic problems, monitors | ✅ |
+| `M06_Deadlocks.md` | 4 conditions, RAG, prevention/avoidance/detection, Banker's (worked) | ✅ |
+| `M07_Memory_Management.md` | Binding, MMU, fragmentation, paging (translation), segmentation | ✅ |
+| `M08_Virtual_Memory.md` | Demand paging, page replacement, Belady, thrashing, TLB/EMAT | ✅ |
+| `M09_File_Systems.md` | Files, access, directories, allocation methods, inodes, links | ✅ |
+| `M10_IO_and_Disk_Scheduling.md` | Polling/interrupt/DMA, disk structure, FCFS/SSTF/SCAN/LOOK (worked) | ✅ |
+| `M11_IPC.md` | Shared memory vs message passing, pipes, sockets, signals | ✅ |
+| `M12_Revision.md` | Checklist, all tables, all formulas, key diagrams, Top 50 Q&A, cheat sheet | ✅ |
 
-Use these **after reading the notes**, not instead of them. Each resource is chosen for a different learning mode.
-
-### 1. OSTEP — best overall conceptual companion
-
-[Operating Systems: Three Easy Pieces](https://pages.cs.wisc.edu/~remzi/OSTEP/) organizes OS around **virtualization, concurrency, and persistence** and explains concepts through problems and mechanisms. Use it when a note feels memorized rather than understood.
-
-**Best for:** processes, scheduling, concurrency, locks, virtual memory, filesystems and storage.
-
-### 2. MIT xv6 — best for making the kernel feel real
-
-[MIT 6.1810 / xv6](https://pdos.csail.mit.edu/6.828/2025/overview.html) uses a small Unix-like teaching OS to connect virtual memory, threads, context switches, interrupts, system calls, IPC and filesystems.
-
-**Best for:** answering “what actually happens inside the kernel?” questions.
-
-### 3. Linux man-pages — best for Linux/SDE interview precision
-
-[Linux man-pages](https://man7.org/linux/man-pages/) are the right place to verify exact behavior of APIs such as `fork`, `open`, `mmap`, `read`, `write`, `wait`, `exec`, and `epoll`.
-
-**Best for:** backend/Linux interviews and avoiding technically incorrect statements.
-
-### 4. Linux kernel documentation — best for production-system depth
-
-[Linux kernel documentation](https://docs.kernel.org/) is useful once the basic model is clear. In particular, the [memory-management documentation](https://docs.kernel.org/admin-guide/mm/) helps connect virtual memory, page cache, reclaim and OOM behavior to a real production kernel.
-
-**Best for:** senior SDE/backend and systems-oriented follow-ups.
-
-### How to use the resources
-
-```text
-Read note
-   ↓
-Explain it without looking
-   ↓
-Solve the tiny example
-   ↓
-If unclear → read OSTEP
-   ↓
-If you want implementation intuition → read xv6
-   ↓
-If you need exact Linux behavior → check man7.org
-```
-
-Do not try to read all of OSTEP or the Linux kernel documentation before interviews. Use them selectively to fix weak concepts.
+**Start:** `INDEX.md` → `M01_OS_Fundamentals.md`.
