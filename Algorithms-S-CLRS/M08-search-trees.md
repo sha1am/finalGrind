@@ -1910,13 +1910,13 @@ void Bst::erase(BstNode* target) {
 
 ```cpp
 // Rotate `pivot` down-left and its right child up. PRESERVES the BST property:
-//
-//      pivot            newParent
-//       / \                / \
-//      a   newParent -> pivot  c
-//         / \            / \
-//        b   c          a   b
-//
+/*
+ *      pivot            newParent
+ *       / \                / \
+ *      a   newParent -> pivot  c
+ *         / \            / \
+ *        b   c          a   b
+ */
 // Before: a < pivot < b < newParent < c.   After: unchanged.  New shape, same order.
 void RbTree::leftRotate(RbNode* pivot) {
     RbNode* newParent = pivot->right;          // 1  assumes pivot->right != nil

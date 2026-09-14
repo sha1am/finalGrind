@@ -1158,11 +1158,11 @@ DescentResult gradientDescent(const Gradient& gradient, Vector start,
 }
 
 // Theorem 33.8's step size and error bound.
-double theoremStepSize(double r, double l, int steps) {
-    return r / (l * sqrt((double)steps));                // eta = R/(L sqrt T)
+double theoremStepSize(double radius, double lipschitz, int steps) {
+    return radius / (lipschitz * sqrt((double)steps));   // eta = R/(L sqrt T)
 }
-double theoremErrorBound(double r, double l, int steps) {
-    return r * l / sqrt((double)steps);                  // eps = RL/sqrt T
+double theoremErrorBound(double radius, double lipschitz, int steps) {
+    return radius * lipschitz / sqrt((double)steps);     // eps = RL/sqrt T
 }
 
 // The inversion: T = R^2 L^2 / eps^2.
@@ -1170,8 +1170,8 @@ double theoremErrorBound(double r, double l, int steps) {
 // QUADRATIC IN 1/eps. Halve the error, quadruple the work. That is the single
 // most important practical fact about first-order methods, and it is why
 // second-order methods exist despite costing Theta(n^3) per step.
-long long iterationsForAccuracy(double r, double l, double accuracy) {
-    return (long long)ceil((r * r * l * l) / (accuracy * accuracy));
+long long iterationsForAccuracy(double radius, double lipschitz, double accuracy) {
+    return (long long)ceil((radius * radius * lipschitz * lipschitz) / (accuracy * accuracy));
 }
 
 // LINE SEARCH: find a step size without knowing R or L.

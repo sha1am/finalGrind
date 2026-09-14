@@ -491,10 +491,10 @@ void parallelMatrixMultiplyRecursive(const Matrix& a, const Matrix& b, Matrix& c
         return;
     }
     const int half = n / 2;
-    auto block = [half](const Matrix& m, int r, int col) {
+    auto block = [half](const Matrix& m, int row, int col) {
         Matrix out(half, vector<double>(half));
         for (int i = 0; i < half; ++i)
-            for (int j = 0; j < half; ++j) out[i][j] = m[r * half + i][col * half + j];
+            for (int j = 0; j < half; ++j) out[i][j] = m[row * half + i][col * half + j];
         return out;
     };
 

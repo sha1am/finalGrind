@@ -18,9 +18,9 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 
 | | |
 |---|---|
-| **Every code block compiles** | **53 translation units** — a body TU and an appendix TU per module — all verified under `g++ -std=c++17 -Wall -Wextra`. Illustrative fragments were rewritten into real compilable functions rather than left as snippets. |
-| **Algorithms are behaviourally checked** | Implementations are run against a brute-force oracle on randomized inputs, and the result is recorded in a `*Verified:*` line beneath the code — the counts, the worst observed ratios, and the bugs the testing actually caught. **171 such lines across the 27 modules.** Coverage is per-section rather than per-function: every module carries them, and the denser modules ([M24](M24-parallel-online.md)–[M26](M26-geometry.md)) carry one under essentially every block. |
-| **All links resolve** | **1 150** internal links checked, **0 broken**. |
+| **Every code block compiles** | **53 translation units** — a body TU and an appendix TU per module — all verified under `g++ -std=c++17 -Wall -Wextra`, **0 errors**. Illustrative fragments were rewritten into real compilable functions rather than left as snippets. Two warnings remain and are deliberate: `danger()` in [M09](M09-amortized.md) and `theDiscardedFutureTrap()` in [M24](M24-parallel-online.md) are examples whose *whole point* is the thing the compiler objects to. |
+| **Algorithms are behaviourally checked** | Implementations are run against a brute-force oracle on randomized inputs, and the result is recorded in a `*Verified:*` line beneath the code — the counts, the worst observed ratios, and the bugs the testing actually caught. **183 such lines across the 27 modules.** Coverage is per-section rather than per-function: every module carries them, and the denser modules ([M24](M24-parallel-online.md)–[M26](M26-geometry.md)) carry one under essentially every block. |
+| **All links resolve** | **791** internal links — every cross-module reference and every in-page anchor they target — checked against GitHub's heading-slug rules: **0 broken**. The **361** external links (LeetCode, CSES, Codeforces) are not re-checked by the link tool. |
 | **Links under every pseudocode block** | **199** `→ C++ implementation:` links connect each pseudocode block in the notes to a runnable, heavily commented translation. |
 | **`using namespace std;` everywhere** | Every block assumes the prelude `#include <bits/stdc++.h>` + `using namespace std;`. No `std::` prefixes anywhere. |
 | **Meaningful identifiers throughout** | Every module has had the variable-naming pass — see [RENAME-PASS-STATUS.md](RENAME-PASS-STATUS.md). Conventional names are kept (`i, j, k`, `n, m`, `u, v`, `lo, hi, mid`); cryptic ones are not. Pseudocode citations in comments are left intact, so each block still documents its correspondence with the book. |
@@ -51,7 +51,7 @@ Start at **[INDEX.md](INDEX.md)** — module map, CLRS↔Skiena crosswalk, study
 | M18 String Matching & Suffix Structures | 10 | 12 |
 | M19 NP-Completeness & Reductions | 10 | 12 |
 | M20 Coping With Hard Problems | 13 | 13 |
-| M21 Number-Theoretic Algorithms | 9 | 10 |
+| M21 Number-Theoretic Algorithms | 7 | 10 |
 | M22 Linear Programming | 7 | 8 |
 | M23 Matrix Operations, Polynomials & FFT | 4 | 7 |
 | M24 Parallel & Online Algorithms | 9 | 10 |

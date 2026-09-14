@@ -1489,16 +1489,16 @@ public:
     explicit Simplex(const AppendixLp& lp)
         : m_(lp.rows()), n_(lp.cols()),
           basic_(m_), nonbasic_(n_ + 1),
-          t_(m_ + 2, vector<double>(n_ + 2, 0.0)) {
+          tableau_(m_ + 2, vector<double>(n_ + 2, 0.0)) {
         for (int i = 0; i < m_; ++i) {
-            for (int j = 0; j < n_; ++j) t_[i][j] = lp.a[i][j];
-            t_[i][n_] = -1.0;                              // the artificial column
-            t_[i][n_ + 1] = lp.b[i];
+            for (int j = 0; j < n_; ++j) tableau_[i][j] = lp.a[i][j];
+            tableau_[i][n_] = -1.0;                              // the artificial column
+            tableau_[i][n_ + 1] = lp.b[i];
             basic_[i] = n_ + 1 + i;                        // slack i starts basic
         }
-        for (int j = 0; j < n_; ++j) { nonbasic_[j] = j; t_[m_][j] = -lp.c[j]; }
+        for (int j = 0; j < n_; ++j) { nonbasic_[j] = j; tableau_[m_][j] = -lp.c[j]; }
         nonbasic_[n_] = -1;                                // slot of the artificial
-        t_[m_ + 1][n_] = 1.0;                              // Phase I: minimise x0
+        tableau_[m_ + 1][n_] = 1.0;                              // Phase I: minimise x0
     }
 
     LpSolution solve() {
@@ -1510,11 +1510,11 @@ public:
         // and then drive x0 back to zero. If it cannot reach zero, no feasible
         // point exists at all.
         int worst = 0;
-        for (int i = 1; i < m_; ++i) if (t_[i][n_ + 1] < t_[worst][n_ + 1]) worst = i;
+        for (int i = 1; i < m_; ++i) if (tableau_[i][n_ + 1] < tableau_[worst][n_ + 1]) worst = i;
 
-        if (t_[worst][n_ + 1] < -kEps) {
+        if (tableau_[worst][n_ + 1] < -kEps) {
             pivot(worst, n_);
-            if (!optimise(kPhaseOne) || t_[m_ + 1][n_ + 1] < -kEps) {
+            if (!optimise(kPhaseOne) || tableau_[m_ + 1][n_ + 1] < -kEps) {
                 result.status = LpSolution::Status::Infeasible;
                 return result;
             }
@@ -1526,8 +1526,8 @@ public:
                 if (basic_[i] == kArtificial) {
                     int col = 0;
                     for (int j = 1; j <= n_; ++j)
-                        if (t_[i][j] < t_[i][col] ||
-                            (t_[i][j] == t_[i][col] && nonbasic_[j] < nonbasic_[col]))
+                        if (tableau_[i][j] < tableau_[i][col] ||
+                            (tableau_[i][j] == tableau_[i][col] && nonbasic_[j] < nonbasic_[col]))
                             col = j;
                     pivot(i, col);
                     break;
@@ -1542,8 +1542,8 @@ public:
 
         result.x.assign(n_, 0.0);                          // nonbasic variables are zero
         for (int i = 0; i < m_; ++i)
-            if (basic_[i] >= 0 && basic_[i] < n_) result.x[basic_[i]] = t_[i][n_ + 1];
-        result.value = t_[m_][n_ + 1];
+            if (basic_[i] >= 0 && basic_[i] < n_) result.x[basic_[i]] = tableau_[i][n_ + 1];
+        result.value = tableau_[m_][n_ + 1];
         return result;
     }
 
@@ -1555,10 +1555,10 @@ private:
 
     int m_, n_;
     vector<int> basic_, nonbasic_;
-    vector<vector<double>> t_;
+    vector<vector<double>> tableau_;
 
     // Exchange basic_[row] with nonbasic_[col]: Gauss-Jordan elimination on
-    // t_[row][col], applied to every other row INCLUDING both objective rows.
+    // tableau_[row][col], applied to every other row INCLUDING both objective rows.
     //
     // The column-scaling steps are the part that is easy to get wrong. After
     // eliminating, the pivot column of every other row is rescaled by -1/pivot,
@@ -1567,17 +1567,17 @@ private:
     // solver still terminates, still reports "optimal", and returns a point
     // that is not even feasible.
     void pivot(int row, int col) {
-        const double inverse = 1.0 / t_[row][col];
+        const double inverse = 1.0 / tableau_[row][col];
 
         for (int i = 0; i < m_ + 2; ++i) {
-            if (i == row || fabs(t_[i][col]) < kEps) continue;
-            const double factor = t_[i][col] * inverse;
+            if (i == row || fabs(tableau_[i][col]) < kEps) continue;
+            const double factor = tableau_[i][col] * inverse;
             for (int j = 0; j < n_ + 2; ++j)
-                if (j != col) t_[i][j] -= factor * t_[row][j];
+                if (j != col) tableau_[i][j] -= factor * tableau_[row][j];
         }
-        for (int j = 0; j < n_ + 2; ++j) if (j != col) t_[row][j] *= inverse;
-        for (int i = 0; i < m_ + 2; ++i) if (i != row) t_[i][col] *= -inverse;
-        t_[row][col] = inverse;
+        for (int j = 0; j < n_ + 2; ++j) if (j != col) tableau_[row][j] *= inverse;
+        for (int i = 0; i < m_ + 2; ++i) if (i != row) tableau_[i][col] *= -inverse;
+        tableau_[row][col] = inverse;
 
         swap(basic_[row], nonbasic_[col]);                 // the vertex has changed
     }
@@ -1601,11 +1601,11 @@ private:
             int col = -1;
             for (int j = 0; j <= n_; ++j) {
                 if (phase == kPhaseTwo && nonbasic_[j] == kArtificial) continue;
-                if (col < 0 || t_[objRow][j] < t_[objRow][col] ||
-                    (t_[objRow][j] == t_[objRow][col] && nonbasic_[j] < nonbasic_[col]))
+                if (col < 0 || tableau_[objRow][j] < tableau_[objRow][col] ||
+                    (tableau_[objRow][j] == tableau_[objRow][col] && nonbasic_[j] < nonbasic_[col]))
                     col = j;
             }
-            if (col < 0 || t_[objRow][col] >= -kEps) return true;   // OPTIMAL
+            if (col < 0 || tableau_[objRow][col] >= -kEps) return true;   // OPTIMAL
 
             // LEAVING: the RATIO TEST. How far can the entering variable rise
             // before some basic variable hits zero? The binding row is the
@@ -1613,10 +1613,10 @@ private:
             // this edge of the polytope.
             int row = -1;
             for (int i = 0; i < m_; ++i) {
-                if (t_[i][col] <= kEps) continue;          // this row never binds
+                if (tableau_[i][col] <= kEps) continue;          // this row never binds
                 if (row < 0) { row = i; continue; }
-                const double here = t_[i][n_ + 1] / t_[i][col];
-                const double best = t_[row][n_ + 1] / t_[row][col];
+                const double here = tableau_[i][n_ + 1] / tableau_[i][col];
+                const double best = tableau_[row][n_ + 1] / tableau_[row][col];
                 if (here < best || (here == best && basic_[i] < basic_[row])) row = i;
             }
             if (row < 0) return false;                     // nothing binds: UNBOUNDED

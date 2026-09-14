@@ -24,7 +24,7 @@ using namespace std;        // no std:: prefixes anywhere in these notes
 - **Third book used only for the C++ teaching**, not for algorithms: Mark Allen Weiss, *Data Structures and Algorithm Analysis in C++*, 4th ed. Cited as `[Weiss §1.5.3, p.25]`.
 - **Every module also ends with a `Practice` section** — specific problems by number and title on LeetCode, plus [CSES](https://cses.fi/problemset/) and Codeforces tag pages.
 
-**Verified state of the code and links:** 53 translation units (a body and an appendix per module) all compile under `g++ -std=c++17 -Wall -Wextra`; 1 150 internal links resolve with 0 broken; 199 `→ C++ implementation:` links connect every pseudocode block in the notes to a runnable translation. Every algorithm is additionally checked by randomized differential testing against a brute-force oracle, and the results are recorded in the `*Verified:*` line under each implementation.
+**Verified state of the code and links:** 53 translation units (a body and an appendix per module) all compile under `g++ -std=c++17 -Wall -Wextra`; 791 internal links and the heading anchors they target resolve with 0 broken (the 361 external links are not checked); 199 `→ C++ implementation:` links connect every pseudocode block in the notes to a runnable translation. Every algorithm is additionally checked by randomized differential testing against a brute-force oracle, and the results are recorded in the `*Verified:*` line under each implementation.
 
 ---
 
